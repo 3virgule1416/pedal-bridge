@@ -17,8 +17,9 @@ sur Raspberry Pi 5, par tampons circulaires partagés dans `/dev/shm`.
 |---|---|---|
 | (a) | Send + pb_inspect + tests | fait, validé à l'oreille |
 | (b) | Return + `pb_inspect --tone/--loop` | fait, validé à l'oreille |
-| (c) | Client JACK + rééchantillonnage adaptatif | fait, à valider à l'oreille |
+| (c) | Client JACK + rééchantillonnage adaptatif, maître du temps | fait, validé à l'oreille |
 | (d) | Mesures (latence, dérive, xruns, CPU) | à faire |
+| (e) | Contrôle au pied : batterie, looper, écran | en conception : [docs/controle.md](docs/controle.md) |
 
 ## Structure
 
