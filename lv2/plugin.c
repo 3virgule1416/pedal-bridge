@@ -1,0 +1,11 @@
+/* Point d'entrée du bundle pedal-bridge.lv2. */
+#include "plugin.h"
+
+LV2_SYMBOL_EXPORT const LV2_Descriptor *lv2_descriptor(uint32_t index)
+{
+    switch (index) {
+    case 0:  return &pb_send_descriptor;
+    case 1:  return &pb_return_descriptor;
+    default: return NULL;
+    }
+}
