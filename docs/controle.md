@@ -41,20 +41,21 @@ Ce qu'on a appris et qui guide la suite :
 ## 3. Architecture
 
 ```
-  MIDI Captain 10 ─┐                                    ┌─> écran OLED (SPI)
-  Axe I/O One  ────┼─ MIDI ─> PiPedal                   │      pb_display
-  (double switch)  │           ├─ liaisons MIDI ─> Bridge Batterie (LV2)
-                   │           ├─ liaisons MIDI ─> Bridge Looper   (LV2)
-                   │           │        │  commandes / état
-                   │           │        ▼  /dev/shm/pedal-bridge-control
-                   │           │   pedal_bridge (le « cerveau »)
-                   │           │     ├─ maître du temps JACK (pb_timebase intégré)
-                   │           │     ├─ transport JACK (play/stop) ─> Hydrogen suit
-                   │           │     ├─ OSC ─> SooperLooper
-                   │           │     ├─ OSC ─> Hydrogen (patterns, fills)
-                   │           │     ├─ séquenceur de sections, calé sur la mesure
-                   │           │     └─ MIDI ─> Captain (DEL)          [à vérifier]
-                   │           └─ audio : Send/Return (existe)
+  MIDI Captain 10 ───── MIDI ──────────> PiPedal               écran OLED (SPI)
+        ▲                                  ├─ liaisons ─> Bridge Batterie (LV2)
+        │ SysEx (DEL), CC 20 (page)        ├─ liaisons ─> Bridge Looper   (LV2)
+        │                                  │       │ commandes / état
+  Axe I/O One ─ MIDI ─> routeur ── court ──┘       ▼ /dev/shm/pedal-bridge-control
+  (double switch)       (dans le client)                                ▲
+                          │ long : mode suivant                         │ état
+                          ▼                                             │
+                   pedal_bridge (le « cerveau ») ───────────────> pb_display
+                     ├─ maître du temps JACK (pb_timebase intégré)
+                     ├─ transport JACK (play/stop) ─> Hydrogen suit
+                     ├─ OSC ─> SooperLooper ; OSC ─> Hydrogen (patterns, fills)
+                     ├─ séquenceur de sections, calé sur la mesure
+                     ├─ mode en cours ; DEL du Captain selon le mode
+                     └─ audio : Send/Return (existe)
 ```
 
 Principes :
@@ -66,8 +67,8 @@ Principes :
    `pedal_bridge` au bon instant de la grille : début de mesure, de cycle ou de
    section.
 3. **Une seule source de tempo** : le maître du temps intégré au client.
-4. **Les liaisons MIDI restent dans PiPedal** (son interface habituelle). On ne
-   lit pas le MIDI nous-mêmes, sauf si l'appui long l'exige (§7).
+4. **Les liaisons MIDI restent dans PiPedal** (son interface habituelle). Seule
+   exception : le double switch passe par le routeur du client (appui long, §7).
 
 ## 4. Communication plugins ↔ client
 
@@ -126,26 +127,64 @@ synchronisées entre elles (« sync to loop »).
 
 ## 7. MIDI Captain et modes
 
-**Trois modes** : **PiPedal** (presets, effets), **Batterie**, **Looper**. Les 10
-boutons du Captain changent de rôle selon le mode.
+**Trois modes** : **PiPedal** (presets, effets, snapshots), **Batterie**,
+**Looper**. Les 10 boutons du Captain changent de rôle selon le mode.
 
-Où vit le mode ? Trois possibilités, à choisir après avoir lu la configuration du
-firmware officiel du Captain :
+### Ce qu'on sait du Captain (firmware officiel), d'après `captain-manager`
 
-| Option | Comment | Pour | Contre |
-|---|---|---|---|
-| A. Pages du Captain | le Captain change de page (bouton dédié ou appui long sur un de ses boutons) ; chaque page envoie d'autres CC | simple, pas de logique côté Pi | il faut que le firmware officiel gère pages et appui long |
-| B. Appui long sur le double switch | le client écoute aussi l'Axe I/O One et mesure la durée d'appui | ton idée de départ | PiPedal change de preset **dès l'appui** (CC 65/67) : le changement de mode déclencherait aussi un changement de preset |
-| C. Mode dans le client | le Captain envoie toujours les mêmes CC ; le client les interprète selon le mode | indépendant du firmware | PiPedal reçoit aussi ces CC : risque de doublons avec ses propres liaisons |
+Le dépôt voisin `captain-manager` (`pipedal_leds.py`, `blinker.py`,
+`testmido.py`) a déjà vérifié sur le vrai matériel :
 
-**Proposition** : l'option **A** si le firmware la permet. Pour B, il faudrait
-que PiPedal change de preset au relâchement, ou déplacer preset +/− sur le
-Captain.
+- **DEL pilotables par MIDI** : SysEx `F0 00 04 10 <touche 1-10> <R G B> × 3 F7`,
+  couleurs sur 7 bits (0-127). Chaque touche a **3 DEL réglables séparément**.
+- **Changer de page depuis le Pi** : **CC 20, valeur N** → le Captain saute à son
+  preset (page) N, avec les CC et couleurs de cette page.
+- Le Captain apparaît sur le Pi comme port MIDI « Feather RP2040 ».
+- `pipedal_leds.py` suit PiPedal par son WebSocket (`ws://127.0.0.1/pipedal`,
+  origine `http://pedalboard`) et colore les touches : effets liés par CC
+  (actif/inactif) et snapshots (couleur de PiPedal, sélectionné ou pâle).
+- `blinker.py` montre l'idée d'un **routeur MIDI** : il lit les pédales de
+  l'Axe I/O One et renvoie lui-même suivant/précédent à PiPedal.
 
-Retour sur le Captain : le client peut envoyer du MIDI au Captain (il est visible
-sur le Pi comme « Feather RP2040 ») pour colorer les DEL selon l'état (rouge =
-enregistrement, vert = lecture, clignotement au tempo). **À vérifier** : le
-firmware officiel accepte-t-il du MIDI entrant pour piloter ses DEL ?
+### Choix proposé : un routeur MIDI pour le double switch
+
+Le double switch est branché sur l'Axe I/O One. Aujourd'hui, PiPedal écoute l'Axe
+directement et change de preset **dès l'appui** (CC 65/67) : impossible d'y
+ajouter un appui long. Proposition :
+
+1. Dans les réglages MIDI de PiPedal, **ne plus écouter l'Axe directement**, mais
+   un port virtuel du client. C'est un réglage de PiPedal : à faire **avec ton
+   accord**.
+2. Le client lit l'Axe et mesure la durée de chaque appui :
+   - **appui court** (relâché avant ~0,5 s) → envoie « preset précédent/suivant »
+     à PiPedal (comme aujourd'hui, mais au relâchement) ;
+   - **appui long** sur un des deux boutons → **mode suivant/précédent** :
+     CC 20 au Captain (sa page change), mise à jour des DEL et de l'écran.
+3. Le Captain reste branché à PiPedal comme maintenant. Chaque page envoie ses
+   propres CC, liés dans PiPedal aux contrôles de Bridge Batterie, Bridge Looper
+   ou aux effets.
+
+Contrepartie : en appui court, le changement de preset part au **relâchement** et
+non à l'appui (quelques centaines de ms plus tard). À juger à l'usage. Sinon :
+appui long sur une touche du Captain, si sa page le permet.
+
+À vérifier : l'Axe envoie-t-il un message au **relâchement** du switch (valeur 0)
+en plus de l'appui ? Sans ça, pas d'appui long possible sur le double switch.
+
+### DEL : un seul responsable à la fois
+
+`pipedal_leds.py` et le client ne doivent pas écrire en même temps dans les DEL :
+
+- **mode PiPedal** : DEL d'effets et de snapshots (logique de `pipedal_leds.py`) ;
+- **mode Batterie** : play (vert/rouge), groove choisi, fill en attente, temps qui
+  clignote, le 1 d'une autre couleur ;
+- **mode Looper** : état de chaque boucle (rouge = enregistrement, jaune =
+  overdub, vert = lecture, pâle = muet, éteint = vide), clignotement au tempo.
+
+Proposition : **un seul programme écrit dans les DEL**, et c'est celui qui connaît
+le mode. Soit la logique de `pipedal_leds.py` est intégrée au système du client,
+soit `pipedal_leds.py` reste en Python et reçoit le mode du client (il se tait
+hors du mode PiPedal). À décider.
 
 ## 8. Tempo sans saut
 
@@ -225,8 +264,9 @@ l'oreille avant la suivante.
 
 1. **Mesures (d)** : latence, dérive, xruns, CPU sur 10 minutes ; origine des
    xruns vus par SooperLooper.
-2. **Lire la configuration du Captain** (firmware officiel) : pages, appui long,
-   DEL par MIDI. Choisir l'option de mode (§7).
+2. **Modes et routeur MIDI** (§7) : vérifier que l'Axe envoie le relâchement du
+   switch ; lire les pages du Captain (quels CC par page) ; routeur
+   court/long dans le client ; changement de page par CC 20.
 3. **Vérifier PiPedal** avec un plugin minimal : rendu des boutons momentanés
    (`lv2:trigger` ou équivalent), des voyants de sortie, liaison d'un CC à un
    bouton.
@@ -236,14 +276,19 @@ l'oreille avant la suivante.
 6. **Hydrogen OSC** : grooves et fills (après accord pour `hydrogen.conf`).
 7. **Sections** (§9).
 8. **Écran** : rendu PNG, puis vrai écran après activation du SPI.
-9. **DEL du Captain** (si le firmware le permet).
+9. **DEL du Captain** par SysEx, selon le mode ; un seul programme responsable
+   (intégration de `pipedal_leds.py`).
 
 ## 13. Questions ouvertes
 
-- Firmware officiel du Captain : pages, appui long, MIDI entrant pour les DEL ?
+- L'Axe I/O One envoie-t-il le relâchement du double switch (valeur 0) ?
+- Pages du Captain : combien, et quels CC envoie chaque touche dans chaque page ?
+  (Le firmware officiel se configure par fichiers sur son lecteur USB.)
+- `pipedal_leds.py` : l'intégrer au client, ou le garder en Python et lui
+  transmettre le mode ?
 - PiPedal 2.0.111 : boutons momentanés, voyants de sortie, liaison MIDI sur un
   bouton momentané (appui ou relâchement) ?
 - Hydrogen 1.2.0-beta : quelles commandes OSC ? Faut-il le mettre à jour (version
   stable 1.2.x compilée depuis les sources) ?
 - SooperLooper : « t. stretch » utilisable au changement de tempo ?
-- Appui long sur le double switch : garde-t-on l'idée (§7, option B) ?
+- Changement de preset au relâchement (appui court) : acceptable à l'usage ?
