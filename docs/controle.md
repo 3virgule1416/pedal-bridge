@@ -260,6 +260,11 @@ Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
   mesurable (elle donnerait un retard constant) : les 10,7 ms comptées
   suffisent. Un premier essai qui accélérait (jusqu'à −136 ms à la 4e mesure)
   montre que la sensation de décalage venait du jeu, pas du pont.
+- **Batterie sur le lien 2** (`session.sh`, liens 1,2 par défaut) : DLS Looper
+  au début de la chaîne, DLS Return (lien 2, Add) à la fin. Vérifié à
+  l'oreille : batterie sans effets. Remplissage des deux retours à quelques
+  trames l'un de l'autre (251,0 et 252,2 pour 256 visées, soit < 0,1 ms) :
+  boucles et batterie restent alignées.
 - Limites : SooperLooper suit le transport : **Record ne part que si le
   transport roule** (appuyer sur Play d'abord). La batterie arrive aussi par le
   lien 1 tant que DLS Drum n'existe pas (branchement de `session.sh`). Ne pas
