@@ -24,6 +24,10 @@ HEAD = """@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
 
 """
 
+DESC = '"""' + """Test plugin for Davis Loop Station: checks how PiPedal shows toggles, momentary buttons, lists, indicators and file selectors.
+
+The audio passes through unchanged. On load, the plugin tries to create the PedalBridgeTest folder with three dummy groove files; the "Dossier créé" indicator shows whether it worked. Choose one of them in the file selector: "Nom reçu" then shows the length of the path the plugin received.""" + '"""'
+
 def audio(idx, sym, name, out):
     kind = "lv2:OutputPort" if out else "lv2:InputPort"
     return f"""    [ a lv2:AudioPort, {kind} ; lv2:index {idx} ; lv2:symbol "{sym}" ; lv2:name "{name}" ]"""
@@ -38,26 +42,35 @@ def plugin(uri, name, stereo):
         ports += [audio(0, "in", "Entrée", 0), audio(1, "out", "Sortie", 1)]
         b = 2
     ports.append(f"""    [ a lv2:ControlPort, lv2:InputPort ; lv2:index {b} ; lv2:symbol "bascule" ; lv2:name "Bascule" ;
+      rdfs:comment "On/off switch. The Voyant indicator follows it." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:InputPort ; lv2:index {b+1} ; lv2:symbol "momentane" ; lv2:name "Momentané" ;
+      rdfs:comment "Momentary button (trigger). Each press increments Appuis." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:InputPort ; lv2:index {b+2} ; lv2:symbol "liste" ; lv2:name "Liste" ;
+      rdfs:comment "Drop-down list test." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "Choix A" ; rdf:value 0 ] , [ rdfs:label "Choix B" ; rdf:value 1 ] ,
                      [ rdfs:label "Choix C" ; rdf:value 2 ] , [ rdfs:label "Choix D" ; rdf:value 3 ] ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+3} ; lv2:symbol "voyant" ; lv2:name "Voyant" ;
+      rdfs:comment "Lit when Bascule is on." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+4} ; lv2:symbol "compteur" ; lv2:name "Appuis" ;
+      rdfs:comment "Number of presses on Momentané." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1000 ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+5} ; lv2:symbol "clignote" ; lv2:name "Clignote" ;
+      rdfs:comment "Blinks once per second." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+6} ; lv2:symbol "etat" ; lv2:name "État" ;
+      rdfs:comment "Output with named values: cycles through vide, enregistre, lecture every 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "vide" ; rdf:value 0 ] , [ rdfs:label "enregistre" ; rdf:value 1 ] ,
                      [ rdfs:label "lecture" ; rdf:value 2 ] ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+7} ; lv2:symbol "longueur_nom" ; lv2:name "Nom reçu" ;
+      rdfs:comment "Length of the file path received from the file selector (0 = none)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1024 ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+8} ; lv2:symbol "dossier_ok" ; lv2:name "Dossier créé" ;
+      rdfs:comment "Lit if the plugin could create the PedalBridgeTest folder and its test files." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
     ports.append(f"""    [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
       lv2:designation lv2:control ; lv2:index {b+9} ; lv2:symbol "control" ; lv2:name "Control" ]""")
@@ -66,9 +79,11 @@ def plugin(uri, name, stereo):
     s = io.StringIO()
     s.write(f"""<{uri}>
     a lv2:Plugin, lv2:UtilityPlugin ;
-    doap:name "{name}" ;
+    doap:name "Davis Loop Station {name}" ;
+    mod:brand "DLS" ;
+    mod:label "DLS {name}" ;
     doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
-    rdfs:comment "Plugin de test de Davis Loop Station : contrôles, voyants et sélecteur de fichier dans PiPedal." ;
+    rdfs:comment {DESC} ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:requiredFeature urid:map ;
@@ -102,8 +117,8 @@ def plugin(uri, name, stereo):
 """)
     return s.getvalue()
 
-ttl = HEAD + plugin("http://pedal-bridge.local/plugins/test-mono", "DLS Test (Mono)", False) \
-           + plugin("http://pedal-bridge.local/plugins/test-stereo", "DLS Test (Stéréo)", True)
+ttl = HEAD + plugin("http://pedal-bridge.local/plugins/test-mono", "Test (Mono)", False) \
+           + plugin("http://pedal-bridge.local/plugins/test-stereo", "Test (Stéréo)", True)
 open(os.path.join(HERE, "test.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
 
 manifest = """@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
