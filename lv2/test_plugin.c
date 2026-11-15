@@ -165,7 +165,8 @@ static void run(LV2_Handle h, uint32_t n)
 
     /* Contrôles -> sorties. */
     const float trig = t->c[C_TRIGGER] ? *t->c[C_TRIGGER] : 0;
-    if (trig > 0.5f && t->last_trigger <= 0.5f) t->count += 1;   /* front montant */
+    if (trig > 0.5f && t->last_trigger <= 0.5f)              /* front montant */
+        t->count = t->count >= 9 ? 0 : t->count + 1;
     t->last_trigger = trig;
     t->frames += n;
     const double secs = t->frames / t->rate;

@@ -28,6 +28,8 @@ DESC = '"""' + """Test plugin for Davis Loop Station: checks how PiPedal shows t
 
 The audio passes through unchanged. On load, the plugin tries to create the PedalBridgeTest folder with three dummy groove files; the "Dossier créé" indicator shows whether it worked. Choose one of them in the file selector: "Nom reçu" then shows the length of the path the plugin received.""" + '"""'
 
+COUNT_POINTS = " , ".join(f'[ rdfs:label "{k}" ; rdf:value {k} ]' for k in range(10))
+
 def audio(idx, sym, name, out):
     kind = "lv2:OutputPort" if out else "lv2:InputPort"
     return f"""    [ a lv2:AudioPort, {kind} ; lv2:index {idx} ; lv2:symbol "{sym}" ; lv2:name "{name}" ]"""
@@ -56,8 +58,9 @@ def plugin(uri, name, stereo):
       rdfs:comment "Lit when Bascule is on." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+4} ; lv2:symbol "compteur" ; lv2:name "Appuis" ;
-      rdfs:comment "Number of presses on Momentané." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1000 ]""")
+      rdfs:comment "Number of presses on Momentané (0 to 9, then back to 0)." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 9 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint {COUNT_POINTS} ]""")
     ports.append(f"""    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index {b+5} ; lv2:symbol "clignote" ; lv2:name "Clignote" ;
       rdfs:comment "Blinks once per second." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ]""")
