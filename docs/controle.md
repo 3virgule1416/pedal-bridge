@@ -131,13 +131,51 @@ Audio : retour de la batterie, lien 2 (§4 bis). Mono et stéréo.
 | Tempo | molette 40–240 BPM | nouveau tempo, appliqué au prochain début de mesure (§8) |
 | Play / Stop | bouton | **global** : batterie et boucles ensemble, toujours depuis la mesure 1. Voir §8 bis (boucles « normalisées » pour que trigger tombe juste) |
 | Début | bouton | retour à la mesure 1 |
-| Groove | liste (1–N) | pattern Hydrogen, changé à la prochaine mesure |
+| Morceau | **sélecteur de fichier** (`.h2song`) | Hydrogen ouvre le morceau (`OPEN_SONG`), le client lit ses patterns (voir ci-dessous) |
+| Groove | **sélecteur de fichier** (un fichier par groove) ; secours : liste « Groove 1 à 16 » | pattern Hydrogen, changé à la prochaine mesure ; cycle de SooperLooper = sa longueur |
+| Groove suivant / précédent | boutons | pour le pied (un choix de fichier ne se lie pas à une pédale) |
 | Fill | bouton | joue le pattern de fill pendant 1 mesure à la prochaine barre, puis revient au groove |
 | Tap tempo | bouton | tempo calculé à partir des derniers appuis |
 | Volume | dB | gain de la batterie (sur le retour, ou dans Hydrogen) |
 
 Sorties (voyants) : **Temps** (1–4), **Sur le 1** (clignote d'une autre couleur
-sur le premier temps), **En lecture**, **Fill en attente**.
+sur le premier temps), **En lecture**, **Fill en attente**, **Groove refusé**.
+
+### Choisir le morceau et le groove par leur vrai nom
+
+Un menu déroulant LV2 a une liste **fixée dans la description du plugin** : il
+ne peut pas montrer les patterns d'un morceau. Le **sélecteur de fichier** de
+PiPedal (celui du NAM de ToobAmp) liste, lui, le **contenu d'un dossier** au
+moment où on l'ouvre. On s'en sert :
+
+- **Morceau** : un champ fichier qui liste les `.h2song` d'un dossier.
+- **Groove** : quand un morceau est chargé, un dossier reçoit **un fichier vide
+  par groove compatible**, nommé avec le vrai nom et la longueur, par exemple
+  `03 - main 2-1 (1 mesure).groove`, `12 - refrain (2 mesures).groove`. Les
+  patterns incompatibles (pas en 4/4, longueur pas entière) **n'y sont pas** :
+  ils ne sont pas proposés.
+- Choisir un fichier : le plugin transmet le chemin au client par le fichier de
+  contrôle (§4), le client lit le numéro au début du nom, sélectionne le pattern
+  (`SELECT_AND_PLAY_PATTERN`) et règle le cycle.
+- **Secours** si le sélecteur ne convient pas : menu « Groove 1 à 16 » ; le vrai
+  nom et la longueur s'affichent sur l'écran OLED (et l'écran du Captain) ; un
+  numéro inexistant ou incompatible allume « Groove refusé » et le groove
+  précédent reste.
+
+À vérifier (plugin minimal, étape 3 du §12) :
+
+- **Dossiers acceptés** par le sélecteur de PiPedal. Probablement seulement les
+  siens (`/var/pipedal/audio_uploads/…`), qui appartiennent à `pipedal_d` : le
+  client (compte `pedalboard`) n'a pas le droit d'y écrire. Deux solutions :
+  le **plugin crée lui-même les fichiers** (il tourne dans PiPedal ; le client
+  lui passe la liste des grooves ; écriture hors de `run()`, par le worker LV2),
+  ou ajouter `pedalboard` au groupe `pipedal_d` (changement système : avec
+  accord).
+- **Mise à jour de la liste** quand on change de morceau (relue à l'ouverture ?).
+- Ce que PiPedal **enregistre dans le preset** pour un champ fichier (chemin
+  complet ?), et ce qui se passe si le fichier n'existe plus.
+- Liaison MIDI : impossible sur un choix de fichier, d'où les boutons
+  suivant / précédent.
 
 ## 6. Plugin « Bridge Looper »
 
@@ -457,8 +495,9 @@ l'oreille avant la suivante.
    court/long dans le client ; changement de page par CC 20.
 3. **Vérifier PiPedal** avec un plugin minimal : rendu des boutons momentanés
    (`lv2:trigger` ou équivalent), des voyants de sortie, liaison d'un CC à un
-   bouton, et comportement d'un plugin mono ou stéréo placé en début de chaîne
-   mono (§4 bis).
+   bouton, comportement d'un plugin mono ou stéréo placé en début de chaîne
+   mono (§4 bis), et **sélecteur de fichier** : dossiers acceptés, droits
+   d'écriture, mise à jour de la liste, ce qui est gardé dans le preset (§5).
 4. **Fichier de contrôle + Bridge Looper** (mono et stéréo, audio intégré :
    envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
    boucle, état) ; `pb_timebase` intégré au client.
