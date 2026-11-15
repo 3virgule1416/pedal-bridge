@@ -19,7 +19,7 @@ sur Raspberry Pi 5, par tampons circulaires partagés dans `/dev/shm`.
 | (b) | Return + `pb_inspect --tone/--loop` | fait, validé à l'oreille |
 | (c) | Client JACK + rééchantillonnage adaptatif, maître du temps | fait, validé à l'oreille |
 | (d) | Mesures (latence, dérive, xruns, CPU) | fait : 0 xrun et 0 coupure sur 10 min, voir plus bas |
-| (e) | Contrôle au pied : batterie, looper, écran | en conception : [docs/controle.md](docs/controle.md) |
+| (e) | Contrôle au pied : batterie, looper, écran | en conception : [docs/controle.md](docs/controle.md) ; comparaison avec les Boss RC : [docs/rc600.md](docs/rc600.md) |
 
 ## Structure
 
