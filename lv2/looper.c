@@ -25,15 +25,25 @@
 #include <string.h>
 
 /* Ports de contrôle, après les ports audio (1+1 en mono, 2+2 en stéréo).
- * Les 7 boutons sont dans l'ordre de enum pb_btn. */
+ * Rangés par section : PiPedal ouvre une nouvelle boîte dès que la section
+ * change d'un port au suivant. */
 enum {
-    C_LOOP = 0,
-    C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, C_PLAYSTOP,
-    C_TEMPO, C_GAIN,
-    O_STATE, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO, O_BRIDGE, O_AUDIO,
+    /* Boucle */
+    C_LOOP = 0, C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, O_STATE,
+    /* Transport */
+    C_PLAYSTOP, C_TEMPO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    /* Pont */
+    C_GAIN, O_LINK,
     C_NUM
 };
-#define FIRST_BTN C_RECORD
+
+/* Port de chaque bouton, dans l'ordre de enum pb_btn. */
+static const int BTN_PORT[PB_BTN_COUNT] = {
+    C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, C_PLAYSTOP
+};
+
+/* Sortie « Liaison ». */
+enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
 
 typedef struct {
     int stereo;
@@ -96,7 +106,7 @@ static void activate(LV2_Handle h)
     p->need_take = 1;
     pb_watch_init(&p->client, p->rate / 2u);
     for (int b = 0; b < PB_BTN_COUNT; b++)
-        p->last_btn[b] = p->c[FIRST_BTN + b] ? *p->c[FIRST_BTN + b] : 0.0f;
+        p->last_btn[b] = p->c[BTN_PORT[b]] ? *p->c[BTN_PORT[b]] : 0.0f;
 }
 
 static inline float port(const Looper *p, int k, float def) { return p->c[k] ? *p->c[k] : def; }
@@ -119,7 +129,7 @@ static void run(LV2_Handle h, uint32_t n)
     pb_ctl *ctl = p->ctl;
     int pressed[PB_BTN_COUNT];
     for (int b = 0; b < PB_BTN_COUNT; b++) {
-        const float v = port(p, FIRST_BTN + b, 0.0f);
+        const float v = port(p, BTN_PORT[b], 0.0f);
         pressed[b] = v > 0.5f && p->last_btn[b] <= 0.5f;   /* front montant */
         p->last_btn[b] = v;
     }
@@ -130,7 +140,7 @@ static void run(LV2_Handle h, uint32_t n)
     if (!ctl) {
         set_out(p, O_STATE, PB_LS_OFFLINE); set_out(p, O_BEAT, 0); set_out(p, O_PULSE, 0);
         set_out(p, O_ONE, 0); set_out(p, O_ROLLING, 0); set_out(p, O_TEMPO, 0);
-        set_out(p, O_BRIDGE, 0); set_out(p, O_AUDIO, (float)(sent && back));
+        set_out(p, O_LINK, sent && back ? LINK_OK : LINK_NONE);
         return;
     }
     if (p->need_take) {                          /* la dernière instance activée commande */
@@ -171,8 +181,7 @@ static void run(LV2_Handle h, uint32_t n)
     set_out(p, O_ONE, pulse && beat == 1 ? 1.0f : 0.0f);
     set_out(p, O_ROLLING, rolling ? 1.0f : 0.0f);
     set_out(p, O_TEMPO, tempo);
-    set_out(p, O_BRIDGE, alive ? 1.0f : 0.0f);
-    set_out(p, O_AUDIO, sent && back ? 1.0f : 0.0f);
+    set_out(p, O_LINK, sent && back ? LINK_OK : alive ? LINK_NO_AUDIO : LINK_NONE);
 }
 
 static void deactivate(LV2_Handle h)

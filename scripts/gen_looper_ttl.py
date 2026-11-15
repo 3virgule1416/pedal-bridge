@@ -85,34 +85,38 @@ def plugin(uri, name, label, stereo):
         i = 2
     B, T, P = "boucle_g", "transport_g", "pont_g"
 
+    # Ordre = enum de lv2/looper.c, rangé par section.
     p.append(ctl_in(i, "boucle", "Boucle", "Loop that the buttons act on (SooperLooper loop 1 to 8).",
                     "lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;\n"
                     "      lv2:scalePoint " + scale([(k, f"Boucle {k}") for k in range(1, 9)]), B)); i += 1
-    for sym, nm, cm, g in [
-        ("record", "Record", "Start recording at the next cycle; press again to stop at the end of the cycle.", B),
-        ("overdub", "Overdub", "Add a layer over the loop; press again to stop.", B),
-        ("undo", "Undo", "Remove the last layer.", B),
-        ("redo", "Redo", "Put back the last removed layer.", B),
-        ("mute", "Mute", "Silence the loop, or bring it back.", B),
-        ("effacer", "Effacer", "Clear the loop completely.", B),
-        ("play_stop", "Play / Stop", "Stop everything, or restart loops and drums together from bar 1.", T),
+    for sym, nm, cm in [
+        ("record", "Record", "Start recording at the next cycle; press again to stop at the end of the cycle."),
+        ("overdub", "Overdub", "Add a layer over the loop; press again to stop."),
+        ("undo", "Undo", "Remove the last layer."),
+        ("redo", "Redo", "Put back the last removed layer."),
+        ("mute", "Mute", "Silence the loop, or bring it back."),
+        ("effacer", "Effacer", "Clear the loop completely."),
     ]:
-        p.append(button(i, sym, nm, cm, g)); i += 1
-    p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
-                    "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
-    p.append(ctl_in(i, "gain", "Volume", "Level of the loops mixed into your signal.",
-                    "lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db", P)); i += 1
+        p.append(button(i, sym, nm, cm, B)); i += 1
     p.append(ctl_out(i, "etat", "État", "State of the selected loop.",
                      enum(0, len(STATES) - 1, list(enumerate(STATES))), B)); i += 1
+
+    p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart loops and drums together from bar 1.", T)); i += 1
+    p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
+                    "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
     p.append(ctl_out(i, "temps", "Temps", "Current beat in the bar (- when stopped).",
                      enum(0, 8, [(0, "-")] + [(k, str(k)) for k in range(1, 9)]), T)); i += 1
-    p.append(ctl_out(i, "pulsation", "Pulsation", "Flashes on every beat.", LED, T, "green")); i += 1
-    p.append(ctl_out(i, "sur_le_1", "Le 1", "Flashes on the first beat of each bar.", LED, T, "red")); i += 1
-    p.append(ctl_out(i, "lecture", "Lecture", "Lit while the transport is playing.", LED, T, "green")); i += 1
+    # Voyants : étroits, donc un nom très court (le détail est dans la bulle).
+    p.append(ctl_out(i, "pulsation", "♩", "Beat: flashes on every beat.", LED, T, "green")); i += 1
+    p.append(ctl_out(i, "sur_le_1", "1", "Flashes on the first beat of each bar.", LED, T, "red")); i += 1
+    p.append(ctl_out(i, "lecture", "▶", "Lit while the transport is playing.", LED, T, "green")); i += 1
     p.append(ctl_out(i, "tempo_actuel", "BPM", "Tempo currently used by the bridge.",
                      enum(0, 240, [(0, "-")] + [(k, str(k)) for k in range(40, 241)]), T)); i += 1
-    p.append(ctl_out(i, "pont", "Pont", "Lit when the pedal_bridge client is running.", LED, P, "green")); i += 1
-    p.append(ctl_out(i, "audio", "Audio", "Lit when audio flows to and from SooperLooper through the bridge.", LED, P, "green")); i += 1
+
+    p.append(ctl_in(i, "gain", "Volume", "Level of the loops mixed into your signal.",
+                    "lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db", P)); i += 1
+    p.append(ctl_out(i, "liaison", "Liaison", "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running.",
+                     enum(0, 2, [(0, "pont absent"), (1, "pas d'audio"), (2, "OK")]), P)); i += 1
 
     return f"""<{uri}>
     a lv2:Plugin, lv2:UtilityPlugin ;

@@ -25,11 +25,12 @@
 
 /* Ports de contrôle (voir lv2/looper.c), après les ports audio. */
 enum {
-    C_LOOP = 0, C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, C_PLAYSTOP,
-    C_TEMPO, C_GAIN,
-    O_STATE, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO, O_BRIDGE, O_AUDIO,
+    C_LOOP = 0, C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, O_STATE,
+    C_PLAYSTOP, C_TEMPO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    C_GAIN, O_LINK,
     C_NUM
 };
+static const int BTN_PORT[7] = { C_RECORD, C_OVERDUB, C_UNDO, C_REDO, C_MUTE, C_CLEAR, C_PLAYSTOP };
 
 typedef struct {
     const LV2_Descriptor *d;
@@ -204,7 +205,7 @@ int main(int argc, char **argv)
             cl_beat(&K);
             K.ctl->rolling = (k / 100) & 1; K.ctl->beat = 1 + (k / 25) % 4;
             K.ctl->beat_frac = (uint32_t)(k * 997) & 0xffff; K.ctl->bpm = 10000u + (uint32_t)(k % 7) * 100u;
-            A.c[C_RECORD + (k / 10) % 7] = (k % 10) < 5;
+            A.c[BTN_PORT[(k / 10) % 7]] = (k % 10) < 5;
             if (k == 1000) A.c[C_GAIN] = -6.0f;
             if (k == 1500) A.c[C_LOOP] = 4;
             if (k == 2000) A.c[C_TEMPO] = 90;
@@ -226,8 +227,8 @@ int main(int argc, char **argv)
     int ok = 1;
     for (int k = 0; k < 5; k++) { run1(&A); ok &= check_dry(&A); }
     T_CHECK(ok, "sans client : sortie identique à l'entrée");
-    T_CHECK(A.c[O_BRIDGE] == 0 && A.c[O_STATE] == PB_LS_OFFLINE && A.c[O_AUDIO] == 0,
-            "sans client : Pont 0, État « hors ligne », Audio 0");
+    T_CHECK(A.c[O_LINK] == 0 && A.c[O_STATE] == PB_LS_OFFLINE,
+            "sans client : Liaison « pont absent », État « hors ligne »");
     T_CHECK(K.ctl->looper_owner != 0 && K.ctl->looper_loop == 1 && K.ctl->looper_tempo == 12000,
             "le plugin publie : propriétaire, boucle 1, tempo 120");
 
@@ -251,8 +252,8 @@ int main(int argc, char **argv)
     }
     T_CHECK(sent_ok, "mono : l'entrée part vers le looper, la même à gauche et à droite");
     T_CHECK(ok, "mono : sortie = entrée + (G + D) / 2 du retour");
-    T_CHECK(A.c[O_BRIDGE] == 1 && A.c[O_AUDIO] == 1 && A.c[O_STATE] == PB_LS_PLAY,
-            "client présent : Pont 1, Audio 1, État « lecture »");
+    T_CHECK(A.c[O_LINK] == 2 && A.c[O_STATE] == PB_LS_PLAY,
+            "client présent : Liaison « OK », État « lecture »");
 
     /* En place : la copie envoyée est bien l'entrée SANS les boucles. */
     host_connect(&A, 1);
@@ -318,9 +319,9 @@ int main(int argc, char **argv)
 
     /* --- 6. Client disparu --- */
     int k_off = 0;
-    for (; k_off < 400 && A.c[O_BRIDGE] == 1; k_off++) run1(&A);
-    T_CHECK(A.c[O_BRIDGE] == 0 && A.c[O_STATE] == PB_LS_OFFLINE && A.c[O_ROLLING] == 0,
-            "client muet : Pont 0 après ~0,5 s, plus d'état");
+    for (; k_off < 400 && A.c[O_LINK] != 0; k_off++) run1(&A);
+    T_CHECK(A.c[O_LINK] == 0 && A.c[O_STATE] == PB_LS_OFFLINE && A.c[O_ROLLING] == 0 && k_off > 100,
+            "client muet : Liaison « pont absent » après ~0,5 s, plus d'état");
     run1(&A);
     T_CHECK(check_dry(&A), "client muet : signal intact");
 
@@ -367,7 +368,7 @@ int main(int argc, char **argv)
     dm->activate(C.h);
     press(&C, C_RECORD);
     run1(&C);
-    T_CHECK(check_dry(&C) && C.c[O_BRIDGE] == 0, "sans dossier : signal intact, Pont 0");
+    T_CHECK(check_dry(&C) && C.c[O_LINK] == 0, "sans dossier : signal intact, Liaison « pont absent »");
     dm->deactivate(C.h);
     dm->cleanup(C.h);
 
