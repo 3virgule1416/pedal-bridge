@@ -523,7 +523,10 @@ void transport_stop_and_pause()
 std::string stop_all()
 {
     sl_refresh();
-    if (!g_sl_ok) return "erreur : SooperLooper ne répond pas (lancé ? port OSC " + std::to_string(g_cfg.sl_port) + ")";
+    if (!g_sl_ok) {                        // batterie seule : arrêter le transport suffit
+        jack_transport_stop(g_cfg.client);
+        return "ok stop (SooperLooper absent : batterie seule)";
+    }
     if (sl_any_recording()) return "erreur : un enregistrement est en cours, termine-le d'abord";
     transport_stop_and_pause();
     usleep(30000);
@@ -596,6 +599,9 @@ void publish_states()
     }
     PB_STORE_RLX(&k->loop_count, g_sl_ok ? (uint32_t)g_loops.size() : 0u);
     PB_STORE_REL(&k->sl_ok, g_sl_ok ? 1u : 0u);
+    PB_STORE_RLX(&k->groove_cur, g_pattern >= 0 ? (uint32_t)g_pattern + 1u : 0u);
+    PB_STORE_RLX(&k->groove_count, (uint32_t)g_pat_sizes.size());
+    PB_STORE_REL(&k->h2_ok, h2_listening() ? 1u : 0u);
 }
 
 /* Ce que le client a déjà vu du plugin propriétaire. */
@@ -631,7 +637,105 @@ std::string looper_button(int b)
     return std::string("ok ") + names[b] + " (boucle " + std::to_string(g_sel + 1) + ")";
 }
 
-/* Lit les commandes de DLS Looper ; appelé ~200 fois par seconde. */
+/* ---------------------------------------------------- DLS Drum (pb_ctl) --- */
+
+uint64_t g_dr_owner = 0;
+uint32_t g_dr_btn[PB_DBTN_COUNT];
+uint32_t g_dr_groove = 0;
+uint32_t g_dr_tempo = 0, g_dr_tempo_seen = 0;   // centièmes de BPM
+double g_dr_tempo_since = 0;
+std::vector<double> g_taps;                     // instants des derniers appuis Tap
+
+/* Groove précédent / suivant (à partir du groove retenu). */
+std::string step_groove(int dir)
+{
+    const int count = g_pat_sizes.empty() ? 16 : (int)g_pat_sizes.size();
+    int n = g_pattern < 0 ? 1 : g_pattern + 1 + dir;          // à partir de 1
+    if (n < 1) n = 1;
+    if (n > count) n = count;
+    return set_groove(std::to_string(n));
+}
+
+/* Tap tempo : moyenne des intervalles des derniers appuis (3 à 5 appuis ;
+ * une pause de plus de 2 s recommence le compte). */
+std::string tap_tempo()
+{
+    const double t = now_s();
+    if (!g_taps.empty() && t - g_taps.back() > 2.0) g_taps.clear();
+    g_taps.push_back(t);
+    if (g_taps.size() > 5) g_taps.erase(g_taps.begin());
+    if (g_taps.size() < 3) return "ok tap " + std::to_string(g_taps.size());
+    const double period = (g_taps.back() - g_taps.front()) / (double)(g_taps.size() - 1);
+    const double bpm = 60.0 / period;
+    if (bpm < 40 || bpm > 240) return "erreur : tap hors limites (40 à 240 BPM)";
+    char b[32];
+    std::snprintf(b, sizeof b, "%.1f", bpm);
+    return set_tempo(b);
+}
+
+void drum_poll(pb_ctl *k)
+{
+    const uint64_t owner = PB_LOAD_ACQ(&k->drum_owner);
+    if (owner != g_dr_owner) {             // autre instance : se recaler sans rien exécuter
+        g_dr_owner = owner;
+        for (int b = 0; b < PB_DBTN_COUNT; b++) g_dr_btn[b] = PB_LOAD_ACQ(&k->drum_btn[b]);
+        g_dr_tempo = g_dr_tempo_seen = PB_LOAD_RLX(&k->drum_tempo);
+        g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
+        g_taps.clear();
+        say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
+        return;
+    }
+    if (!owner) return;
+    const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
+    if (groove != g_dr_groove) {
+        g_dr_groove = groove;
+        say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
+        g_refresh_now = true;
+    }
+    const uint32_t tempo = PB_LOAD_RLX(&k->drum_tempo);
+    if (tempo != g_dr_tempo_seen) { g_dr_tempo_seen = tempo; g_dr_tempo_since = now_s(); }
+    if (tempo != g_dr_tempo && now_s() - g_dr_tempo_since >= 0.3) {
+        g_dr_tempo = tempo;
+        char t[32];
+        std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
+        say("DLS Drum : tempo %s -> %s", t, set_tempo(t).c_str());
+    }
+    for (int b = 0; b < PB_DBTN_COUNT; b++) {
+        const uint32_t c = PB_LOAD_ACQ(&k->drum_btn[b]);
+        uint32_t d = c - g_dr_btn[b];
+        g_dr_btn[b] = c;
+        if (d > 4) d = 4;                  // garde-fou
+        for (uint32_t j = 0; j < d; j++) {
+            std::string r;
+            switch (b) {
+            case PB_DBTN_PLAYSTOP: r = transport_rolling() ? stop_all() : play_from_start(); break;
+            case PB_DBTN_PREV:     r = step_groove(-1); break;
+            case PB_DBTN_NEXT:     r = step_groove(+1); break;
+            case PB_DBTN_TAP:      r = tap_tempo(); break;
+            }
+            say("DLS Drum : %s", r.c_str());
+            g_refresh_now = true;
+        }
+    }
+}
+
+/* Morceau courant d'Hydrogen au démarrage (lastSongFilename de son fichier
+ * de réglages) : taille de ses patterns, pour régler le cycle de SooperLooper
+ * dès le premier changement de groove. */
+void read_h2_current_song()
+{
+    const char *home = std::getenv("HOME");
+    if (!home) return;
+    std::ifstream f(std::string(home) + "/.hydrogen/hydrogen.conf");
+    std::string conf((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    const std::string tag = "<lastSongFilename>";
+    const size_t a = conf.find(tag), b = conf.find("</lastSongFilename>");
+    if (a == std::string::npos || b == std::string::npos || b < a) return;
+    const std::string path = conf.substr(a + tag.size(), b - a - tag.size());
+    if (file_size(path) > 0) read_pattern_sizes(path);
+}
+
+/* Lit les commandes de DLS Looper et DLS Drum ; appelé ~200 fois par seconde. */
 void looper_poll()
 {
     pb_ctl *k = g_ctl.load(std::memory_order_acquire);
@@ -642,9 +746,10 @@ void looper_poll()
         if (pb_ctl_open(&k, 0, err, sizeof err) != 0) return;   // pas encore créé par un plugin
         g_ctl_me = ((uint64_t)getpid() << 32) | 1u;
         g_ctl.store(k, std::memory_order_release);
-        say("fichier de contrôle ouvert (DLS Looper)");
+        say("fichier de contrôle ouvert (DLS Looper / DLS Drum)");
         publish_states();
     }
+    drum_poll(k);
     const uint64_t owner = PB_LOAD_ACQ(&k->looper_owner);
     if (owner != g_lp_owner) {             // autre instance : se recaler sans rien exécuter
         g_lp_owner = owner;
@@ -845,6 +950,7 @@ std::string handle(const std::string &line)
 void thread_main()
 {
     double next_poll = 0;
+    read_h2_current_song();
     while (g_run.load()) {
         fd_set rs;
         FD_ZERO(&rs);

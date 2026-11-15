@@ -45,10 +45,18 @@ for uri in http://pedal-bridge.local/plugins/looper-mono http://pedal-bridge.loc
     echo "  ÉCHEC $uri"; echo "$out" | head -40; FAIL=1
   fi
 done
+for uri in http://pedal-bridge.local/plugins/drum-mono http://pedal-bridge.local/plugins/drum-stereo; do
+  out="$(LV2_PATH="$B/lv2:/usr/lib/lv2" lv2info "$uri" 2>&1)" || true
+  if echo "$out" | grep -q "Name:.*Davis Loop Station Drum" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 4 ]      && echo "$out" | grep -q '"Groove 16"' && echo "$out" | grep -q '"no bridge"'; then
+    echo "  ok    $uri (4 boutons, grooves, liaison)"
+  else
+    echo "  ÉCHEC $uri"; echo "$out" | head -40; FAIL=1
+  fi
+done
 
 echo
 echo "=== 3. Temps réel : appels système pendant run()"
-for t in test_plugin test_return test_looper; do
+for t in test_plugin test_return test_looper test_drum; do
   LOG="$(mktemp /tmp/pb-strace-XXXXXX)"
   if strace -f -qq -o "$LOG" "$B/$t" "$SO" "$BUNDLE/" --rt-loop > /dev/null; then
     # Lignes entre les deux marqueurs getppid().

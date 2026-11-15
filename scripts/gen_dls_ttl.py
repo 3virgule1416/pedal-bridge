@@ -1,6 +1,7 @@
-# Génère lv2/ttl/looper.ttl (plugin DLS Looper, mono et stéréo).
-#   python scripts/gen_looper_ttl.py
-# L'ordre des ports doit suivre l'enum de lv2/looper.c.
+# Génère lv2/ttl/looper.ttl et lv2/ttl/drum.ttl (DLS Looper et DLS Drum,
+# mono et stéréo).
+#   python scripts/gen_dls_ttl.py
+# L'ordre des ports doit suivre l'enum de lv2/looper.c et de lv2/drum.c.
 # Sections (pg:group) et couleurs des voyants (pipedal_ui:ledColor) comme les
 # plugins TooB : PiPedal affiche chaque section dans sa propre boîte.
 import os
@@ -9,7 +10,7 @@ HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lv2", "tt
 GROUPS = [("boucle_g", "Loop"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
 G = "http://pedal-bridge.local/plugins/looper#"
 
-HEAD = """@prefix doap:  <http://usefulinc.com/ns/doap#> .
+PREFIXES = """@prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix epp:   <http://lv2plug.in/ns/ext/port-props#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
@@ -20,12 +21,16 @@ HEAD = """@prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 
-""" + "".join(f"""<{G}{sym}>
+"""
+
+
+def head(groups):
+    return PREFIXES + "".join(f"""<{G}{sym}>
     a pg:ControlGroup ;
     lv2:name "{name}" ;
     lv2:symbol "{sym}" .
 
-""" for sym, name in GROUPS)
+""" for sym, name in groups)
 
 DESC = '"""' + """Live looper for Davis Loop Station, driven from PiPedal and your MIDI pedals.
 
@@ -71,18 +76,37 @@ LED = "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:togg
 STATES = ["offline", "empty", "waiting", "recording", "overdub", "playing", "muted", "paused", "other"]
 
 
-def plugin(uri, name, label, stereo):
+def audio_ports(stereo):
     p = []
     if stereo:
         p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "In L" ]',
               '    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "In R" ]',
               '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Out L" ]',
               '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Out R" ]']
-        i = 4
     else:
         p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "In" ]',
               '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Out" ]']
-        i = 2
+    return p
+
+
+def plugin_head(uri, name, label, desc):
+    return f"""<{uri}>
+    a lv2:Plugin, lv2:UtilityPlugin ;
+    doap:name "Davis Loop Station {name}" ;
+    mod:brand "DLS" ;
+    mod:label "{label}" ;
+    doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
+    rdfs:comment {desc} ;
+    doap:license <http://opensource.org/licenses/isc> ;
+    lv2:minorVersion 1 ; lv2:microVersion 0 ;
+    lv2:optionalFeature lv2:hardRTCapable ;
+    lv2:port
+"""
+
+
+def plugin(uri, name, label, stereo):
+    p = audio_ports(stereo)
+    i = 4 if stereo else 2
     B, T, P = "boucle_g", "transport_g", "pont_g"
 
     # Ordre = enum de lv2/looper.c, rangé par section.
@@ -118,21 +142,58 @@ def plugin(uri, name, label, stereo):
     p.append(ctl_out(i, "liaison", "Link", "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running.",
                      enum(0, 2, [(0, "no bridge"), (1, "no audio"), (2, "OK")]), P)); i += 1
 
-    return f"""<{uri}>
-    a lv2:Plugin, lv2:UtilityPlugin ;
-    doap:name "Davis Loop Station {name}" ;
-    mod:brand "DLS" ;
-    mod:label "{label}" ;
-    doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
-    rdfs:comment {DESC} ;
-    doap:license <http://opensource.org/licenses/isc> ;
-    lv2:minorVersion 1 ; lv2:microVersion 0 ;
-    lv2:optionalFeature lv2:hardRTCapable ;
-    lv2:port
-""" + " ,\n".join(p) + " .\n\n"
+    return plugin_head(uri, name, label, DESC) + " ,\n".join(p) + " .\n\n"
 
 
-ttl = HEAD + plugin("http://pedal-bridge.local/plugins/looper-mono", "Looper (Mono)", "DLS Looper", False) \
+ttl = head(GROUPS) + plugin("http://pedal-bridge.local/plugins/looper-mono", "Looper (Mono)", "DLS Looper", False) \
            + plugin("http://pedal-bridge.local/plugins/looper-stereo", "Looper (Stéréo)", "DLS Looper St.", True)
 open(os.path.join(HERE, "looper.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
+
+# ------------------------------------------------------------- DLS Drum ---
+G = "http://pedal-bridge.local/plugins/drum#"
+DRUM_GROUPS = [("drum_g", "Drums"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
+
+DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, played in time with your loops and driven from PiPedal and your MIDI pedals.
+
+The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
+
+Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps.
+
+Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" + '"""'
+
+
+def drum_plugin(uri, name, label, stereo):
+    p = audio_ports(stereo)
+    i = 4 if stereo else 2
+    D, T, P = "drum_g", "transport_g", "pont_g"
+    # Ordre = enum de lv2/drum.c, rangé par section.
+    p.append(ctl_in(i, "groove", "Groove", "Hydrogen pattern to play (1 = first pattern of the song), from the next bar.",
+                    enum(1, 16, [(k, f"Groove {k}") for k in range(1, 17)]), D)); i += 1
+    p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
+    p.append(button(i, "suivant", "Next", "Next groove, from the next bar.", D)); i += 1
+    p.append(ctl_out(i, "groove_joue", "Playing", "Groove being played (- when unknown).",
+                     enum(0, 32, [(0, "-")] + [(k, str(k)) for k in range(1, 33)]), D)); i += 1
+
+    p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", T)); i += 1
+    p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
+                    "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
+    p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", T)); i += 1
+    p.append(ctl_out(i, "temps", "Beat", "Current beat in the bar (- when stopped).",
+                     enum(0, 8, [(0, "-")] + [(k, str(k)) for k in range(1, 9)]), T)); i += 1
+    p.append(ctl_out(i, "pulsation", "♩", "Beat: flashes on every beat.", LED, T, "green")); i += 1
+    p.append(ctl_out(i, "sur_le_1", "1", "Flashes on the first beat of each bar.", LED, T, "red")); i += 1
+    p.append(ctl_out(i, "lecture", "▶", "Lit while the transport is playing.", LED, T, "green")); i += 1
+    p.append(ctl_out(i, "tempo_actuel", "BPM", "Tempo currently used by the bridge.",
+                     enum(0, 240, [(0, "-")] + [(k, str(k)) for k in range(40, 241)]), T)); i += 1
+
+    p.append(ctl_in(i, "gain", "Volume", "Level of the drums mixed into your signal.",
+                    "lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db", P)); i += 1
+    p.append(ctl_out(i, "liaison", "Link", "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running.",
+                     enum(0, 2, [(0, "no bridge"), (1, "no audio"), (2, "OK")]), P)); i += 1
+    return plugin_head(uri, name, label, DRUM_DESC) + " ,\n".join(p) + " .\n\n"
+
+
+ttl = head(DRUM_GROUPS) + drum_plugin("http://pedal-bridge.local/plugins/drum-mono", "Drum (Mono)", "DLS Drum", False) \
+                        + drum_plugin("http://pedal-bridge.local/plugins/drum-stereo", "Drum (Stéréo)", "DLS Drum St.", True)
+open(os.path.join(HERE, "drum.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
 print("ok")

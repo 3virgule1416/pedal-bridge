@@ -9,6 +9,10 @@
  *   pb_ctl press NOM            appui : record overdub undo redo mute effacer play
  *   pb_ctl loop N               boucle choisie (1-8)
  *   pb_ctl tempo BPM            réglage Tempo
+ *   pb_ctl drum-take            devient le « DLS Drum » propriétaire
+ *   pb_ctl drum-press NOM       appui : play prev next tap
+ *   pb_ctl drum-groove N        menu Groove (1-16)
+ *   pb_ctl drum-tempo BPM       réglage Tempo de DLS Drum
  *
  * Dossier : $PB_SHM_DIR (ou /dev/shm). Avec un vrai DLS Looper chargé, press
  * incrémente le compteur à sa place (pour le dépannage seulement).
@@ -27,10 +31,12 @@ static const char *STATES[PB_LS_COUNT] = {
     "hors-ligne", "vide", "attente", "enregistre", "overdub", "lecture", "muet", "pause", "autre"
 };
 static const char *BTN[PB_BTN_COUNT] = { "record", "overdub", "undo", "redo", "mute", "effacer", "play" };
+static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap" };
 
 static int usage(void)
 {
-    fprintf(stderr, "usage : pb_ctl show | create | take | press NOM | loop N | tempo BPM\n");
+    fprintf(stderr, "usage : pb_ctl show | create | take | press NOM | loop N | tempo BPM\n"
+                    "        pb_ctl drum-take | drum-press NOM | drum-groove N | drum-tempo BPM\n");
     return 2;
 }
 
@@ -61,7 +67,28 @@ int main(int argc, char **argv)
             uint32_t s = PB_LOAD_RLX(&c->loop_state[i]);
             printf(" b%u=%s", i + 1, s < PB_LS_COUNT ? STATES[s] : "?");
         }
-        printf(" proprietaire=%s\n", PB_LOAD_RLX(&c->looper_owner) ? "oui" : "non");
+        printf(" proprietaire=%s h2=%u groove=%u/%u drum=%s\n", PB_LOAD_RLX(&c->looper_owner) ? "oui" : "non",
+               PB_LOAD_RLX(&c->h2_ok), PB_LOAD_RLX(&c->groove_cur), PB_LOAD_RLX(&c->groove_count),
+               PB_LOAD_RLX(&c->drum_owner) ? "oui" : "non");
+    } else if (!strcmp(cmd, "drum-take")) {
+        PB_STORE_REL(&c->drum_owner, pb_new_owner_id());
+        printf("ok propriétaire drum\n");
+    } else if (!strcmp(cmd, "drum-press") && argc > 2) {
+        int b = -1;
+        for (int i = 0; i < PB_DBTN_COUNT; i++) if (!strcmp(argv[2], DBTN[i])) b = i;
+        if (b < 0) { pb_ctl_close(c); return usage(); }
+        PB_STORE_REL(&c->drum_btn[b], PB_LOAD_RLX(&c->drum_btn[b]) + 1u);
+        printf("ok drum %s\n", DBTN[b]);
+    } else if (!strcmp(cmd, "drum-groove") && argc > 2) {
+        const int v = atoi(argv[2]);
+        if (v < 1 || v > 16) { pb_ctl_close(c); return usage(); }
+        PB_STORE_RLX(&c->drum_groove, (uint32_t)v);
+        printf("ok groove %d\n", v);
+    } else if (!strcmp(cmd, "drum-tempo") && argc > 2) {
+        const double v = atof(argv[2]);
+        if (v < 40 || v > 240) { pb_ctl_close(c); return usage(); }
+        PB_STORE_RLX(&c->drum_tempo, (uint32_t)lround(v * 100));
+        printf("ok tempo drum %.2f\n", v);
     } else if (!strcmp(cmd, "press") && argc > 2) {
         int b = -1;
         for (int i = 0; i < PB_BTN_COUNT; i++) if (!strcmp(argv[2], BTN[i])) b = i;

@@ -20,3 +20,13 @@
     a lv2:Plugin ;
     lv2:binary <pedal_bridge.so> ;
     rdfs:seeAlso <looper.ttl> .
+
+<http://pedal-bridge.local/plugins/drum-mono>
+    a lv2:Plugin ;
+    lv2:binary <pedal_bridge.so> ;
+    rdfs:seeAlso <drum.ttl> .
+
+<http://pedal-bridge.local/plugins/drum-stereo>
+    a lv2:Plugin ;
+    lv2:binary <pedal_bridge.so> ;
+    rdfs:seeAlso <drum.ttl> .

@@ -67,6 +67,8 @@ int pb_ctl_open(pb_ctl **out, int create, char *err, size_t errlen)
         c->creator_uid = (uint32_t)getuid();
         c->looper_loop = 1;
         c->looper_tempo = 12000;
+        c->drum_groove = 1;
+        c->drum_tempo = 12000;
         PB_STORE_REL(&c->magic, PB_CTL_MAGIC);
     } else {
         for (int i = 0; i < 40 && PB_LOAD_ACQ(&c->magic) != PB_CTL_MAGIC; i++) sleep_ms(5);

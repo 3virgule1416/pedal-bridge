@@ -121,6 +121,22 @@ check "Play : repart de la mesure 1, boucle en lecture" wait_show "lecture=1 mes
 sleep 0.5
 "$B/pb_ctl" press effacer > /dev/null
 check "Effacer : boucle 1 vide" wait_show "b1=vide" 5
+echo
+echo "=== DLS Drum (sans Hydrogen sur le banc)"
+"$B/pb_ctl" drum-take > /dev/null
+sleep 0.3
+for _ in 1 2 3 4; do "$B/pb_ctl" drum-press tap > /dev/null; sleep 0.6; done
+check "Tap ×4 toutes les 0,6 s : tempo 100" wait_show "bpm=\(99\.[5-9]\|100\.[0-4]\)" 3
+"$B/pb_ctl" drum-press play > /dev/null
+check "Play/Stop de Drum pendant la lecture : arrêt" wait_show "lecture=0" 5
+"$B/pb_ctl" drum-press play > /dev/null
+check "Play/Stop de Drum : repart de la mesure 1" wait_show "lecture=1 mesure=1" 5
+"$B/pb_ctl" drum-tempo 110 > /dev/null
+check "réglage Tempo de Drum 110" wait_show "bpm=110.00" 3
+"$B/pb_ctl" drum-groove 3 > /dev/null
+sleep 0.3
+check "groove sans Hydrogen : refusé proprement (client toujours là)" wait_show "pont=1" 2
+
 "$B/pb_ctl" take > /dev/null
 sleep 0.3
 "$B/pb_ctl" press record > /dev/null
