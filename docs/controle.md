@@ -165,6 +165,52 @@ fois), `trigger`, `rate`/`stretch` (« t. stretch » : la boucle suit le tempo ?
 `sync`/`play sync`, la quantification du mute (`mute_quantized`), et les pistes
 synchronisées entre elles (« sync to loop »).
 
+## 6 bis. Jouer avec ou sans batterie ; mode tempo et mode libre
+
+### Batterie audible ou non : la présence du plugin décide
+
+- Le **tempo et la grille des mesures** viennent de `pb_timebase`, pas
+  d'Hydrogen : SooperLooper se cale (départs, arrêts, longueurs) **sans aucune
+  batterie**.
+- La batterie n'arrive dans PiPedal **que par Bridge Batterie**. Preset avec
+  **seulement Bridge Looper** : on n'entend pas la batterie (le pont n'écrit
+  même rien quand aucun plugin n'écoute). On **ajoute Bridge Batterie** (ou on
+  passe à un preset qui l'a) : la batterie apparaît, déjà calée.
+- Hydrogen **reste lancé**, silencieux, pour être prêt (≈ 27 % d'un cœur).
+- Repères sans batterie : DEL du Captain qui clignotent au tempo (autre couleur
+  sur le 1), écran OLED (mesure, temps). En option, un **clic** : métronome
+  d'Hydrogen par OSC (`TOGGLE_METRONOME`), comme le genre « GUIDE » du RC-600.
+- C'est l'usage « rythme éteint » des Boss RC : la mémoire garde un tempo et une
+  mesure qui servent au calage des pistes.
+
+### Mode tempo (mode principal)
+
+- Le tempo est choisi **avant** d'enregistrer : réglage BPM (plugin Looper ou
+  Batterie, commande `tempo`), ou **tap tempo** au pied.
+- Mesure : 4/4 aujourd'hui ; 3/4, 6/8 à faire (`pb_timebase` à N temps).
+- Tout est quantifié : départ et fin d'enregistrement sur la grille, longueur =
+  nombre entier de cycles. La batterie ajoutée plus tard tombe juste.
+
+### Mode libre (option)
+
+- **Pas de tempo au départ** : la **1re boucle** enregistrée fixe la longueur.
+  Elle commence et finit **exactement aux appuis** (rien à quantifier).
+- Le client en déduit le tempo : `tempo = mesures × temps par mesure × 60 / durée`,
+  le donne à `pb_timebase`, place la grille pour que le **début de la boucle
+  soit le 1**, puis les boucles suivantes se calent normalement (mode tempo).
+- **Nombre de mesures choisi d'avance** (1, 2, 4, 8 ; réglage MEASURE du RC-600) :
+  sinon le tempo peut être faux du simple au double, ou ne pas tomber sur la
+  phrase (phrase de 3 mesures comptée comme 4). Option : choix automatique du
+  nombre qui donne un tempo entre 70 et 140 BPM, en signalant l'hypothèse.
+- **Limites** :
+  - la précision dépend des appuis : un départ en retard place le « 1 » de la
+    future batterie à l'appui, pas sur le premier temps joué ; un départ ou une
+    fin imprécis fait un petit accroc à chaque tour (vrai pour tout looper
+    libre) ;
+  - à faire au pied (Captain, double switch), pas par VNC (50 à 150 ms de délai).
+- Usage conseillé : boucler seul. Pour ajouter une batterie ensuite, préférer le
+  mode tempo (BPM d'avance ou tap tempo).
+
 ## 7. MIDI Captain et modes
 
 **Trois modes** : **PiPedal** (presets, effets, snapshots), **Batterie**,
