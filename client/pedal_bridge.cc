@@ -19,6 +19,7 @@
 #include <zita-resampler/vresampler.h>
 
 #include "pb_shm.h"
+#include "controle.h"
 
 #include <atomic>
 #include <cerrno>
@@ -553,7 +554,12 @@ void usage()
         "                   à JACK en plus du pont (défaut : lue dans /var/pipedal/AudioConfig.json,\n"
         "                   relue toutes les secondes)\n"
         "  --sl-osc PORT    tient à jour la compensation de latence de SooperLooper (OSC,\n"
-        "                   ex. 9951) : il ne lit pas la latence des ports JACK\n"
+        "                   ex. 9951) : il ne lit pas la latence des ports JACK. Active aussi\n"
+        "                   les commandes play/stop/save/load (port --ctl-port)\n"
+        "  --ctl-port PORT  port UDP des commandes (défaut 9982)\n"
+        "  --dir DOSSIER    chansons et fichiers de travail (défaut ~/pedal-bridge)\n"
+        "  --cmd \"TEXTE\"    envoie une commande au pedal_bridge déjà lancé et affiche la\n"
+        "                   réponse : play, stop, save NOM, load NOM, list, status\n"
         "Ports : sendN_L/R (sorties, son de PiPedal), returnN_L/R (entrées, vers PiPedal)\n");
 }
 
@@ -565,6 +571,9 @@ int main(int argc, char **argv)
     std::string name = "pedal_bridge", server;
     double stats_every = 5;
     bool loopback = false;
+    int ctl_port = 9982;
+    std::string base_dir = std::string(std::getenv("HOME") ? std::getenv("HOME") : "/tmp") + "/pedal-bridge";
+    std::string cmd;
 
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
@@ -588,8 +597,12 @@ int main(int argc, char **argv)
         else if (a == "--loopback") loopback = true;
         else if (a == "--pipedal-latency-ms") { g_pp_lat_ms = std::atof(next()); g_pp_lat_fixed = true; }
         else if (a == "--sl-osc") g_sl_port = std::atoi(next());
+        else if (a == "--ctl-port") ctl_port = std::atoi(next());
+        else if (a == "--dir") base_dir = next();
+        else if (a == "--cmd") cmd = next();
         else { usage(); return 2; }
     }
+    if (!cmd.empty()) return ctl_send_command(ctl_port, cmd, 30.0);   // mode commande
     if (links.empty()) links.push_back(1);
 
     if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0)
@@ -651,6 +664,24 @@ int main(int argc, char **argv)
             }
     }
 
+    bool ctl_on = false;
+    if (g_sl_port) {                       // play/stop/save/load : voir controle.h
+        CtlConfig cc;
+        cc.client = g_client;
+        cc.sl_port = g_sl_port;
+        cc.cmd_port = ctl_port;
+        cc.base_dir = base_dir;
+        cc.comp_frames = []() -> uint32_t {   // D = latence envoi + retour du 1er lien
+            uint32_t in = 0, out = 0;
+            for (Path *p : g_paths) {
+                if (p->link_no != g_paths.front()->link_no || !p->enabled.load()) continue;
+                (p->dir == PB_DIR_SEND ? in : out) = p->latency.load();
+            }
+            return in && out ? in + out : 0;
+        };
+        ctl_on = ctl_start(cc);
+    }
+
     const double t0 = now_s();
     double next_stats = t0 + stats_every;
     double next_cfg = t0 + 1.0;
@@ -676,6 +707,7 @@ int main(int argc, char **argv)
         sleep_s(0.1);
     }
 
+    if (ctl_on) ctl_stop();
     if (g_shutdown.load()) std::fprintf(stderr, "Le serveur JACK s'est arrêté.\n");
     else { print_stats(now_s() - t0); jack_deactivate(g_client); }
     for (Path *p : g_paths) {

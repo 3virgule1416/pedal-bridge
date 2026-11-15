@@ -9,9 +9,12 @@
 #   bash scripts/session.sh status    état, branchements, dernières stats du pont
 #   bash scripts/session.sh connect   refait les branchements JACK
 #   bash scripts/session.sh tempo 115 change le tempo (Hydrogen et SooperLooper suivent)
-#   bash scripts/session.sh play      batterie + boucles repartent ensemble, d'où elles étaient
-#   bash scripts/session.sh pause     batterie + boucles s'arrêtent ensemble
-#   bash scripts/session.sh debut     repartir de la mesure 1 (boucles 22,7 ms en retard : à corriger)
+#   bash scripts/session.sh play      batterie + boucles repartent ensemble de la mesure 1
+#   bash scripts/session.sh pause     batterie + boucles s'arrêtent (vrai stop)
+#   bash scripts/session.sh save NOM  sauvegarde la chanson (boucles + tempo)
+#   bash scripts/session.sh load NOM  recharge une chanson, prête à jouer de la mesure 1
+#   bash scripts/session.sh list      chansons sauvegardées
+#   bash scripts/session.sh boucles   état des boucles (normalisées ou non)
 #   bash scripts/session.sh stop      arrête le pont, Hydrogen et SooperLooper
 #   bash scripts/session.sh stop-all  arrête aussi JACK, pb_timebase, l'écran virtuel et VNC
 #
@@ -93,29 +96,6 @@ for i in range(8):
     c.send_message(f"/sl/{i}/set", ["round", 1])
 PY
   echo "  SooperLooper : synchro Jack/Host, quantize cycle, round, 8 croches/cycle"
-}
-
-# Envoie une commande SooperLooper (hit) à chaque boucle qui contient quelque
-# chose (les boucles vides sont laissées tranquilles).
-sl_all() {
-  "$HOME/bridge-env/bin/python" - "$1" <<'PY'
-import sys, time
-from pythonosc.udp_client import SimpleUDPClient
-from pythonosc.dispatcher import Dispatcher
-from pythonosc.osc_server import BlockingOSCUDPServer
-cmd = sys.argv[1]
-c = SimpleUDPClient("127.0.0.1", 9951)
-lens = {}
-d = Dispatcher(); d.set_default_handler(lambda a, *v: lens.__setitem__(v[0], v[2]))
-srv = BlockingOSCUDPServer(("127.0.0.1", 0), d); srv.timeout = 0.05
-port = srv.server_address[1]
-for i in range(8):
-    c.send_message(f"/sl/{i}/get", ["loop_len", f"osc.udp://127.0.0.1:{port}/", "/l"])
-t = time.time()
-while len(lens) < 8 and time.time() - t < 0.5: srv.handle_request()
-for i, n in sorted(lens.items()):
-    if n > 0: c.send_message(f"/sl/{i}/hit", [cmd])
-PY
 }
 
 do_start() {
@@ -217,22 +197,14 @@ case "${1:-}" in
   tempo)    # tempo de pb_timebase : Hydrogen et SooperLooper le suivent par JACK
     if [ -z "${2:-}" ]; then "$B/pb_timebase" --get; exit; fi
     "$B/pb_timebase" --set "$2" ;;
-  debut)    # tout repart de la mesure 1 : batterie + boucles relancées par trigger.
-    # ATTENTION : mesuré avec pb_lag, une boucle relancée par trigger perd la
-    # compensation de latence de SooperLooper (22,7 ms de retard). À corriger.
-    "$B/pb_transport" stop
-    "$B/pb_transport" zero
-    sl_all trigger        # boucles armées : elles partent au début du transport
-    sleep 0.05
-    "$B/pb_transport" start
-    echo "Lecture depuis la mesure 1 (batterie et boucles) — boucles 22,7 ms en retard" ;;
-  play|reprise)   # batterie + boucles repartent d'où elles étaient, ensemble
-    "$B/pb_transport" resume 9951
-    echo "Reprise (batterie et boucles)" ;;
-  pause)    # batterie + boucles s'arrêtent ensemble, là où elles sont
-    "$B/pb_transport" pause 9951
-    echo "Pause (batterie et boucles)" ;;
+  # Commandes musicales : exécutées par le client pedal_bridge (voir client/controle.h)
+  play)  "$B/pedal_bridge" --cmd play ;;            # tout repart de la mesure 1, ensemble
+  pause) "$B/pedal_bridge" --cmd stop ;;            # tout s'arrête ; nouvelles boucles normalisées
+  save)  "$B/pedal_bridge" --cmd "save ${2:-}" ;;   # sauvegarde la chanson
+  load)  "$B/pedal_bridge" --cmd "load ${2:-}" ;;   # recharge une chanson
+  list)  "$B/pedal_bridge" --cmd list ;;
+  boucles) "$B/pedal_bridge" --cmd status ;;
   stop)     do_stop ;;
   stop-all) do_stop; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
-  *) sed -n '2,30p' "$0"; exit 2 ;;
+  *) sed -n '2,31p' "$0"; exit 2 ;;
 esac

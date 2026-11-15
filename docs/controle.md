@@ -222,33 +222,42 @@ lecture**, et `trigger` oublie ce décalage. Si l'**audio de la boucle est
 décalé lui-même** du même nombre de trames, `trigger` tombe juste, et une boucle
 rechargée d'un fichier aussi.
 
-### Fonctionnement prévu
+### Réalisé dans le client (`client/controle.cc`)
 
-- **Stop** : transport arrêté + boucles en pause. Puis, pendant l'arrêt, le
-  client **normalise** chaque boucle qui n'est pas déjà normalisée :
-  `save_loop` (WAV float), rotation de l'audio de D = entrée + sortie (1088
-  trames aujourd'hui) vers l'avant, `load_loop`. Une boucle normalisée est
-  marquée (le client garde la liste).
-- **Play** : transport à la trame 0, `trigger` de toutes les boucles (armées, elles
-  partent sur la première barre), départ du transport. Exact à la trame.
-- **Sauvegarder une chanson** : dossier `~/pedal-bridge/chansons/<nom>/` avec les
-  boucles normalisées (WAV), le tempo, le morceau Hydrogen (`.h2song`), les
-  réglages utiles des boucles, et D au moment de l'enregistrement.
-- **Recharger une chanson** : `load_loop` de chaque boucle, tempo, morceau
-  Hydrogen, transport à la mesure 1. Puis Play.
-- Si la latence change entre la sauvegarde et le rechargement (autre période
-  JACK ou autres réglages de PiPedal), le client refait la rotation de la
-  différence.
+Commandes texte par UDP (`pedal_bridge --cmd "..."`, ou `session.sh play`,
+`pause`, `save NOM`, `load NOM`, `list`, `boucles`) :
 
-### À vérifier
+- **stop** : transport arrêté + boucles en pause, puis **normalisation** des
+  boucles qui en ont besoin : `save_loop` (WAV float, ~20 ms pour 4 s),
+  rotation de l'audio de D = latence envoi + retour (1088 trames aujourd'hui),
+  `load_loop`. Refusé pendant un enregistrement en cours.
+- **play** : stop (normalise au besoin), transport à la trame 0, `trigger` de
+  toutes les boucles (armées, elles partent sur la première barre), départ du
+  transport. Toujours depuis la mesure 1.
+- **save NOM** : `~/pedal-bridge/chansons/NOM/` : `boucleN.wav` (normalisées),
+  `chanson.txt` (tempo, D, fréquence, longueurs).
+- **load NOM** : `load_loop` de chaque boucle (les autres sont vidées), tempo
+  envoyé à `pb_timebase`, transport à la mesure 1. Si D a changé depuis la
+  sauvegarde, l'audio est tourné de la différence.
+- Seul un **enregistrement neuf** (état record) rend une boucle « à normaliser » :
+  un overdub sur une boucle normalisée tombe juste (mesuré : pic unique à
+  −22,67 ms après overdub de la même batterie).
+- **État gardé** dans `~/pedal-bridge/travail/etat.txt` (index, longueur, D) :
+  après un redémarrage du pont, les boucles déjà normalisées sont reconnues
+  (même longueur) et ne sont pas décalées deux fois.
 
-- **Overdub** sur une boucle normalisée qui a été relancée par `trigger` : la
-  nouvelle couche est-elle placée au bon endroit ? (SooperLooper applique sa
-  compensation à l'overdub par rapport à la position de lecture.)
-- Durée de `save_loop` + `load_loop` pour de longues boucles (le Stop doit rester
-  rapide ; la normalisation peut se faire en arrière-plan pendant l'arrêt).
-- Commandes OSC d'Hydrogen pour sauver/charger un morceau (sinon par son
-  interface).
+Mesures (`pb_lag`, batterie branchée directement dans la boucle 2) : −22,67 ms
+en lecture continue, après 3 × stop + play, après save + load + play, et après
+un redémarrage du pont. Partout identique.
+
+### Limites connues
+
+- Le **morceau Hydrogen** n'est pas sauvegardé par `save` : à sauver dans
+  Hydrogen (OSC d'Hydrogen à activer plus tard, §10).
+- Un **undo** qui ramène une boucle à son contenu d'avant la normalisation
+  (annuler le chargement) n'est pas détecté.
+- Une boucle réenregistrée **pendant que le pont est arrêté**, avec exactement
+  la même longueur, serait prise pour normalisée.
 
 ## 9. Sections (enchaîner les boucles)
 

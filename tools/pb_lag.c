@@ -74,15 +74,32 @@ int main(int argc, char **argv)
         printf("Signal trop faible : A %.2e, B %.2e (rien ne joue ?)\n", ea, eb);
         return 1;
     }
+    double *xc = malloc(sizeof(double) * (size_t)(2 * L + 1));
+    if (!xc) { fprintf(stderr, "mémoire\n"); return 1; }
     long best = 0;
     double bestv = -1e300;
     for (long lag = -L; lag <= L; lag++) {   /* b[i + lag] ≈ a[i] : B en retard de lag */
         double s = 0;
         for (long i = L; i < n - L; i++) s += (double)a[i] * b[i + lag];
+        xc[lag + L] = s;
         if (s > bestv) { bestv = s; best = lag; }
     }
     const double r = bestv / sqrt(ea * eb);
     printf("Décalage : B %s A de %ld trames = %.2f ms (corrélation %.3f, sur %.1f s)\n",
            best >= 0 ? "en retard sur" : "en avance sur", labs(best), labs(best) * 1000.0 / sr, r, secs);
+    /* Deuxième pic (maximum local à plus de 1 ms du premier) : une deuxième
+     * copie décalée du même son, par exemple une couche d'overdub mal placée. */
+    const long gap = (long)(sr / 1000.0);
+    long best2 = 0;
+    double v2 = -1e300;
+    for (long k = 1; k < 2 * L; k++) {
+        const long lag = k - L;
+        if (labs(lag - best) <= gap) continue;
+        if (xc[k] > xc[k - 1] && xc[k] >= xc[k + 1] && xc[k] > v2) { v2 = xc[k]; best2 = lag; }
+    }
+    if (v2 > 0)
+        printf("2e pic     : %+ld trames = %+.2f ms, hauteur %.0f %% du premier\n",
+               best2, best2 * 1000.0 / sr, 100.0 * v2 / bestv);
+    free(xc);
     return 0;
 }
