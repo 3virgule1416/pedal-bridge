@@ -18,7 +18,7 @@ sur Raspberry Pi 5, par tampons circulaires partagés dans `/dev/shm`.
 | (a) | Send + pb_inspect + tests | fait, validé à l'oreille |
 | (b) | Return + `pb_inspect --tone/--loop` | fait, validé à l'oreille |
 | (c) | Client JACK + rééchantillonnage adaptatif, maître du temps | fait, validé à l'oreille |
-| (d) | Mesures (latence, dérive, xruns, CPU) | à faire |
+| (d) | Mesures (latence, dérive, xruns, CPU) | fait : 0 xrun et 0 coupure sur 10 min, voir plus bas |
 | (e) | Contrôle au pied : batterie, looper, écran | en conception : [docs/controle.md](docs/controle.md) |
 
 ## Structure
@@ -46,6 +46,7 @@ scripts/deploy.sh           PC -> Pi, puis compilation
 scripts/test.sh             tests unitaires, TTL, strace (se relance sur le Pi)
 scripts/test-jack.sh        client JACK avec serveur JACK séparé et dérive simulée
 scripts/session.sh          démarre/arrête JACK, VNC, SooperLooper, Hydrogen et le pont
+scripts/mesure.sh           mesures sur la vraie session (dérive, xruns, CPU), lecture seule
 scripts/sl-sync-test.sh     synchro SooperLooper sur serveur JACK de test (départ sur le 1)
 scripts/install.sh          affiche les commandes sudo d'installation
 ```
@@ -219,6 +220,43 @@ dérive ±100 ppm, aller-retour Send → JACK → Return) :
 
 CPU : client environ 1,7 % d'un cœur, serveur JACK dummy environ 0,7 %. La dérive
 est estimée à ±300 ppm près en moins d'une minute.
+
+### Mesures sur la vraie session (étape d)
+
+`bash scripts/mesure.sh 600` (lecture seule) : 10 minutes avec le vrai PiPedal
+(48 kHz, blocs de 128 × 4), JACK en période 128, Hydrogen qui joue, SooperLooper
+en record/overdub/undo et guitare jouée.
+
+| Mesure | Résultat |
+|---|---|
+| Sous-débits / sur-débits du pont | **0 / 0** |
+| xruns JACK / xruns vus par SooperLooper | **0 / 0** |
+| Latence aller-retour du pont (banc, période 128) | **12,0 ms** (12,3 ms au 2e essai) |
+| Température max / bridage | 51,2 °C / aucun (`0x0`) |
+| CPU total du Pi | 8 à 32 % (sur 4 cœurs) |
+
+CPU moyen par programme (% d'un cœur) :
+
+| Reste à terme | | Partira (VNC) | |
+|---|---|---|---|
+| PiPedal | 28,3 | x11vnc | 6,7 |
+| Hydrogen (interface comprise) | 27,5 | slgui | 3,9 |
+| Xvfb (pour Hydrogen) | 5,0 | | |
+| SooperLooper | 3,9 | | |
+| pedal_bridge | 2,0 | | |
+| jackd | 0,8 | | |
+| pb_timebase | 0,4 | | |
+| **Total** | **≈ 68 % d'un cœur (≈ 17 % du Pi)** | | |
+
+Dérive : l'estimation revient vers 0 ppm, mais toutes les ~148 s le remplissage
+fait un saut de 20 à 30 trames (0,5 ms) dans les deux sens à la fois ; la
+correction monte alors à 30-56 ppm, puis redescend en ~100 s. Effet inaudible
+(écart de vitesse ≤ 0,006 %, résidu du sinus inchangé), aucune coupure. La cause
+(PiPedal/ALSA ou minuterie du pilote dummy de JACK) reste à identifier.
+
+**Attention** : ne pas lancer `test-jack.sh` ni `sl-sync-test.sh` pendant une
+vraie session. Un 2e serveur JACK et le faux PiPedal temps réel provoquent des
+xruns des deux côtés (mesuré : 2 xruns sur la vraie session, 12 sur le banc).
 
 ## Format du tampon (version 1)
 
