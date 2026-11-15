@@ -248,8 +248,13 @@ Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
   −10,6 ms juste après l'enregistrement, −10,6 ms après Stop (normalisation)
   puis Play, trois fois. Attendu : −10,7 ms = latence propre de PiPedal
   (entrée + sortie de l'Axe), que la batterie ne traverse pas dans ce test.
-  Le trajet du plugin et du pont est donc exact ; ce qui reste à vérifier est
-  la vraie latence de l'Axe (USB) par rapport aux 10,7 ms comptées.
+  Le trajet du plugin et du pont est donc exact.
+- **Test au médiator** (même jour, métronome d'Hydrogen, coups étouffés sur
+  chaque temps, `pb_onsets` sur la boucle) : 12 coups, écart moyen au temps
+  **−6,4 ms**, dispersion 22 ms, sans dérive. Pas de latence cachée de l'Axe
+  mesurable (elle donnerait un retard constant) : les 10,7 ms comptées
+  suffisent. Un premier essai qui accélérait (jusqu'à −136 ms à la 4e mesure)
+  montre que la sensation de décalage venait du jeu, pas du pont.
 - Limites : SooperLooper suit le transport : **Record ne part que si le
   transport roule** (appuyer sur Play d'abord). La batterie arrive aussi par le
   lien 1 tant que DLS Drum n'existe pas (branchement de `session.sh`). Ne pas
