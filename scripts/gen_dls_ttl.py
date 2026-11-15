@@ -157,7 +157,7 @@ DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, 
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps.
+Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" + '"""'
 
@@ -178,6 +178,8 @@ def drum_plugin(uri, name, label, stereo):
     p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
                     "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
     p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", T)); i += 1
+    p.append(ctl_in(i, "metronome", "Metronome", "Hydrogen metronome click on or off.",
+                    "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled", T)); i += 1
     p.append(ctl_out(i, "temps", "Beat", "Current beat in the bar (- when stopped).",
                      enum(0, 8, [(0, "-")] + [(k, str(k)) for k in range(1, 9)]), T)); i += 1
     p.append(ctl_out(i, "pulsation", "♩", "Beat: flashes on every beat.", LED, T, "green")); i += 1

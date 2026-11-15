@@ -7,7 +7,7 @@
  *
  * Contrôle (fichier partagé pb_ctl.h, section « drum ») : groove choisi,
  * tempo et compteurs de boutons (Play/Stop, groove précédent/suivant, tap
- * tempo). Le client pedal_bridge pilote Hydrogen et le transport, et renvoie
+ * tempo), interrupteur du métronome. Le client pedal_bridge pilote Hydrogen et le transport, et renvoie
  * le groove joué et la mesure.
  *
  * Temps réel : tout est ouvert à l'instanciation ; run() ne fait que des
@@ -27,7 +27,7 @@ enum {
     /* Drums */
     C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
     /* Transport */
-    C_PLAYSTOP, C_TEMPO, C_TAP, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    C_PLAYSTOP, C_TEMPO, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
     C_GAIN, O_LINK,
     C_NUM
@@ -138,6 +138,7 @@ static void run(LV2_Handle h, uint32_t n)
     if (PB_LOAD_ACQ(&ctl->drum_owner) == p->me) {
         PB_STORE_RLX(&ctl->drum_groove, (uint32_t)groove);
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
+        PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
         for (int b = 0; b < PB_DBTN_COUNT; b++)
             if (pressed[b])
                 PB_STORE_REL(&ctl->drum_btn[b], PB_LOAD_RLX(&ctl->drum_btn[b]) + 1u);

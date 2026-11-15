@@ -26,7 +26,7 @@
 /* Ports de contrôle (voir lv2/drum.c), après les ports audio. */
 enum {
     C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
-    C_PLAYSTOP, C_TEMPO, C_TAP, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    C_PLAYSTOP, C_TEMPO, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
     C_NUM
 };
@@ -236,6 +236,11 @@ int main(int argc, char **argv)
     T_CHECK(K.ctl->looper_btn[PB_BTN_PLAYSTOP] == 0, "Play/Stop de Drum : compteur du Looper intact");
     A.c[C_GROOVE] = 7; A.c[C_TEMPO] = 96; run1(&A);
     T_CHECK(K.ctl->drum_groove == 7 && K.ctl->drum_tempo == 9600, "groove 7 et tempo 96 publiés");
+    T_CHECK(K.ctl->drum_metro == 0, "Metronome éteint par défaut");
+    A.c[C_METRO] = 1; run1(&A);
+    T_CHECK(K.ctl->drum_metro == 1, "Metronome allumé publié");
+    A.c[C_METRO] = 0; run1(&A);
+    T_CHECK(K.ctl->drum_metro == 0, "Metronome éteint publié");
 
     /* --- 4. Transport --- */
     K.ctl->rolling = 1; K.ctl->beat = 1; K.ctl->beat_frac = 100; K.ctl->bpm = 9600;

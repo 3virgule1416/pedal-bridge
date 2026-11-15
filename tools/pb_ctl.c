@@ -13,6 +13,7 @@
  *   pb_ctl drum-press NOM       appui : play prev next tap
  *   pb_ctl drum-groove N        menu Groove (1-16)
  *   pb_ctl drum-tempo BPM       réglage Tempo de DLS Drum
+ *   pb_ctl drum-metro 0|1       interrupteur Metronome de DLS Drum
  *
  * Dossier : $PB_SHM_DIR (ou /dev/shm). Avec un vrai DLS Looper chargé, press
  * incrémente le compteur à sa place (pour le dépannage seulement).
@@ -36,7 +37,7 @@ static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap" };
 static int usage(void)
 {
     fprintf(stderr, "usage : pb_ctl show | create | take | press NOM | loop N | tempo BPM\n"
-                    "        pb_ctl drum-take | drum-press NOM | drum-groove N | drum-tempo BPM\n");
+                    "        pb_ctl drum-take | drum-press NOM | drum-groove N | drum-tempo BPM | drum-metro 0|1\n");
     return 2;
 }
 
@@ -89,6 +90,9 @@ int main(int argc, char **argv)
         if (v < 40 || v > 240) { pb_ctl_close(c); return usage(); }
         PB_STORE_RLX(&c->drum_tempo, (uint32_t)lround(v * 100));
         printf("ok tempo drum %.2f\n", v);
+    } else if (!strcmp(cmd, "drum-metro") && argc > 2) {
+        PB_STORE_RLX(&c->drum_metro, atoi(argv[2]) ? 1u : 0u);
+        printf("ok métronome %d\n", atoi(argv[2]) ? 1 : 0);
     } else if (!strcmp(cmd, "press") && argc > 2) {
         int b = -1;
         for (int i = 0; i < PB_BTN_COUNT; i++) if (!strcmp(argv[2], BTN[i])) b = i;

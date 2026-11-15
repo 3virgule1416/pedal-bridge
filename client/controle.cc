@@ -154,6 +154,15 @@ void sl_send(const std::string &addr, const std::vector<std::string> &sargs,
     sendto(g_osc, m.data(), m.size(), 0, (sockaddr *)&a, sizeof a);
 }
 
+/* Retour d'état d'Hydrogen (OSC feedback) : il l'envoie à toute adresse qui
+ * lui a parlé, sur la même prise que les réponses de SooperLooper. */
+int g_h2_metro = -1;              // métronome d'Hydrogen : -1 inconnu, 0 éteint, 1 allumé
+void h2_feedback(const OscMsg &m)
+{
+    if (m.addr == "/Hydrogen/TOGGLE_METRONOME" && !m.args.empty() && m.args[0].type == 'f')
+        g_h2_metro = m.args[0].f > 0.5f ? 1 : 0;
+}
+
 /* Lit les réponses OSC en attente (au plus « wait » secondes) et appelle f. */
 void sl_drain(double wait, const std::function<bool(const OscMsg &)> &f)
 {
@@ -169,7 +178,9 @@ void sl_drain(double wait, const std::function<bool(const OscMsg &)> &f)
         char buf[1024];
         ssize_t n = recv(g_osc, buf, sizeof buf, 0);
         OscMsg m;
-        if (n > 0 && decode(buf, (size_t)n, m) && f(m)) return;
+        if (n <= 0 || !decode(buf, (size_t)n, m)) continue;
+        h2_feedback(m);
+        if (f(m)) return;
     }
 }
 
@@ -490,6 +501,23 @@ bool h2_listening()
     return false;
 }
 
+/* Métronome d'Hydrogen. Son OSC n'a qu'une bascule (TOGGLE_METRONOME, argument
+ * ignoré) : on bascule seulement si l'état connu diffère. État inconnu : un
+ * message d'une adresse nouvelle pour Hydrogen lui fait renvoyer tout son état. */
+std::string set_metronome(bool on)
+{
+    if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
+    if (g_h2_metro < 0) {
+        h2_send("/Hydrogen/PB_PROBE", nullptr, nullptr);
+        sl_drain(0.3, [](const OscMsg &) { return g_h2_metro >= 0; });
+    }
+    if (g_h2_metro < 0) return "erreur : état du métronome d'Hydrogen inconnu";
+    if (g_h2_metro == (on ? 1 : 0)) return on ? "ok métronome déjà allumé" : "ok métronome déjà éteint";
+    h2_send("/Hydrogen/TOGGLE_METRONOME", nullptr, nullptr);
+    g_h2_metro = on ? 1 : 0;
+    return on ? "ok métronome allumé" : "ok métronome éteint";
+}
+
 std::string set_groove(const std::string &arg)
 {
     const int n = std::atoi(arg.c_str());
@@ -642,6 +670,7 @@ std::string looper_button(int b)
 uint64_t g_dr_owner = 0;
 uint32_t g_dr_btn[PB_DBTN_COUNT];
 uint32_t g_dr_groove = 0;
+uint32_t g_dr_metro = 2;                        // 2 = à appliquer
 uint32_t g_dr_tempo = 0, g_dr_tempo_seen = 0;   // centièmes de BPM
 double g_dr_tempo_since = 0;
 std::vector<double> g_taps;                     // instants des derniers appuis Tap
@@ -682,6 +711,7 @@ void drum_poll(pb_ctl *k)
         g_dr_tempo = g_dr_tempo_seen = PB_LOAD_RLX(&k->drum_tempo);
         g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
         g_taps.clear();
+        g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
         return;
     }
@@ -691,6 +721,11 @@ void drum_poll(pb_ctl *k)
         g_dr_groove = groove;
         say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
         g_refresh_now = true;
+    }
+    const uint32_t metro = PB_LOAD_RLX(&k->drum_metro);
+    if (metro != g_dr_metro) {
+        g_dr_metro = metro;
+        say("DLS Drum : %s", set_metronome(metro != 0).c_str());
     }
     const uint32_t tempo = PB_LOAD_RLX(&k->drum_tempo);
     if (tempo != g_dr_tempo_seen) { g_dr_tempo_seen = tempo; g_dr_tempo_since = now_s(); }

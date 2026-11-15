@@ -34,7 +34,7 @@
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps.
+Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" ;
     doap:license <http://opensource.org/licenses/isc> ;
@@ -120,7 +120,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 9 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+      rdfs:comment "Hydrogen metronome click on or off." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
+      pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 10 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -133,22 +137,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 10 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -354,11 +358,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
@@ -376,7 +380,7 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps.
+Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" ;
     doap:license <http://opensource.org/licenses/isc> ;
@@ -464,7 +468,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+      rdfs:comment "Hydrogen metronome click on or off." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
+      pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -477,22 +485,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -698,11 +706,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 16 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 17 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
