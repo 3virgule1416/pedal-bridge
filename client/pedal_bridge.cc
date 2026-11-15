@@ -401,6 +401,10 @@ void sl_sync_latency(double now)
     if (!in || !out) return;                  // plugins pas encore là
     const bool changed = in != sent_in || out != sent_out;
     if (!changed && now - last < 5.0) return;
+    /* Mesuré avec pb_lag : SooperLooper applique cette compensation en lecture
+     * continue, mais une boucle relancée par « trigger » repart SANS elle
+     * (22,7 ms de retard), que la compensation soit à l'entrée ou à la sortie.
+     * Play/Stop ne doit donc pas relancer les boucles par trigger. */
     osc_set_all(g_sl_port, "autoset_latency", 0.0f);
     osc_set_all(g_sl_port, "input_latency", (float)in);
     osc_set_all(g_sl_port, "output_latency", (float)out);

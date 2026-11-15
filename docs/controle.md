@@ -93,7 +93,7 @@ client, écrivains uniques par champ, atomiques.
 | Contrôle | Type | Effet (exécuté par le client) |
 |---|---|---|
 | Tempo | molette 40–240 BPM | nouveau tempo, appliqué au prochain début de mesure (§8) |
-| Play / Stop | bouton | démarre ou arrête le transport JACK ; Hydrogen suit |
+| Play / Stop | bouton | **global** : batterie et boucles ensemble, toujours depuis la mesure 1. Voir §8 bis (boucles « normalisées » pour que trigger tombe juste) |
 | Début | bouton | retour à la mesure 1 |
 | Groove | liste (1–N) | pattern Hydrogen, changé à la prochaine mesure |
 | Fill | bouton | joue le pattern de fill pendant 1 mesure à la prochaine barre, puis revient au groove |
@@ -114,6 +114,7 @@ sur le premier temps), **En lecture**, **Fill en attente**.
 | Mute | bouton | coupe ou réactive la boucle, à la fin du cycle |
 | Effacer | bouton (appui long ?) | vide la boucle |
 | Section suivante | bouton | passe à la section suivante au prochain cycle (§9) |
+| Play / Stop | bouton | le même Play/Stop global que la batterie |
 | Tempo | molette | **le même tempo** que la batterie (une seule valeur, deux endroits) |
 
 Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
@@ -200,6 +201,54 @@ valider sur le banc (`sl-sync-test.sh`).
 
 Les boucles déjà enregistrées à l'ancien tempo ne s'étirent pas, sauf si l'option
 « t. stretch » de SooperLooper le fait proprement (à tester).
+
+## 8 bis. Stop, Play et chansons sauvegardées
+
+But : un **vrai stop** puis un **play depuis la mesure 1**, batterie et boucles
+ensemble, et pouvoir **sauvegarder** boucles + batterie pour y revenir plus tard.
+
+### Ce qu'on a mesuré (`pb_lag`, batterie enregistrée dans une boucle)
+
+| Situation | Boucle vs batterie |
+|---|---|
+| Lecture continue après l'enregistrement | −22,67 ms (compensation de SooperLooper appliquée) |
+| Relance par `trigger` (play depuis la mesure 1) | 0 ms : **compensation perdue** (22,7 ms de retard) |
+| Idem avec toute la compensation à l'entrée | 0 ms : pareil |
+| Pause/reprise (pause_on/pause_off + transport) | garde la compensation, mais +3 à 4 ms à **chaque** pause (cycles JACK différents) |
+| **Boucle sauvée, audio décalé de 1088 trames, rechargée, puis `trigger`** | **−22,67 ms, identique 3 fois de suite** |
+
+Conclusion : SooperLooper ne compense pas en modifiant l'audio, il **décale la
+lecture**, et `trigger` oublie ce décalage. Si l'**audio de la boucle est
+décalé lui-même** du même nombre de trames, `trigger` tombe juste, et une boucle
+rechargée d'un fichier aussi.
+
+### Fonctionnement prévu
+
+- **Stop** : transport arrêté + boucles en pause. Puis, pendant l'arrêt, le
+  client **normalise** chaque boucle qui n'est pas déjà normalisée :
+  `save_loop` (WAV float), rotation de l'audio de D = entrée + sortie (1088
+  trames aujourd'hui) vers l'avant, `load_loop`. Une boucle normalisée est
+  marquée (le client garde la liste).
+- **Play** : transport à la trame 0, `trigger` de toutes les boucles (armées, elles
+  partent sur la première barre), départ du transport. Exact à la trame.
+- **Sauvegarder une chanson** : dossier `~/pedal-bridge/chansons/<nom>/` avec les
+  boucles normalisées (WAV), le tempo, le morceau Hydrogen (`.h2song`), les
+  réglages utiles des boucles, et D au moment de l'enregistrement.
+- **Recharger une chanson** : `load_loop` de chaque boucle, tempo, morceau
+  Hydrogen, transport à la mesure 1. Puis Play.
+- Si la latence change entre la sauvegarde et le rechargement (autre période
+  JACK ou autres réglages de PiPedal), le client refait la rotation de la
+  différence.
+
+### À vérifier
+
+- **Overdub** sur une boucle normalisée qui a été relancée par `trigger` : la
+  nouvelle couche est-elle placée au bon endroit ? (SooperLooper applique sa
+  compensation à l'overdub par rapport à la position de lecture.)
+- Durée de `save_loop` + `load_loop` pour de longues boucles (le Stop doit rester
+  rapide ; la normalisation peut se faire en arrière-plan pendant l'arrêt).
+- Commandes OSC d'Hydrogen pour sauver/charger un morceau (sinon par son
+  interface).
 
 ## 9. Sections (enchaîner les boucles)
 

@@ -99,6 +99,8 @@ bash scripts/session.sh start      # JACK 128, écran virtuel :1 + VNC, SooperLo
 bash scripts/session.sh status     # état, branchements, dernières stats du pont
 bash scripts/session.sh connect    # refaire les branchements
 bash scripts/session.sh tempo 115  # changer le tempo (pb_timebase)
+bash scripts/session.sh play       # batterie + boucles repartent ensemble de la mesure 1
+bash scripts/session.sh pause      # batterie + boucles s'arrêtent ensemble
 bash scripts/session.sh stop       # arrêter pont, Hydrogen, SooperLooper
 bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran virtuel et VNC
 ```
