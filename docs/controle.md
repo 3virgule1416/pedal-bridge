@@ -242,6 +242,14 @@ Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
   stop avec normalisation, play depuis la mesure 1, effacer, changement
   d'instance. Tout passe. Test hors ligne `test_looper` (40 vérifications,
   aucun appel système dans `run()`).
+- **Mesure en direct à travers le plugin** (2026-11-15, période 128, `pb_lag`) :
+  batterie amenée dans la chaîne par DLS Return (lien 2) placé avant DLS
+  Looper, enregistrée en boucle avec les boutons du plugin. Boucle vs batterie :
+  −10,6 ms juste après l'enregistrement, −10,6 ms après Stop (normalisation)
+  puis Play, trois fois. Attendu : −10,7 ms = latence propre de PiPedal
+  (entrée + sortie de l'Axe), que la batterie ne traverse pas dans ce test.
+  Le trajet du plugin et du pont est donc exact ; ce qui reste à vérifier est
+  la vraie latence de l'Axe (USB) par rapport aux 10,7 ms comptées.
 - Limites : SooperLooper suit le transport : **Record ne part que si le
   transport roule** (appuyer sur Play d'abord). La batterie arrive aussi par le
   lien 1 tant que DLS Drum n'existe pas (branchement de `session.sh`). Ne pas
