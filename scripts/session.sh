@@ -23,13 +23,16 @@
 # d'Hydrogen 1.2.0-beta est défectueux. Dans Hydrogen : J.Trans oui, J.Master non.
 #
 # Depuis le PC, il se relance tout seul sur le Pi (hôte pi-dev).
-# Réglages : PB_JACK_PERIOD (défaut 128), PB_LINKS (défaut 1), PB_TEMPO (défaut 120,
+# Réglages : PB_JACK_PERIOD (défaut 128), PB_LINKS (défaut 1,2), PB_TEMPO (défaut 120,
 # au premier démarrage de pb_timebase seulement).
 #
-# Branchements faits par « start » et « connect » (lien 1) :
-#   pedal_bridge:send1_L/R    -> sooperlooper:common_in_1/2   (ta guitare dans le looper)
-#   sooperlooper:common_out_1/2 -> pedal_bridge:return1_L/R   (les boucles dans PiPedal)
-#   Hydrogen:out_L/R          -> pedal_bridge:return1_L/R     (la batterie dans PiPedal)
+# Branchements faits par « start » et « connect » :
+#   lien 1 = looper (DLS Looper, ou DLS Send/Return sur le lien 1)
+#     pedal_bridge:send1_L/R      -> sooperlooper:common_in_1/2   (ta guitare dans le looper)
+#     sooperlooper:common_out_1/2 -> pedal_bridge:return1_L/R     (les boucles dans PiPedal)
+#   lien 2 = batterie (DLS Return sur le lien 2, plus tard DLS Drum), en fin de chaîne
+#     Hydrogen:out_L/R            -> pedal_bridge:return2_L/R
+# Avec PB_LINKS=1 : ancienne façon, la batterie arrive par le lien 1.
 set -u
 
 HOST="${PB_HOST:-pi-dev}"
@@ -41,7 +44,7 @@ fi
 B="$HOME/$REMOTE/build"
 RUN=/tmp/pedal-bridge-session          # journaux (effacés au redémarrage du Pi)
 PERIOD="${PB_JACK_PERIOD:-128}"
-LINKS="${PB_LINKS:-1}"
+LINKS="${PB_LINKS:-1,2}"
 TEMPO="${PB_TEMPO:-120}"
 export DISPLAY=:1
 mkdir -p "$RUN"
@@ -72,17 +75,26 @@ link() {        # branche si pas déjà fait
   jack_connect "$1" "$2" 2> /dev/null && echo "  $1 -> $2" || echo "  ÉCHEC : $1 -> $2"
 }
 
+unlink_port() { # débranche si branché
+  jack_lsp -c "$1" 2> /dev/null | grep -qx "   $2" || return 0
+  jack_disconnect "$1" "$2" 2> /dev/null && echo "  débranché : $1 -> $2"
+}
+
 do_connect() {
   echo "== Branchements JACK"
-  for n in ${LINKS//,/ }; do
-    link "pedal_bridge:send${n}_L" sooperlooper:common_in_1
-    link "pedal_bridge:send${n}_R" sooperlooper:common_in_2
-    link sooperlooper:common_out_1 "pedal_bridge:return${n}_L"
-    link sooperlooper:common_out_2 "pedal_bridge:return${n}_R"
-    link Hydrogen:out_L "pedal_bridge:return${n}_L"
-    link Hydrogen:out_R "pedal_bridge:return${n}_R"
-    break   # looper et batterie sur le premier lien seulement
-  done
+  local looper="${LINKS%%,*}" drum="${LINKS%%,*}"
+  case ",$LINKS," in *,2,*) [ "$looper" != 2 ] && drum=2 ;; esac
+  link "pedal_bridge:send${looper}_L" sooperlooper:common_in_1
+  link "pedal_bridge:send${looper}_R" sooperlooper:common_in_2
+  link sooperlooper:common_out_1 "pedal_bridge:return${looper}_L"
+  link sooperlooper:common_out_2 "pedal_bridge:return${looper}_R"
+  if [ "$drum" != "$looper" ]; then   # la batterie quitte le lien du looper
+    unlink_port Hydrogen:out_L "pedal_bridge:return${looper}_L"
+    unlink_port Hydrogen:out_R "pedal_bridge:return${looper}_R"
+  fi
+  link Hydrogen:out_L "pedal_bridge:return${drum}_L"
+  link Hydrogen:out_R "pedal_bridge:return${drum}_R"
+  echo "  looper : lien $looper ; batterie : lien $drum"
 }
 
 sl_settings() {   # synchro SooperLooper sur JACK (comme ~/sl_init.py)
