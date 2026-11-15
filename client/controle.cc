@@ -529,6 +529,7 @@ const char *URI_DRUM = "http://pedal-bridge.local/plugins/drum-";
 const char *URI_LOOPER = "http://pedal-bridge.local/plugins/looper-";
 int g_ui_groove = 0;              // à afficher (0 = rien)
 int g_ui_tempo = 0;
+const char *g_ui_tempo_skip = nullptr;   // bouton qu'on tourne : ne pas lui renvoyer sa valeur
 uint32_t g_last_tempo_c = 0;      // dernier tempo appliqué, centièmes de BPM
 
 int pipedal_port()
@@ -543,10 +544,12 @@ void ui_flush()
     std::vector<PipedalSet> v;
     if (g_ui_groove) v.push_back({URI_DRUM, "groove", (float)g_ui_groove});
     if (g_ui_tempo) {
-        v.push_back({URI_DRUM, "tempo", (float)g_ui_tempo});
-        v.push_back({URI_LOOPER, "tempo", (float)g_ui_tempo});
+        for (const char *u : {URI_DRUM, URI_LOOPER})
+            if (u != g_ui_tempo_skip) v.push_back({u, "tempo", (float)g_ui_tempo});
     }
     g_ui_groove = g_ui_tempo = 0;
+    g_ui_tempo_skip = nullptr;
+    if (v.empty()) return;
     const int port = pipedal_port();
     if (port <= 0) return;
     std::string err;
@@ -776,6 +779,7 @@ void drum_poll(pb_ctl *k)
             char t[32];
             std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
             say("DLS Drum : tempo %s -> %s", t, set_tempo(t).c_str());
+            g_ui_tempo_skip = URI_DRUM;              // il vient de ce bouton (on le tourne peut-être encore)
         }
     }
     for (int b = 0; b < PB_DBTN_COUNT; b++) {
@@ -856,6 +860,7 @@ void looper_poll()
             char t[32];
             std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
             say("DLS Looper : tempo %s -> %s", t, set_tempo(t).c_str());
+            g_ui_tempo_skip = URI_LOOPER;
         }
     }
     for (int b = 0; b < PB_BTN_COUNT; b++) {
