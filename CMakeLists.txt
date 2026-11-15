@@ -28,6 +28,18 @@ foreach(ttl manifest.ttl send.ttl return.ttl)
   configure_file(lv2/ttl/${ttl} ${PB_BUNDLE_DIR}/${ttl} COPYONLY)
 endforeach()
 
+# --- Bundle de test (vérifications dans PiPedal, à retirer ensuite) ----------
+set(PB_TEST_BUNDLE_DIR ${CMAKE_BINARY_DIR}/lv2/pedal-bridge-test.lv2)
+add_library(pedal_bridge_test MODULE lv2/test_plugin.c)
+set_target_properties(pedal_bridge_test PROPERTIES
+  PREFIX ""
+  C_VISIBILITY_PRESET hidden
+  LIBRARY_OUTPUT_DIRECTORY ${PB_TEST_BUNDLE_DIR})
+target_link_options(pedal_bridge_test PRIVATE -Wl,-z,defs)
+foreach(ttl manifest.ttl test.ttl)
+  configure_file(lv2/ttl-test/${ttl} ${PB_TEST_BUNDLE_DIR}/${ttl} COPYONLY)
+endforeach()
+
 # --- Outil de contrôle -------------------------------------------------------
 add_executable(pb_inspect tools/pb_inspect.c)
 target_link_libraries(pb_inspect PRIVATE pb_shm m)
