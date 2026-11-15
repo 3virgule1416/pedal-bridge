@@ -525,7 +525,9 @@ l'oreille avant la suivante.
    - noms de sortie courts collés les uns aux autres (« VoyantAppuis… ») :
      prendre des noms plus longs ;
    - sélecteur de fichier : voir §5 ;
-   - reste : écoute d'un plugin mono puis stéréo en début de chaîne.
+   - écoute en début de chaîne : son identique, avec ou sans le plugin
+     (sortie sur un seul haut-parleur Headrush : les deux côtés du stéréo
+     restent à vérifier au casque).
 4. **Fichier de contrôle + DLS Looper** (mono et stéréo, audio intégré :
    envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
    boucle, état) ; `pb_timebase` intégré au client.
