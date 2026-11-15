@@ -553,6 +553,13 @@ std::string play_from_start()
     int n = 0;
     for (size_t i = 0; i < g_loops.size(); i++)
         if (g_loops[i].len > 0) { sl_send("/sl/" + std::to_string(i) + "/hit", {"trigger"}); n++; }
+    /* Hydrogen en mode Pattern (et le groove retenu) à chaque départ : au
+     * démarrage de la session, il ignore la commande tant qu'aucun morceau
+     * n'est chargé (« No song set yet ») et reste alors en mode Song. */
+    if (h2_listening()) {
+        h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
+        if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)g_pattern);
+    }
     usleep(40000);                         // laisser SooperLooper armer les boucles
     jack_transport_start(g_cfg.client);
     return "ok play (mesure 1, " + std::to_string(n) + " boucle(s))";
@@ -595,7 +602,9 @@ void publish_states()
 uint64_t g_lp_owner = 0;
 uint32_t g_lp_btn[PB_BTN_COUNT];
 uint32_t g_lp_loop = 0;
-uint32_t g_lp_tempo = 0;          // centièmes de BPM
+uint32_t g_lp_tempo = 0;          // centièmes de BPM, dernier appliqué
+uint32_t g_tempo_seen = 0;        // dernière valeur lue du plugin
+double g_tempo_since = 0;         // depuis quand elle n'a pas bougé
 int g_sel = 0;                     // boucle choisie (0 = boucle 1)
 double g_ctl_next_try = 0;
 bool g_refresh_now = false;
@@ -640,7 +649,7 @@ void looper_poll()
     if (owner != g_lp_owner) {             // autre instance : se recaler sans rien exécuter
         g_lp_owner = owner;
         for (int b = 0; b < PB_BTN_COUNT; b++) g_lp_btn[b] = PB_LOAD_ACQ(&k->looper_btn[b]);
-        g_lp_tempo = PB_LOAD_RLX(&k->looper_tempo);
+        g_lp_tempo = g_tempo_seen = PB_LOAD_RLX(&k->looper_tempo);
         g_lp_loop = PB_LOAD_RLX(&k->looper_loop);
         if (owner) { select_loop(g_lp_loop); say("DLS Looper actif (boucle %u)", g_lp_loop); }
         else say("DLS Looper retiré");
@@ -653,8 +662,11 @@ void looper_poll()
         select_loop(loop);
         say("DLS Looper : boucle %u", loop);
     }
+    /* Tempo : appliqué quand le bouton ne bouge plus depuis 0,3 s (tourner le
+     * bouton envoie une valeur par cran ; Hydrogen déborde sinon). */
     const uint32_t tempo = PB_LOAD_RLX(&k->looper_tempo);
-    if (tempo != g_lp_tempo) {
+    if (tempo != g_tempo_seen) { g_tempo_seen = tempo; g_tempo_since = now_s(); }
+    if (tempo != g_lp_tempo && now_s() - g_tempo_since >= 0.3) {
         g_lp_tempo = tempo;
         char t[32];
         std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
