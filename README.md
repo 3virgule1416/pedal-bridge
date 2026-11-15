@@ -123,7 +123,8 @@ bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran 
   `pb_timebase` publie une mesure correcte calculée depuis la trame 0 du
   transport, comme la grille de SooperLooper (qui ne lit que le tempo et la
   trame). Change le tempo transport arrêté : en lecture, la position saute.
-  Dans Hydrogen : **J.Trans allumé, J.Master éteint**. Tempo :
+  Dans Hydrogen : **J.Trans allumé, J.Master éteint** ; `start` le met en **mode
+  Pattern** par son OSC (activé dans `hydrogen.conf`, port 9000). Tempo :
   `bash scripts/session.sh tempo 115` (sans nombre : affiche le tempo).
   `hydrogen.conf` est revenu à J.Master éteint au démarrage (sauvegarde des
   essais : `hydrogen.conf.bak-20261114-171658`).

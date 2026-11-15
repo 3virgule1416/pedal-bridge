@@ -305,6 +305,8 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
   `OPEN_SONG` au chargement, mode (`SONG_MODE_ACTIVATION`), pattern retenu par
   le client (`SELECT_AND_PLAY_PATTERN`), et `BPM` pour que l'affichage
   d'Hydrogen suive `pb_timebase`.
+- **Mode Pattern** : `SONG_MODE_ACTIVATION 0` met Hydrogen en mode Pattern
+  (vérifié depuis le mode Song). `session.sh start` l'envoie à chaque démarrage.
 - Fill = pattern dédié, joué une mesure, puis retour au groove. Le client envoie
   le changement juste avant la barre.
 - Alternative si l'OSC est trop limité : piloter Hydrogen par MIDI (notes et

@@ -98,6 +98,26 @@ PY
   echo "  SooperLooper : synchro Jack/Host, quantize cycle, round, 8 croches/cycle"
 }
 
+# Hydrogen en mode Pattern (pas Song), par son OSC (port 9000, activé dans
+# ~/.hydrogen/hydrogen.conf). Vérifié : SONG_MODE_ACTIVATION 0 = mode Pattern.
+h2_pattern_mode() {
+  for _ in $(seq 50); do       # attendre que son OSC écoute (max 5 s)
+    ss -lun 2> /dev/null | grep -q ':9000 ' && break
+    sleep 0.1
+  done
+  if ! ss -lun 2> /dev/null | grep -q ':9000 '; then
+    echo "  ATTENTION : l'OSC d'Hydrogen ne répond pas (oscEnabled dans hydrogen.conf ?)"
+    return
+  fi
+  "$HOME/bridge-env/bin/python" - <<'PY'
+import socket
+from pythonosc.osc_message_builder import OscMessageBuilder
+m = OscMessageBuilder(address="/Hydrogen/SONG_MODE_ACTIVATION"); m.add_arg(0.0)
+socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(m.build().dgram, ("127.0.0.1", 9000))
+PY
+  echo "  Hydrogen : mode Pattern"
+}
+
 do_start() {
   echo "== JACK (dummy, 48 kHz, période $PERIOD)"
   if jack_ok; then
@@ -144,6 +164,7 @@ do_start() {
     launch hydrogen hydrogen -d jack -n
     wait_port Hydrogen:out_L 20
   fi
+  h2_pattern_mode
 
   echo "== Pont pedal_bridge (liens $LINKS)"
   if ! running pedal_bridge; then
