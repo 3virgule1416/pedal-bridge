@@ -88,7 +88,43 @@ client, écrivains uniques par champ, atomiques.
 - Les plugins recopient l'état vers leurs **ports de sortie** : voyants et
   valeurs affichés par PiPedal.
 
+## 4 bis. Audio intégré aux plugins de contrôle (décidé)
+
+Les plugins **Bridge Looper** et **Bridge Batterie** font **leur audio et leurs
+contrôles** au même endroit de la chaîne. But : pouvoir enregistrer la guitare
+**sèche** et choisir ou changer ses effets **après coup** (réamping), la
+batterie restant hors des effets.
+
+| Plugin | Audio | Lien fixe | Où le placer |
+|---|---|---|---|
+| **Bridge Looper** | copie l'entrée vers SooperLooper (Send) **puis** ajoute les boucles (Return, Add) | lien 1 (send + return) | **début** de chaîne : boucles sèches qui passent dans les effets ; **fin** : boucles enregistrées avec leurs effets |
+| **Bridge Batterie** | ajoute la batterie (Return, Add) | lien 2 (return) | **fin** de chaîne : la batterie ne passe dans aucun effet |
+
+- Dans Bridge Looper, la copie vers le looper se fait **avant** l'ajout des
+  boucles : les boucles ne peuvent pas se réenregistrer dans elles-mêmes.
+- **La position du plugin décide du son** (sec ou avec effets), sans réglage.
+- Liens fixes : plus de numéro de lien à choisir. Branchements JACK :
+  `pedal_bridge:send1` → SooperLooper, sortie de SooperLooper → `return1`,
+  Hydrogen → `return2`. La compensation de SooperLooper reste calculée sur le
+  lien 1 (envoi + retour du looper), comme aujourd'hui.
+- **Versions mono et stéréo** de chaque plugin (le nombre de canaux d'un plugin
+  LV2 est fixé dans sa description : pas une option). Même code, deux
+  descriptions, comme ToobAmp (« TooB Tone (Mono) », « … (Stereo) »).
+  - début d'une chaîne mono : **Bridge Looper (Mono)**, pour que les effets mono
+    qui suivent (NAM) le restent ;
+  - fin de chaîne après une réverb stéréo : versions **stéréo**.
+  Le tampon partagé reste stéréo : la version mono écrit le même son à gauche
+  et à droite, et additionne le retour en mono.
+- Les **Bridge Send / Bridge Return** génériques restent, pour les usages
+  particuliers (boucle sur sa propre branche d'effets en mode Replace, autre
+  programme JACK…).
+- À vérifier dans PiPedal : qu'un plugin mono en début de chaîne garde bien le
+  reste de la chaîne en mono, et ce que fait PiPedal d'un plugin stéréo placé
+  dans la partie mono.
+
 ## 5. Plugin « Bridge Batterie »
+
+Audio : retour de la batterie, lien 2 (§4 bis). Mono et stéréo.
 
 | Contrôle | Type | Effet (exécuté par le client) |
 |---|---|---|
@@ -104,6 +140,9 @@ Sorties (voyants) : **Temps** (1–4), **Sur le 1** (clignote d'une autre couleu
 sur le premier temps), **En lecture**, **Fill en attente**.
 
 ## 6. Plugin « Bridge Looper »
+
+Audio : envoi de l'entrée au looper puis ajout des boucles, lien 1 (§4 bis).
+Mono et stéréo. Plus un réglage de **gain des boucles**.
 
 | Contrôle | Type | Effet |
 |---|---|---|
@@ -372,11 +411,15 @@ l'oreille avant la suivante.
    court/long dans le client ; changement de page par CC 20.
 3. **Vérifier PiPedal** avec un plugin minimal : rendu des boutons momentanés
    (`lv2:trigger` ou équivalent), des voyants de sortie, liaison d'un CC à un
-   bouton.
-4. **Fichier de contrôle + Bridge Looper** (record, overdub, undo, mute, boucle,
-   état) ; `pb_timebase` intégré au client.
-5. **Bridge Batterie** : tempo, play/stop, début, tap ; tempo sans saut (§8).
-6. **Hydrogen OSC** : grooves et fills (après accord pour `hydrogen.conf`).
+   bouton, et comportement d'un plugin mono ou stéréo placé en début de chaîne
+   mono (§4 bis).
+4. **Fichier de contrôle + Bridge Looper** (mono et stéréo, audio intégré :
+   envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
+   boucle, état) ; `pb_timebase` intégré au client.
+5. **Bridge Batterie** (mono et stéréo, retour de la batterie sur le lien 2) :
+   tempo, play/stop, début, tap ; tempo sans saut (§8). Branchements JACK :
+   SooperLooper → `return1`, Hydrogen → `return2`.
+6. **Hydrogen OSC** : grooves et fills (OSC activé ; `groove N` fait).
 7. **Sections** (§9).
 8. **Écran** : rendu PNG, puis vrai écran après activation du SPI.
 9. **DEL du Captain** par SysEx, selon le mode ; un seul programme responsable
