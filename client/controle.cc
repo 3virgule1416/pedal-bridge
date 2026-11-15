@@ -529,6 +529,8 @@ const char *URI_DRUM = "http://pedal-bridge.local/plugins/drum-";
 const char *URI_LOOPER = "http://pedal-bridge.local/plugins/looper-";
 int g_ui_groove = 0;              // à afficher (0 = rien)
 int g_ui_tempo = 0;
+int g_ui_tempo_late = 0;          // BPM +/- : affiché une fois le bouton relâché
+double g_bpm_step_t = 0;          // dernier pas de BPM +/-
 const char *g_ui_tempo_skip = nullptr;   // bouton qu'on tourne : ne pas lui renvoyer sa valeur
 uint32_t g_last_tempo_c = 0;      // dernier tempo appliqué, centièmes de BPM
 
@@ -540,6 +542,9 @@ int pipedal_port()
 
 void ui_flush()
 {
+    /* Pendant qu'on tient BPM +/-, ne pas toucher aux boutons Tempo : leur
+     * retour arriverait en retard et ramènerait un ancien tempo. */
+    if (g_ui_tempo_late && now_s() - g_bpm_step_t > 0.4) { g_ui_tempo = g_ui_tempo_late; g_ui_tempo_late = 0; }
     if (!g_ui_groove && !g_ui_tempo) return;
     std::vector<PipedalSet> v;
     if (g_ui_groove) v.push_back({URI_DRUM, "groove", (float)g_ui_groove});
@@ -716,6 +721,28 @@ uint32_t g_dr_metro = 2;                        // 2 = à appliquer
 uint32_t g_dr_tempo = 0, g_dr_tempo_seen = 0;   // centièmes de BPM
 double g_dr_tempo_since = 0;
 std::vector<double> g_taps;                     // instants des derniers appuis Tap
+int g_bpm_delta = 0;                            // pas de BPM +/- pas encore appliqués
+int g_bpm_target = 0;                           // tempo visé pendant une série de pas
+double g_bpm_apply_t = 0;
+
+/* BPM +/- : pas regroupés, appliqués au plus 10 fois par seconde (Hydrogen
+ * déborde si on lui envoie le tempo trop souvent). */
+void bpm_steps(pb_ctl *k)
+{
+    if (!g_bpm_delta || now_s() - g_bpm_apply_t < 0.1) return;
+    if (!g_bpm_target || now_s() - g_bpm_step_t > 1.0) {    // nouvelle série : part du tempo actuel
+        const uint32_t c = g_last_tempo_c ? g_last_tempo_c : PB_LOAD_RLX(&k->bpm);
+        g_bpm_target = c ? (int)std::lround(c * 0.01) : 120;
+    }
+    g_bpm_target += g_bpm_delta;
+    g_bpm_delta = 0;
+    if (g_bpm_target < 40) g_bpm_target = 40;
+    if (g_bpm_target > 240) g_bpm_target = 240;
+    say("DLS Drum : BPM +/- -> %s", set_tempo(std::to_string(g_bpm_target)).c_str());
+    g_ui_tempo = 0;                                   // affiché au relâchement
+    g_ui_tempo_late = g_bpm_target;
+    g_bpm_apply_t = g_bpm_step_t = now_s();
+}
 
 /* Groove précédent / suivant (à partir du groove retenu). */
 std::string step_groove(int dir)
@@ -786,6 +813,12 @@ void drum_poll(pb_ctl *k)
         const uint32_t c = PB_LOAD_ACQ(&k->drum_btn[b]);
         uint32_t d = c - g_dr_btn[b];
         g_dr_btn[b] = c;
+        if (b == PB_DBTN_BPM_UP || b == PB_DBTN_BPM_DOWN) {   // pas répétés quand on tient
+            if (d > 100) d = 100;                             // garde-fou
+            g_bpm_delta += b == PB_DBTN_BPM_UP ? (int)d : -(int)d;
+            if (d) g_bpm_step_t = now_s();
+            continue;
+        }
         if (d > 4) d = 4;                  // garde-fou
         for (uint32_t j = 0; j < d; j++) {
             std::string r;
@@ -799,6 +832,7 @@ void drum_poll(pb_ctl *k)
             g_refresh_now = true;
         }
     }
+    bpm_steps(k);
 }
 
 /* Morceau courant d'Hydrogen au démarrage (lastSongFilename de son fichier

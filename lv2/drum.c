@@ -27,16 +27,25 @@ enum {
     /* Drums */
     C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
     /* Transport */
-    C_PLAYSTOP, C_TEMPO, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
     C_GAIN, O_LINK,
     C_NUM
 };
 
 /* Port de chaque bouton, dans l'ordre de enum pb_drum_btn. */
-static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP };
+static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN };
 
 enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
+
+/* BPM + / BPM - tenus : un pas à l'appui, puis répétition après 0,4 s (un
+ * pas toutes les 120 ms), plus vite après 2 s (toutes les 40 ms). */
+#define HOLD_FIRST_S  0.4
+#define HOLD_SLOW_S   0.12
+#define HOLD_FAST_S   0.04
+#define HOLD_FAST_AFTER_S 2.0
+
+typedef struct { uint32_t held, next; } Hold;      /* en trames */
 
 typedef struct {
     int stereo;
@@ -51,6 +60,7 @@ typedef struct {
     int          need_take;
     pb_watch     client;
     float        last_btn[PB_DBTN_COUNT];
+    Hold         hold[2];                       /* BPM +, BPM - */
 } Drum;
 
 static LV2_Handle instantiate_common(double rate, int stereo)
@@ -97,6 +107,7 @@ static void activate(LV2_Handle h)
     pb_watch_init(&p->client, p->rate / 2u);
     for (int b = 0; b < PB_DBTN_COUNT; b++)
         p->last_btn[b] = p->c[BTN_PORT[b]] ? *p->c[BTN_PORT[b]] : 0.0f;
+    p->hold[0].held = p->hold[1].held = 0;
 }
 
 static inline float port(const Drum *p, int k, float def) { return p->c[k] ? *p->c[k] : def; }
@@ -120,6 +131,21 @@ static void run(LV2_Handle h, uint32_t n)
         pressed[b] = v > 0.5f && p->last_btn[b] <= 0.5f;   /* front montant */
         p->last_btn[b] = v;
     }
+    /* Répétition de BPM + / BPM - tenus (pas supplémentaires). */
+    uint32_t steps[PB_DBTN_COUNT] = {0};
+    for (int b = 0; b < PB_DBTN_COUNT; b++) steps[b] = (uint32_t)pressed[b];
+    for (int h = 0; h < 2; h++) {
+        const int b = PB_DBTN_BPM_UP + h;
+        Hold *H = &p->hold[h];
+        if (port(p, BTN_PORT[b], 0.0f) <= 0.5f) { H->held = 0; continue; }
+        if (pressed[b]) { H->held = 0; H->next = (uint32_t)(p->rate * HOLD_FIRST_S); continue; }
+        H->held += n;
+        for (int guard = 0; H->held >= H->next && guard < 16; guard++) {
+            steps[b]++;
+            const double gap = H->held > p->rate * HOLD_FAST_AFTER_S ? HOLD_FAST_S : HOLD_SLOW_S;
+            H->next += (uint32_t)(p->rate * gap);
+        }
+    }
     int groove = (int)lrintf(port(p, C_GROOVE, 1.0f));
     if (groove < 1) groove = 1;
     if (groove > 16) groove = 16;
@@ -140,8 +166,8 @@ static void run(LV2_Handle h, uint32_t n)
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
         PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
         for (int b = 0; b < PB_DBTN_COUNT; b++)
-            if (pressed[b])
-                PB_STORE_REL(&ctl->drum_btn[b], PB_LOAD_RLX(&ctl->drum_btn[b]) + 1u);
+            if (steps[b])
+                PB_STORE_REL(&ctl->drum_btn[b], PB_LOAD_RLX(&ctl->drum_btn[b]) + steps[b]);
         PB_STORE_REL(&ctl->drum_heartbeat, PB_LOAD_RLX(&ctl->drum_heartbeat) + 1u);
     }
 

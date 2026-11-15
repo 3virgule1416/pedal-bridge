@@ -26,11 +26,11 @@
 /* Ports de contrôle (voir lv2/drum.c), après les ports audio. */
 enum {
     C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
-    C_PLAYSTOP, C_TEMPO, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
     C_NUM
 };
-static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP };
+static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN };
 
 typedef struct {
     const LV2_Descriptor *d;
@@ -241,6 +241,23 @@ int main(int argc, char **argv)
     T_CHECK(K.ctl->drum_metro == 1, "Metronome allumé publié");
     A.c[C_METRO] = 0; run1(&A);
     T_CHECK(K.ctl->drum_metro == 0, "Metronome éteint publié");
+
+    /* BPM + / BPM - : un pas à l'appui, répétition quand on tient. */
+    uint32_t u0 = K.ctl->drum_btn[PB_DBTN_BPM_UP], d0 = K.ctl->drum_btn[PB_DBTN_BPM_DOWN];
+    press(&A, C_BPM_UP);
+    T_CHECK(K.ctl->drum_btn[PB_DBTN_BPM_UP] == u0 + 1, "BPM + appuyé : 1 pas");
+    A.c[C_BPM_DOWN] = 1; for (int k = 0; k < 112; k++) run1(&A); A.c[C_BPM_DOWN] = 0; run1(&A);  /* 0,3 s */
+    T_CHECK(K.ctl->drum_btn[PB_DBTN_BPM_DOWN] == d0 + 1, "BPM - tenu 0,3 s : 1 pas (pas encore de répétition)");
+    u0 = K.ctl->drum_btn[PB_DBTN_BPM_UP];
+    A.c[C_BPM_UP] = 1; for (int k = 0; k < 375; k++) run1(&A); A.c[C_BPM_UP] = 0; run1(&A);    /* 1 s */
+    uint32_t du = K.ctl->drum_btn[PB_DBTN_BPM_UP] - u0;
+    printf("BPM + tenu 1 s : %u pas\n", du);
+    T_CHECK(du >= 6 && du <= 8, "BPM + tenu 1 s : 6 à 8 pas (répétition toutes les 120 ms)");
+    u0 = K.ctl->drum_btn[PB_DBTN_BPM_UP];
+    A.c[C_BPM_UP] = 1; for (int k = 0; k < 1125; k++) run1(&A); A.c[C_BPM_UP] = 0; run1(&A);   /* 3 s */
+    du = K.ctl->drum_btn[PB_DBTN_BPM_UP] - u0;
+    printf("BPM + tenu 3 s : %u pas\n", du);
+    T_CHECK(du >= 35 && du <= 45, "BPM + tenu 3 s : plus vite après 2 s (35 à 45 pas)");
 
     /* --- 4. Transport --- */
     K.ctl->rolling = 1; K.ctl->beat = 1; K.ctl->beat_frac = 100; K.ctl->bpm = 9600;

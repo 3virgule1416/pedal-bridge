@@ -54,6 +54,8 @@ enum pb_drum_btn {
     PB_DBTN_PREV,       /* groove précédent */
     PB_DBTN_NEXT,       /* groove suivant */
     PB_DBTN_TAP,        /* tap tempo */
+    PB_DBTN_BPM_UP,     /* BPM + : +1 par pas ; tenu, le plugin répète (de plus en plus vite) */
+    PB_DBTN_BPM_DOWN,   /* BPM - */
     PB_DBTN_COUNT
 };
 

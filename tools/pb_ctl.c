@@ -10,7 +10,7 @@
  *   pb_ctl loop N               boucle choisie (1-8)
  *   pb_ctl tempo BPM            réglage Tempo
  *   pb_ctl drum-take            devient le « DLS Drum » propriétaire
- *   pb_ctl drum-press NOM       appui : play prev next tap
+ *   pb_ctl drum-press NOM       appui : play prev next tap bpm+ bpm-
  *   pb_ctl drum-groove N        menu Groove (1-16)
  *   pb_ctl drum-tempo BPM       réglage Tempo de DLS Drum
  *   pb_ctl drum-metro 0|1       interrupteur Metronome de DLS Drum
@@ -32,7 +32,7 @@ static const char *STATES[PB_LS_COUNT] = {
     "hors-ligne", "vide", "attente", "enregistre", "overdub", "lecture", "muet", "pause", "autre"
 };
 static const char *BTN[PB_BTN_COUNT] = { "record", "overdub", "undo", "redo", "mute", "effacer", "play" };
-static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap" };
+static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap", "bpm+", "bpm-" };
 
 static int usage(void)
 {
