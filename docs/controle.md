@@ -285,11 +285,26 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
 
 ## 10. Hydrogen : grooves et fills
 
-- Le contrôle par OSC d'Hydrogen est **désactivé** dans `~/.hydrogen/hydrogen.conf`
-  (`oscEnabled` = false). Il faudra l'activer (**avec ton accord**).
-- **À vérifier dans la 1.2.0-beta** : les commandes OSC disponibles (choisir et
-  jouer un pattern, pattern suivant, mode « stacked »), et si elles marchent
-  quand Hydrogen est en écoute du maître du temps.
+- **OSC d'Hydrogen activé** (accord donné) : `oscEnabled` = true dans
+  `~/.hydrogen/hydrogen.conf` (sauvegarde : `hydrogen.conf.bak-20261114-224403`).
+  Hydrogen écoute en UDP sur le port **9000, toutes interfaces** (accessible
+  depuis le réseau local, comme l'OSC de SooperLooper).
+- **Retour d'état** : un programme qui lui a écrit reçoit l'état de la table de
+  mixage (volume, pan, mute, solo de chaque instrument), le métronome et le mute
+  général. **Pas** le tempo, le mode ni le pattern sélectionné : c'est donc notre
+  système qui doit retenir le pattern qu'il a demandé.
+- **Commandes présentes dans la 1.2.0-beta** (liste tirée du programme) :
+  `OPEN_SONG`, `SAVE_SONG`, `SAVE_SONG_AS`, `NEW_SONG`, `SELECT_AND_PLAY_PATTERN`,
+  `SELECT_NEXT_PATTERN`, `SELECT_ONLY_NEXT_PATTERN`, `SONG_MODE_ACTIVATION`,
+  `LOOP_MODE_ACTIVATION`, `BPM`, `BPM_INCR`/`DECR`, `TAP_TEMPO`, `PLAY`, `STOP`,
+  `PAUSE`, `RELOCATE`, `NEXT_BAR`, `PREVIOUS_BAR`, `LOAD_DRUMKIT`,
+  `TOGGLE_METRONOME`, `MUTE`/`UNMUTE`, `JACK_TRANSPORT_ACTIVATION`,
+  `JACK_TIMEBASE_MASTER_ACTIVATION`, table de mixage par instrument.
+  À tester une par une (arguments, comportement en écoute du maître du temps).
+- Pour une chanson : `SAVE_SONG_AS` (le `.h2song` dans le dossier de la chanson),
+  `OPEN_SONG` au chargement, mode (`SONG_MODE_ACTIVATION`), pattern retenu par
+  le client (`SELECT_AND_PLAY_PATTERN`), et `BPM` pour que l'affichage
+  d'Hydrogen suive `pb_timebase`.
 - Fill = pattern dédié, joué une mesure, puis retour au groove. Le client envoie
   le changement juste avant la barre.
 - Alternative si l'OSC est trop limité : piloter Hydrogen par MIDI (notes et
