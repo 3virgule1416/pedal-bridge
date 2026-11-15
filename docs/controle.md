@@ -222,10 +222,15 @@ Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
 - Contrôles : Boucle (1-8), Record, Overdub, Undo, Redo, Mute, Effacer,
   Play / Stop (boutons momentanés), Tempo (40-240, appliqué quand on le
   **change** : charger un preset ne change pas le tempo), Volume boucles.
-- Sorties : État de la boucle (texte : hors ligne, vide, attente, enregistre,
-  overdub, lecture, muet, pause, autre), Temps de la mesure (texte), Pulsation
-  et Sur le 1 (voyants au tempo), En lecture, Tempo actuel (texte), Pont actif,
-  Audio connecté.
+- Sorties : State (texte : offline, empty, waiting, recording, overdub,
+  playing, muted, paused, other), Beat (texte), voyants ♩ (chaque temps, vert),
+  1 (premier temps, rouge), ▶ (lecture), BPM (texte), Link (no bridge, no
+  audio, OK).
+- Interface en anglais (noms affichés seulement : les symboles des ports, que
+  les presets gardent, restent les mêmes). Trois sections (pg:group) : Loop,
+  Transport, Bridge ; les ports sont rangés par section, car PiPedal ouvre une
+  nouvelle boîte dès que la section change d'un port au suivant. Les voyants
+  ont un nom d'un caractère (un voyant est trop étroit pour un mot).
 - **Fichier de contrôle** `/dev/shm/pedal-bridge-control` (`common/pb_ctl.h`) :
   créé par le plugin ; compteurs de boutons ; la dernière instance activée
   commande (changement de preset) ; le client se recale sur ses compteurs sans

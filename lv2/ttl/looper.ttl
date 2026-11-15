@@ -11,7 +11,7 @@
 
 <http://pedal-bridge.local/plugins/looper#boucle_g>
     a pg:ControlGroup ;
-    lv2:name "Boucle" ;
+    lv2:name "Loop" ;
     lv2:symbol "boucle_g" .
 
 <http://pedal-bridge.local/plugins/looper#transport_g>
@@ -21,7 +21,7 @@
 
 <http://pedal-bridge.local/plugins/looper#pont_g>
     a pg:ControlGroup ;
-    lv2:name "Pont" ;
+    lv2:name "Bridge" ;
     lv2:symbol "pont_g" .
 
 <http://pedal-bridge.local/plugins/looper-mono>
@@ -41,19 +41,19 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:optionalFeature lv2:hardRTCapable ;
     lv2:port
-    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "Entrée" ] ,
-    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Sortie" ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 2 ; lv2:symbol "boucle" ; lv2:name "Boucle" ;
+    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "In" ] ,
+    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Out" ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 2 ; lv2:symbol "boucle" ; lv2:name "Loop" ;
       rdfs:comment "Loop that the buttons act on (SooperLooper loop 1 to 8)." ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "Boucle 1" ; rdf:value 1 ] ,
-                     [ rdfs:label "Boucle 2" ; rdf:value 2 ] ,
-                     [ rdfs:label "Boucle 3" ; rdf:value 3 ] ,
-                     [ rdfs:label "Boucle 4" ; rdf:value 4 ] ,
-                     [ rdfs:label "Boucle 5" ; rdf:value 5 ] ,
-                     [ rdfs:label "Boucle 6" ; rdf:value 6 ] ,
-                     [ rdfs:label "Boucle 7" ; rdf:value 7 ] ,
-                     [ rdfs:label "Boucle 8" ; rdf:value 8 ] ;
+      lv2:scalePoint [ rdfs:label "Loop 1" ; rdf:value 1 ] ,
+                     [ rdfs:label "Loop 2" ; rdf:value 2 ] ,
+                     [ rdfs:label "Loop 3" ; rdf:value 3 ] ,
+                     [ rdfs:label "Loop 4" ; rdf:value 4 ] ,
+                     [ rdfs:label "Loop 5" ; rdf:value 5 ] ,
+                     [ rdfs:label "Loop 6" ; rdf:value 6 ] ,
+                     [ rdfs:label "Loop 7" ; rdf:value 7 ] ,
+                     [ rdfs:label "Loop 8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 3 ; lv2:symbol "record" ; lv2:name "Record" ;
       rdfs:comment "Start recording at the next cycle; press again to stop at the end of the cycle." ;
@@ -75,22 +75,22 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Silence the loop, or bring it back." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "effacer" ; lv2:name "Effacer" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "effacer" ; lv2:name "Clear" ;
       rdfs:comment "Clear the loop completely." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 9 ; lv2:symbol "etat" ; lv2:name "État" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 9 ; lv2:symbol "etat" ; lv2:name "State" ;
       rdfs:comment "State of the selected loop." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "hors ligne" ; rdf:value 0 ] ,
-                     [ rdfs:label "vide" ; rdf:value 1 ] ,
-                     [ rdfs:label "attente" ; rdf:value 2 ] ,
-                     [ rdfs:label "enregistre" ; rdf:value 3 ] ,
+      lv2:scalePoint [ rdfs:label "offline" ; rdf:value 0 ] ,
+                     [ rdfs:label "empty" ; rdf:value 1 ] ,
+                     [ rdfs:label "waiting" ; rdf:value 2 ] ,
+                     [ rdfs:label "recording" ; rdf:value 3 ] ,
                      [ rdfs:label "overdub" ; rdf:value 4 ] ,
-                     [ rdfs:label "lecture" ; rdf:value 5 ] ,
-                     [ rdfs:label "muet" ; rdf:value 6 ] ,
-                     [ rdfs:label "pause" ; rdf:value 7 ] ,
-                     [ rdfs:label "autre" ; rdf:value 8 ] ;
+                     [ rdfs:label "playing" ; rdf:value 5 ] ,
+                     [ rdfs:label "muted" ; rdf:value 6 ] ,
+                     [ rdfs:label "paused" ; rdf:value 7 ] ,
+                     [ rdfs:label "other" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart loops and drums together from bar 1." ;
@@ -100,7 +100,7 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/looper#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "temps" ; lv2:name "Temps" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -338,11 +338,11 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Level of the loops mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/looper#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "liaison" ; lv2:name "Liaison" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "pont absent" ; rdf:value 0 ] ,
-                     [ rdfs:label "pas d'audio" ; rdf:value 1 ] ,
+      lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
+                     [ rdfs:label "no audio" ; rdf:value 1 ] ,
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#pont_g> ] .
 
@@ -363,21 +363,21 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:optionalFeature lv2:hardRTCapable ;
     lv2:port
-    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "Entrée G" ] ,
-    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "Entrée D" ] ,
-    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Sortie G" ] ,
-    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Sortie D" ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 4 ; lv2:symbol "boucle" ; lv2:name "Boucle" ;
+    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "In L" ] ,
+    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "In R" ] ,
+    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Out L" ] ,
+    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Out R" ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 4 ; lv2:symbol "boucle" ; lv2:name "Loop" ;
       rdfs:comment "Loop that the buttons act on (SooperLooper loop 1 to 8)." ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "Boucle 1" ; rdf:value 1 ] ,
-                     [ rdfs:label "Boucle 2" ; rdf:value 2 ] ,
-                     [ rdfs:label "Boucle 3" ; rdf:value 3 ] ,
-                     [ rdfs:label "Boucle 4" ; rdf:value 4 ] ,
-                     [ rdfs:label "Boucle 5" ; rdf:value 5 ] ,
-                     [ rdfs:label "Boucle 6" ; rdf:value 6 ] ,
-                     [ rdfs:label "Boucle 7" ; rdf:value 7 ] ,
-                     [ rdfs:label "Boucle 8" ; rdf:value 8 ] ;
+      lv2:scalePoint [ rdfs:label "Loop 1" ; rdf:value 1 ] ,
+                     [ rdfs:label "Loop 2" ; rdf:value 2 ] ,
+                     [ rdfs:label "Loop 3" ; rdf:value 3 ] ,
+                     [ rdfs:label "Loop 4" ; rdf:value 4 ] ,
+                     [ rdfs:label "Loop 5" ; rdf:value 5 ] ,
+                     [ rdfs:label "Loop 6" ; rdf:value 6 ] ,
+                     [ rdfs:label "Loop 7" ; rdf:value 7 ] ,
+                     [ rdfs:label "Loop 8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "record" ; lv2:name "Record" ;
       rdfs:comment "Start recording at the next cycle; press again to stop at the end of the cycle." ;
@@ -399,22 +399,22 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Silence the loop, or bring it back." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "effacer" ; lv2:name "Effacer" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "effacer" ; lv2:name "Clear" ;
       rdfs:comment "Clear the loop completely." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "etat" ; lv2:name "État" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "etat" ; lv2:name "State" ;
       rdfs:comment "State of the selected loop." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "hors ligne" ; rdf:value 0 ] ,
-                     [ rdfs:label "vide" ; rdf:value 1 ] ,
-                     [ rdfs:label "attente" ; rdf:value 2 ] ,
-                     [ rdfs:label "enregistre" ; rdf:value 3 ] ,
+      lv2:scalePoint [ rdfs:label "offline" ; rdf:value 0 ] ,
+                     [ rdfs:label "empty" ; rdf:value 1 ] ,
+                     [ rdfs:label "waiting" ; rdf:value 2 ] ,
+                     [ rdfs:label "recording" ; rdf:value 3 ] ,
                      [ rdfs:label "overdub" ; rdf:value 4 ] ,
-                     [ rdfs:label "lecture" ; rdf:value 5 ] ,
-                     [ rdfs:label "muet" ; rdf:value 6 ] ,
-                     [ rdfs:label "pause" ; rdf:value 7 ] ,
-                     [ rdfs:label "autre" ; rdf:value 8 ] ;
+                     [ rdfs:label "playing" ; rdf:value 5 ] ,
+                     [ rdfs:label "muted" ; rdf:value 6 ] ,
+                     [ rdfs:label "paused" ; rdf:value 7 ] ,
+                     [ rdfs:label "other" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#boucle_g> ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart loops and drums together from bar 1." ;
@@ -424,7 +424,7 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/looper#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "temps" ; lv2:name "Temps" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -662,11 +662,11 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
       rdfs:comment "Level of the loops mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/looper#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 20 ; lv2:symbol "liaison" ; lv2:name "Liaison" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 20 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "pont absent" ; rdf:value 0 ] ,
-                     [ rdfs:label "pas d'audio" ; rdf:value 1 ] ,
+      lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
+                     [ rdfs:label "no audio" ; rdf:value 1 ] ,
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/looper#pont_g> ] .
 

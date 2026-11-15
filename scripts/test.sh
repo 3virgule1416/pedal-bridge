@@ -28,7 +28,7 @@ echo "=== 2. TTL lus par lilv"
 for uri in http://pedal-bridge.local/plugins/send http://pedal-bridge.local/plugins/return; do
   out="$(LV2_PATH="$B/lv2:/usr/lib/lv2" lv2info "$uri" 2>&1)" || true
   if echo "$out" | grep -q "Name:.*Davis Loop Station" && echo "$out" | grep -q "lv2core#enumeration" \
-     && [ "$(echo "$out" | grep -cE '"Lien [1-8]"|Lien [1-8]')" -ge 8 ]; then
+     && [ "$(echo "$out" | grep -cE '"Link [1-8]"|Link [1-8]')" -ge 8 ]; then
     echo "  ok    $uri"
     echo "$out" | grep -E "^\s+(Name|Symbol|Minimum|Maximum|Default|Type|Properties|Scale Points)" \
                 | sed 's/^/        /' | head -60
@@ -39,7 +39,7 @@ done
 
 for uri in http://pedal-bridge.local/plugins/looper-mono http://pedal-bridge.local/plugins/looper-stereo; do
   out="$(LV2_PATH="$B/lv2:/usr/lib/lv2" lv2info "$uri" 2>&1)" || true
-  if echo "$out" | grep -q "Name:.*Davis Loop Station Looper" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 7 ]      && echo "$out" | grep -q '"enregistre"' && echo "$out" | grep -q '"240"'; then
+  if echo "$out" | grep -q "Name:.*Davis Loop Station Looper" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 7 ]      && echo "$out" | grep -q '"recording"' && echo "$out" | grep -q '"240"'; then
     echo "  ok    $uri (7 boutons, états, tempo)"
   else
     echo "  ÉCHEC $uri"; echo "$out" | head -40; FAIL=1

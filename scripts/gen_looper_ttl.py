@@ -6,7 +6,7 @@
 import os
 HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lv2", "ttl")
 
-GROUPS = [("boucle_g", "Boucle"), ("transport_g", "Transport"), ("pont_g", "Pont")]
+GROUPS = [("boucle_g", "Loop"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
 G = "http://pedal-bridge.local/plugins/looper#"
 
 HEAD = """@prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -68,43 +68,43 @@ def enum(lo, hi, points):
 
 
 LED = "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled"
-STATES = ["hors ligne", "vide", "attente", "enregistre", "overdub", "lecture", "muet", "pause", "autre"]
+STATES = ["offline", "empty", "waiting", "recording", "overdub", "playing", "muted", "paused", "other"]
 
 
 def plugin(uri, name, label, stereo):
     p = []
     if stereo:
-        p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "Entrée G" ]',
-              '    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "Entrée D" ]',
-              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Sortie G" ]',
-              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Sortie D" ]']
+        p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "In L" ]',
+              '    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "In R" ]',
+              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Out L" ]',
+              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Out R" ]']
         i = 4
     else:
-        p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "Entrée" ]',
-              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Sortie" ]']
+        p += ['    [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "In" ]',
+              '    [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Out" ]']
         i = 2
     B, T, P = "boucle_g", "transport_g", "pont_g"
 
     # Ordre = enum de lv2/looper.c, rangé par section.
-    p.append(ctl_in(i, "boucle", "Boucle", "Loop that the buttons act on (SooperLooper loop 1 to 8).",
+    p.append(ctl_in(i, "boucle", "Loop", "Loop that the buttons act on (SooperLooper loop 1 to 8).",
                     "lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;\n"
-                    "      lv2:scalePoint " + scale([(k, f"Boucle {k}") for k in range(1, 9)]), B)); i += 1
+                    "      lv2:scalePoint " + scale([(k, f"Loop {k}") for k in range(1, 9)]), B)); i += 1
     for sym, nm, cm in [
         ("record", "Record", "Start recording at the next cycle; press again to stop at the end of the cycle."),
         ("overdub", "Overdub", "Add a layer over the loop; press again to stop."),
         ("undo", "Undo", "Remove the last layer."),
         ("redo", "Redo", "Put back the last removed layer."),
         ("mute", "Mute", "Silence the loop, or bring it back."),
-        ("effacer", "Effacer", "Clear the loop completely."),
+        ("effacer", "Clear", "Clear the loop completely."),
     ]:
         p.append(button(i, sym, nm, cm, B)); i += 1
-    p.append(ctl_out(i, "etat", "État", "State of the selected loop.",
+    p.append(ctl_out(i, "etat", "State", "State of the selected loop.",
                      enum(0, len(STATES) - 1, list(enumerate(STATES))), B)); i += 1
 
     p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart loops and drums together from bar 1.", T)); i += 1
     p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
                     "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
-    p.append(ctl_out(i, "temps", "Temps", "Current beat in the bar (- when stopped).",
+    p.append(ctl_out(i, "temps", "Beat", "Current beat in the bar (- when stopped).",
                      enum(0, 8, [(0, "-")] + [(k, str(k)) for k in range(1, 9)]), T)); i += 1
     # Voyants : étroits, donc un nom très court (le détail est dans la bulle).
     p.append(ctl_out(i, "pulsation", "♩", "Beat: flashes on every beat.", LED, T, "green")); i += 1
@@ -115,8 +115,8 @@ def plugin(uri, name, label, stereo):
 
     p.append(ctl_in(i, "gain", "Volume", "Level of the loops mixed into your signal.",
                     "lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db", P)); i += 1
-    p.append(ctl_out(i, "liaison", "Liaison", "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running.",
-                     enum(0, 2, [(0, "pont absent"), (1, "pas d'audio"), (2, "OK")]), P)); i += 1
+    p.append(ctl_out(i, "liaison", "Link", "OK: audio flows to and from SooperLooper. No audio: the pedal_bridge client runs but the audio link is not up. Bridge absent: the pedal_bridge client is not running.",
+                     enum(0, 2, [(0, "no bridge"), (1, "no audio"), (2, "OK")]), P)); i += 1
 
     return f"""<{uri}>
     a lv2:Plugin, lv2:UtilityPlugin ;
