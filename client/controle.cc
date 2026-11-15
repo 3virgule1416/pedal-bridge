@@ -2,6 +2,7 @@
 #include "controle.h"
 #include "pb_ctl.h"
 #include "pb_shm.h"
+#include "pipedal_ws.h"
 
 #include <arpa/inet.h>
 #include <jack/transport.h>
@@ -518,6 +519,40 @@ std::string set_metronome(bool on)
     return on ? "ok métronome allumé" : "ok métronome éteint";
 }
 
+/* --- Affichage de PiPedal ------------------------------------------------
+ * Next/Previous et Tap changent le groove et le tempo sans passer par les
+ * réglages des plugins : le pont remet ensuite Groove et Tempo à la bonne
+ * valeur par le websocket de PiPedal, comme un changement à la main. Le
+ * plugin renvoie alors cette valeur : le pont la reconnaît (groove joué,
+ * dernier tempo appliqué) et ne refait rien. PB_PIPEDAL_PORT=0 : désactivé. */
+const char *URI_DRUM = "http://pedal-bridge.local/plugins/drum-";
+const char *URI_LOOPER = "http://pedal-bridge.local/plugins/looper-";
+int g_ui_groove = 0;              // à afficher (0 = rien)
+int g_ui_tempo = 0;
+uint32_t g_last_tempo_c = 0;      // dernier tempo appliqué, centièmes de BPM
+
+int pipedal_port()
+{
+    const char *e = std::getenv("PB_PIPEDAL_PORT");
+    return e ? std::atoi(e) : 80;
+}
+
+void ui_flush()
+{
+    if (!g_ui_groove && !g_ui_tempo) return;
+    std::vector<PipedalSet> v;
+    if (g_ui_groove) v.push_back({URI_DRUM, "groove", (float)g_ui_groove});
+    if (g_ui_tempo) {
+        v.push_back({URI_DRUM, "tempo", (float)g_ui_tempo});
+        v.push_back({URI_LOOPER, "tempo", (float)g_ui_tempo});
+    }
+    g_ui_groove = g_ui_tempo = 0;
+    const int port = pipedal_port();
+    if (port <= 0) return;
+    std::string err;
+    if (pipedal_set_controls(port, v, err) < 0) say("PiPedal : affichage non mis à jour (%s)", err.c_str());
+}
+
 std::string set_groove(const std::string &arg)
 {
     const int n = std::atoi(arg.c_str());
@@ -526,6 +561,7 @@ std::string set_groove(const std::string &arg)
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
     h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)(n - 1));
     g_pattern = n - 1;
+    if (n <= 16) g_ui_groove = n;                      // menu Groove : 1 à 16
     return "ok groove " + std::to_string(n) + " ; " + apply_cycle(g_pattern);
 }
 
@@ -535,6 +571,9 @@ std::string set_tempo(const std::string &arg)
     if (bpm < 20 || bpm > 400) return "erreur : tempo entre 20 et 400";
     if (timebase(arg).empty()) return "erreur : pb_timebase ne répond pas";
     if (h2_listening()) h2_float("/Hydrogen/BPM", (float)bpm);    // affichage d'Hydrogen
+    g_last_tempo_c = (uint32_t)std::lround(bpm * 100);
+    if (bpm >= 40 && bpm <= 240 && std::fabs(bpm - std::round(bpm)) < 0.005)
+        g_ui_tempo = (int)std::lround(bpm);               // bouton Tempo : BPM entiers
     return "ok tempo " + arg;
 }
 
@@ -698,7 +737,7 @@ std::string tap_tempo()
     const double bpm = 60.0 / period;
     if (bpm < 40 || bpm > 240) return "erreur : tap hors limites (40 à 240 BPM)";
     char b[32];
-    std::snprintf(b, sizeof b, "%.1f", bpm);
+    std::snprintf(b, sizeof b, "%.0f", bpm);         // entier : comme le bouton Tempo
     return set_tempo(b);
 }
 
@@ -719,8 +758,10 @@ void drum_poll(pb_ctl *k)
     const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
     if (groove != g_dr_groove) {
         g_dr_groove = groove;
-        say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
-        g_refresh_now = true;
+        if ((int)groove != g_pattern + 1) {            // sinon : c'est le groove qui joue déjà
+            say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
+            g_refresh_now = true;
+        }
     }
     const uint32_t metro = PB_LOAD_RLX(&k->drum_metro);
     if (metro != g_dr_metro) {
@@ -731,9 +772,11 @@ void drum_poll(pb_ctl *k)
     if (tempo != g_dr_tempo_seen) { g_dr_tempo_seen = tempo; g_dr_tempo_since = now_s(); }
     if (tempo != g_dr_tempo && now_s() - g_dr_tempo_since >= 0.3) {
         g_dr_tempo = tempo;
-        char t[32];
-        std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
-        say("DLS Drum : tempo %s -> %s", t, set_tempo(t).c_str());
+        if (tempo != g_last_tempo_c) {               // sinon : c'est déjà le tempo
+            char t[32];
+            std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
+            say("DLS Drum : tempo %s -> %s", t, set_tempo(t).c_str());
+        }
     }
     for (int b = 0; b < PB_DBTN_COUNT; b++) {
         const uint32_t c = PB_LOAD_ACQ(&k->drum_btn[b]);
@@ -785,6 +828,7 @@ void looper_poll()
         publish_states();
     }
     drum_poll(k);
+    ui_flush();
     const uint64_t owner = PB_LOAD_ACQ(&k->looper_owner);
     if (owner != g_lp_owner) {             // autre instance : se recaler sans rien exécuter
         g_lp_owner = owner;
@@ -808,9 +852,11 @@ void looper_poll()
     if (tempo != g_tempo_seen) { g_tempo_seen = tempo; g_tempo_since = now_s(); }
     if (tempo != g_lp_tempo && now_s() - g_tempo_since >= 0.3) {
         g_lp_tempo = tempo;
-        char t[32];
-        std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
-        say("DLS Looper : tempo %s -> %s", t, set_tempo(t).c_str());
+        if (tempo != g_last_tempo_c) {               // sinon : c'est déjà le tempo
+            char t[32];
+            std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
+            say("DLS Looper : tempo %s -> %s", t, set_tempo(t).c_str());
+        }
     }
     for (int b = 0; b < PB_BTN_COUNT; b++) {
         const uint32_t c = PB_LOAD_ACQ(&k->looper_btn[b]);

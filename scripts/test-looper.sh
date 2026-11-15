@@ -27,6 +27,7 @@ for p in pb_timebase pedal_bridge sooperlooper; do
 done
 
 export PB_SHM_DIR="$(mktemp -d /tmp/pb-looper-XXXXXX)"
+export PB_PIPEDAL_PORT=0          # banc : ne pas toucher à la page de PiPedal
 WORK="$PB_SHM_DIR/travail"
 PIDS=()
 cleanup() {
