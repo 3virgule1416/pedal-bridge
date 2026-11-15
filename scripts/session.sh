@@ -102,7 +102,12 @@ do_start() {
   echo "== JACK (dummy, 48 kHz, période $PERIOD)"
   if jack_ok; then
     cur=$(jack_bufsize 2> /dev/null | grep -o '[0-9]\+' | head -1)
-    if [ "$cur" != "$PERIOD" ]; then
+    if [ "$cur" != "$PERIOD" ] && running sooperlooper; then
+      # SooperLooper 1.7.8 plante si la période JACK change pendant qu'il tourne
+      # (constaté : processus disparu, boucles perdues).
+      echo "  ATTENTION : JACK est en période $cur, pas $PERIOD. Je ne la change pas :"
+      echo "  SooperLooper planterait. Pour changer : session.sh stop, puis start."
+    elif [ "$cur" != "$PERIOD" ]; then
       echo "  déjà démarré en période $cur : passage à $PERIOD"
       jack_bufsize "$PERIOD" > /dev/null
     else

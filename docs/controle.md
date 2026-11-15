@@ -229,7 +229,8 @@ Commandes texte par UDP (`pedal_bridge --cmd "..."`, ou `session.sh play`,
 
 - **stop** : transport arrêté + boucles en pause, puis **normalisation** des
   boucles qui en ont besoin : `save_loop` (WAV float, ~20 ms pour 4 s),
-  rotation de l'audio de D = latence envoi + retour (1088 trames aujourd'hui),
+  rotation de l'audio de D = latence envoi + retour **au moment de
+  l'enregistrement** de la boucle (1088 trames aujourd'hui),
   `load_loop`. Refusé pendant un enregistrement en cours.
 - **play** : stop (normalise au besoin), transport à la trame 0, `trigger` de
   toutes les boucles (armées, elles partent sur la première barre), départ du
@@ -237,11 +238,15 @@ Commandes texte par UDP (`pedal_bridge --cmd "..."`, ou `session.sh play`,
 - **save NOM** : `~/pedal-bridge/chansons/NOM/` : `boucleN.wav` (normalisées),
   `chanson.txt` (tempo, D, fréquence, longueurs).
 - **load NOM** : `load_loop` de chaque boucle (les autres sont vidées), tempo
-  envoyé à `pb_timebase`, transport à la mesure 1. Si D a changé depuis la
-  sauvegarde, l'audio est tourné de la différence.
+  envoyé à `pb_timebase`, transport à la mesure 1, **sans aucun décalage**.
 - Seul un **enregistrement neuf** (état record) rend une boucle « à normaliser » :
   un overdub sur une boucle normalisée tombe juste (mesuré : pic unique à
   −22,67 ms après overdub de la même batterie).
+- **Une boucle normalisée est définitive.** Au playback, la boucle et la batterie
+  passent par le même chemin de retour : elles restent alignées même si la
+  latence change ensuite (période JACK, réglages de PiPedal). Mesuré : boucle
+  normalisée avec D = 1088, puis pont relancé avec D = 1536 : toujours −22,67 ms,
+  et chanson sauvée à 1088 rechargée à 1536 : −22,67 ms.
 - **État gardé** dans `~/pedal-bridge/travail/etat.txt` (index, longueur, D) :
   après un redémarrage du pont, les boucles déjà normalisées sont reconnues
   (même longueur) et ne sont pas décalées deux fois.
@@ -252,6 +257,9 @@ un redémarrage du pont. Partout identique.
 
 ### Limites connues
 
+- **Ne pas changer la période JACK pendant que SooperLooper tourne** : il
+  plante (constaté, boucles perdues). `session.sh start` refuse maintenant de
+  la changer dans ce cas.
 - Le **morceau Hydrogen** n'est pas sauvegardé par `save` : à sauver dans
   Hydrogen (OSC d'Hydrogen à activer plus tard, §10).
 - Un **undo** qui ramène une boucle à son contenu d'avant la normalisation

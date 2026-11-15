@@ -87,7 +87,8 @@ struct Loop {
     int state = 0;
     bool normalized = false;
     bool dirty = false;     // enregistrement neuf pas encore normalisé
-    uint32_t norm_d = 0;    // D utilisé pour la normalisation
+    uint32_t norm_d = 0;    // délai appliqué à la normalisation (pour information)
+    uint32_t rec_d = 0;     // délai du trajet au moment de l'enregistrement
 };
 
 CtlConfig g_cfg;
@@ -97,6 +98,7 @@ int g_cmd = -1, g_osc = -1;
 std::string g_reply_url;
 std::vector<Loop> g_loops;
 uint32_t g_sr = 48000;
+bool g_sl_ok = false;        // SooperLooper a répondu au dernier ping
 
 enum { SL_RECORD = 2, SL_PLAY = 4, SL_PAUSED = 14 };
 
@@ -210,7 +212,8 @@ void restore_state()
 void sl_refresh()
 {
     const int n = sl_count();
-    if (n <= 0) return;
+    if (n <= 0) { g_sl_ok = false; return; }
+    g_sl_ok = true;
     bool restore = false;
     if ((int)g_loops.size() != n) {
         g_loops.assign(n, Loop{});
@@ -238,6 +241,9 @@ void sl_refresh()
                 if (L.normalized) changed = true;
                 L.dirty = true;
                 L.normalized = false;
+                /* Délai à corriger = celui du moment de l'enregistrement. */
+                const uint32_t d = g_cfg.comp_frames ? g_cfg.comp_frames() : 0;
+                if (d) L.rec_d = d;
             }
         }
         return ++seen >= 2 * n;
@@ -355,13 +361,16 @@ bool load_loop_from(int i, const std::string &path, std::string &err)
 std::string work_dir() { return g_cfg.base_dir + "/travail"; }
 std::string songs_dir() { return g_cfg.base_dir + "/chansons"; }
 
-/* Normalise une boucle : décale son audio de D (ou de la différence avec la
- * normalisation précédente si D a changé). */
+/* Normalise une boucle : décale son audio du délai qu'avait le trajet au moment
+ * de son enregistrement (rec_d ; à défaut, D actuel).
+ * Une boucle normalisée est DÉFINITIVE : au playback, la boucle et la batterie
+ * passent par le même chemin de retour, donc elles restent alignées même si la
+ * latence change ensuite. On ne la décale plus jamais. */
 bool normalize(int i, uint32_t D, std::string &err)
 {
     Loop &L = g_loops[i];
-    const long shift = L.normalized ? (long)D - (long)L.norm_d : (long)D;
-    if (L.normalized && shift == 0) return true;
+    if (L.normalized) return true;
+    const long shift = L.rec_d ? (long)L.rec_d : (long)D;
     mkdirs(work_dir());
     const std::string a = work_dir() + "/boucle" + std::to_string(i + 1) + ".wav";
     const std::string b = work_dir() + "/boucle" + std::to_string(i + 1) + "-norm.wav";
@@ -373,7 +382,7 @@ bool normalize(int i, uint32_t D, std::string &err)
     unlink(b.c_str());
     L.normalized = true;
     L.dirty = false;
-    L.norm_d = D;
+    L.norm_d = (uint32_t)shift;
     save_state();
     say("boucle %d normalisée (%+ld trames, %.0f ms de traitement)", i + 1, shift, 1000 * (now_s() - t0));
     return true;
@@ -416,6 +425,7 @@ void transport_stop_and_pause()
 std::string stop_all()
 {
     sl_refresh();
+    if (!g_sl_ok) return "erreur : SooperLooper ne répond pas (lancé ? port OSC " + std::to_string(g_cfg.sl_port) + ")";
     if (sl_any_recording()) return "erreur : un enregistrement est en cours, termine-le d'abord";
     transport_stop_and_pause();
     usleep(30000);
@@ -426,7 +436,7 @@ std::string stop_all()
         Loop &L = g_loops[i];
         if (L.len <= 0) continue;
         if (!D) { errs += " latence inconnue (plugins absents ?)"; break; }
-        if (!L.normalized || L.norm_d != D) {
+        if (!L.normalized) {
             std::string err;
             if (normalize((int)i, D, err)) done++;
             else errs += " boucle " + std::to_string(i + 1) + " : " + err;
@@ -496,9 +506,9 @@ std::string load_song(const std::string &name)
         if (eq != std::string::npos) kv[line.substr(0, eq)] = line.substr(eq + 1);
     }
     sl_refresh();
+    if (!g_sl_ok) return "erreur : SooperLooper ne répond pas (lancé ? port OSC " + std::to_string(g_cfg.sl_port) + ")";
     if (sl_any_recording()) return "erreur : un enregistrement est en cours";
     transport_stop_and_pause();
-    const uint32_t D = g_cfg.comp_frames ? g_cfg.comp_frames() : 0;
     const uint32_t Dsaved = (uint32_t)std::atol(kv["compensation"].c_str());
     int n = 0;
     for (size_t i = 0; i < g_loops.size(); i++) {
@@ -509,18 +519,14 @@ std::string load_song(const std::string &name)
             L = Loop{};
             continue;
         }
-        std::string src = f, err;
-        if (D && Dsaved && D != Dsaved) {            // la latence a changé depuis
-            mkdirs(work_dir());
-            src = work_dir() + "/charge" + std::to_string(i + 1) + ".wav";
-            if (!rotate_wav(f, src, (long)D - (long)Dsaved, err)) return "erreur : " + err;
-        }
-        if (!load_loop_from((int)i, src, err)) return "erreur : " + err;
-        if (src != f) unlink(src.c_str());
+        /* Les boucles sauvées sont normalisées : aucun décalage au chargement,
+         * même si la latence a changé depuis (voir normalize()). */
+        std::string err;
+        if (!load_loop_from((int)i, f, err)) return "erreur : " + err;
         sl_send("/sl/" + std::to_string(i) + "/hit", {"pause_on"});
         L.normalized = true;
         L.dirty = false;
-        L.norm_d = D ? D : Dsaved;
+        L.norm_d = Dsaved;
         n++;
     }
     save_state();
@@ -550,6 +556,7 @@ std::string list_songs()
 std::string status()
 {
     sl_refresh();
+    if (!g_sl_ok) return "erreur : SooperLooper ne répond pas (lancé ? port OSC " + std::to_string(g_cfg.sl_port) + ")";
     std::string r = "ok compensation " + std::to_string(g_cfg.comp_frames ? g_cfg.comp_frames() : 0) +
                     " trames ;";
     for (size_t i = 0; i < g_loops.size(); i++) {
