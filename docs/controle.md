@@ -260,8 +260,16 @@ un redémarrage du pont. Partout identique.
 - **Ne pas changer la période JACK pendant que SooperLooper tourne** : il
   plante (constaté, boucles perdues). `session.sh start` refuse maintenant de
   la changer dans ce cas.
-- Le **morceau Hydrogen** n'est pas sauvegardé par `save` : à sauver dans
-  Hydrogen (OSC d'Hydrogen à activer plus tard, §10).
+- **Hydrogen** (fait, §10) : `save` écrit aussi `NOM.h2song` (`SAVE_SONG_AS`),
+  `mode=pattern` et le groove retenu ; `load` rouvre le morceau (`OPEN_SONG`),
+  remet le mode Pattern, le groove et l'affichage du tempo. Vérifié à l'écran
+  (titre, pattern, BPM). Le groove n'est connu que s'il a été choisi par
+  `groove N` : Hydrogen n'annonce pas un pattern cliqué dans son interface.
+  `SAVE_SONG_AS` fait aussi de ce fichier le morceau « courant » d'Hydrogen.
+- **Mesure fixe en 4/4** (`pb_timebase --beats 4`, SooperLooper 8 croches par
+  cycle). Un pattern en 3/4, 6/8 ou de plusieurs mesures décalerait les départs
+  et arrêts d'enregistrement : à rendre automatique (taille des patterns lue
+  dans le `.h2song`).
 - Un **undo** qui ramène une boucle à son contenu d'avant la normalisation
   (annuler le chargement) n'est pas détecté.
 - Une boucle réenregistrée **pendant que le pont est arrêté**, avec exactement

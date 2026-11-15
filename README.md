@@ -102,10 +102,11 @@ bash scripts/session.sh connect    # refaire les branchements
 bash scripts/session.sh tempo 115  # changer le tempo (pb_timebase)
 bash scripts/session.sh play       # batterie + boucles repartent ensemble de la mesure 1 (exact)
 bash scripts/session.sh pause      # vrai stop ; les nouvelles boucles sont normalisées
-bash scripts/session.sh save NOM   # sauvegarde la chanson (boucles + tempo) dans ~/pedal-bridge/chansons
+bash scripts/session.sh save NOM   # sauvegarde la chanson (boucles, tempo, morceau Hydrogen, groove)
 bash scripts/session.sh load NOM   # recharge une chanson, prête à jouer de la mesure 1
 bash scripts/session.sh list       # chansons sauvegardées
 bash scripts/session.sh boucles    # état des boucles (normalisées ou non)
+bash scripts/session.sh groove 3   # pattern 3 d'Hydrogen (1 = premier), retenu par save
 bash scripts/session.sh stop       # arrêter pont, Hydrogen, SooperLooper
 bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran virtuel et VNC
 ```

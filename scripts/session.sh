@@ -15,6 +15,7 @@
 #   bash scripts/session.sh load NOM  recharge une chanson, prête à jouer de la mesure 1
 #   bash scripts/session.sh list      chansons sauvegardées
 #   bash scripts/session.sh boucles   état des boucles (normalisées ou non)
+#   bash scripts/session.sh groove N  pattern N d'Hydrogen (1 = premier), retenu par save
 #   bash scripts/session.sh stop      arrête le pont, Hydrogen et SooperLooper
 #   bash scripts/session.sh stop-all  arrête aussi JACK, pb_timebase, l'écran virtuel et VNC
 #
@@ -222,7 +223,9 @@ case "${1:-}" in
   connect)  do_connect ;;
   tempo)    # tempo de pb_timebase : Hydrogen et SooperLooper le suivent par JACK
     if [ -z "${2:-}" ]; then "$B/pb_timebase" --get; exit; fi
-    "$B/pb_timebase" --set "$2" ;;
+    # par le client si possible : il met aussi à jour l'affichage d'Hydrogen
+    if running pedal_bridge; then "$B/pedal_bridge" --cmd "tempo $2"; else "$B/pb_timebase" --set "$2"; fi ;;
+  groove) "$B/pedal_bridge" --cmd "groove ${2:-}" ;;   # pattern N d'Hydrogen (à partir de 1)
   # Commandes musicales : exécutées par le client pedal_bridge (voir client/controle.h)
   play)  "$B/pedal_bridge" --cmd play ;;            # tout repart de la mesure 1, ensemble
   pause) "$B/pedal_bridge" --cmd stop ;;            # tout s'arrête ; nouvelles boucles normalisées
@@ -232,5 +235,5 @@ case "${1:-}" in
   boucles) "$B/pedal_bridge" --cmd status ;;
   stop)     do_stop ;;
   stop-all) do_stop; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
-  *) sed -n '2,31p' "$0"; exit 2 ;;
+  *) sed -n '2,32p' "$0"; exit 2 ;;
 esac

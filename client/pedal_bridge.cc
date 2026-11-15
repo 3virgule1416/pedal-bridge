@@ -559,7 +559,8 @@ void usage()
         "  --ctl-port PORT  port UDP des commandes (défaut 9982)\n"
         "  --dir DOSSIER    chansons et fichiers de travail (défaut ~/pedal-bridge)\n"
         "  --cmd \"TEXTE\"    envoie une commande au pedal_bridge déjà lancé et affiche la\n"
-        "                   réponse : play, stop, save NOM, load NOM, list, status\n"
+        "                   réponse : play, stop, save NOM, load NOM, list, status,\n"
+        "                   groove N, tempo BPM\n"
         "Ports : sendN_L/R (sorties, son de PiPedal), returnN_L/R (entrées, vers PiPedal)\n");
 }
 

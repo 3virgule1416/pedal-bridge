@@ -11,6 +11,8 @@
  *   load NOM        recharge une chanson (transport arrêté à la mesure 1)
  *   list            liste les chansons sauvegardées
  *   status          état des boucles
+ *   groove N        pattern N d'Hydrogen (à partir de 1), retenu pour save
+ *   tempo BPM       tempo (pb_timebase) + affichage d'Hydrogen
  *
  * Normaliser une boucle : SooperLooper compense la latence en décalant la
  * lecture, et oublie ce décalage quand la boucle repart par « trigger »
@@ -34,6 +36,7 @@ struct CtlConfig {
     int sl_port = 9951;                       // OSC de SooperLooper
     int cmd_port = 9982;                      // commandes texte (UDP, 127.0.0.1)
     int timebase_port = 9980;                 // pb_timebase (tempo)
+    int h2_port = 9000;                       // OSC d'Hydrogen
     std::string base_dir;                     // ~/pedal-bridge
     std::function<uint32_t()> comp_frames;    // D en trames JACK (0 = inconnu)
 };

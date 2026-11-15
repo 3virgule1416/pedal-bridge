@@ -412,6 +412,59 @@ double get_tempo()
     return p == std::string::npos ? 0 : std::atof(r.c_str() + p + 6);
 }
 
+/* ------------------------------------------------------------ Hydrogen --- */
+/* OSC d'Hydrogen (port 9000, à activer dans ~/.hydrogen/hydrogen.conf).
+ * Vérifié sur la 1.2.0-beta : SELECT_AND_PLAY_PATTERN compte à partir de 0,
+ * BPM change l'affichage, SONG_MODE_ACTIVATION 0 = mode Pattern,
+ * SAVE_SONG_AS écrit le .h2song. Hydrogen n'annonce PAS le pattern
+ * sélectionné : le client retient celui qu'il a demandé (g_pattern). */
+int g_pattern = -1;               // pattern choisi par « groove », à partir de 0
+
+void h2_send(const std::string &addr, const std::string *s, const float *f)
+{
+    std::string m;
+    put_str(m, addr);
+    put_str(m, std::string(",") + (s ? "s" : "") + (f ? "f" : ""));
+    if (s) put_str(m, *s);
+    if (f) put_f(m, *f);
+    sockaddr_in a = local(g_cfg.h2_port);
+    sendto(g_osc, m.data(), m.size(), 0, (sockaddr *)&a, sizeof a);
+}
+void h2_float(const std::string &addr, float v) { h2_send(addr, nullptr, &v); }
+void h2_string(const std::string &addr, const std::string &v) { h2_send(addr, &v, nullptr); }
+
+/* Hydrogen écoute-t-il ? (port UDP ouvert : on ne peut pas lui « parler » sans effet) */
+bool h2_listening()
+{
+    std::ifstream f("/proc/net/udp");
+    char port_hex[8];
+    std::snprintf(port_hex, sizeof port_hex, ":%04X", g_cfg.h2_port);
+    std::string line;
+    while (std::getline(f, line))
+        if (line.find(port_hex) != std::string::npos && line.find(port_hex) < 20) return true;
+    return false;
+}
+
+std::string set_groove(const std::string &arg)
+{
+    const int n = std::atoi(arg.c_str());
+    if (n < 1 || n > 999) return "erreur : groove N, N à partir de 1 (1er pattern d'Hydrogen)";
+    if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
+    h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
+    h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)(n - 1));
+    g_pattern = n - 1;
+    return "ok groove " + std::to_string(n);
+}
+
+std::string set_tempo(const std::string &arg)
+{
+    const double bpm = std::atof(arg.c_str());
+    if (bpm < 20 || bpm > 400) return "erreur : tempo entre 20 et 400";
+    if (timebase(arg).empty()) return "erreur : pb_timebase ne répond pas";
+    if (h2_listening()) h2_float("/Hydrogen/BPM", (float)bpm);    // affichage d'Hydrogen
+    return "ok tempo " + arg;
+}
+
 /* ----------------------------------------------------------- commandes --- */
 
 void transport_stop_and_pause()
@@ -488,9 +541,21 @@ std::string save_song(const std::string &name)
         info << "boucle" << (i + 1) << "=" << g_loops[i].len << "\n";
         n++;
     }
-    say("chanson « %s » sauvegardée : %d boucle(s), tempo %.2f", name.c_str(), n, tempo);
+    /* Morceau Hydrogen (patterns, kit) + mode + pattern retenu. */
+    std::string h2 = "morceau Hydrogen non sauvé (OSC d'Hydrogen absent)";
+    if (h2_listening()) {
+        const std::string f = dir + "/" + name + ".h2song";
+        unlink(f.c_str());
+        h2_string("/Hydrogen/SAVE_SONG_AS", f);
+        if (wait_file(f, 1000, 10.0)) {
+            info << "hydrogen=" << name << ".h2song\n" << "mode=pattern\n" << "pattern=" << g_pattern << "\n";
+            h2 = "morceau Hydrogen sauvé" + (g_pattern >= 0 ? ", groove " + std::to_string(g_pattern + 1)
+                                                             : std::string(", groove inconnu (choisis-le avec groove N)"));
+        } else h2 = "erreur : Hydrogen n'a pas écrit " + f;
+    }
+    say("chanson « %s » sauvegardée : %d boucle(s), tempo %.2f ; %s", name.c_str(), n, tempo, h2.c_str());
     return "ok sauvegardé « " + name + " » : " + std::to_string(n) + " boucle(s), tempo " +
-           std::to_string((int)std::lround(tempo)) + " (le morceau Hydrogen se sauve dans Hydrogen)";
+           std::to_string((int)std::lround(tempo)) + " ; " + h2;
 }
 
 std::string load_song(const std::string &name)
@@ -532,10 +597,27 @@ std::string load_song(const std::string &name)
     save_state();
     const double tempo = std::atof(kv["tempo"].c_str());
     if (tempo >= 20) timebase(std::to_string(tempo));
+    /* Morceau Hydrogen : ouvrir, mode Pattern, pattern retenu, affichage du tempo. */
+    std::string h2 = "pas de morceau Hydrogen dans cette chanson";
+    if (!kv["hydrogen"].empty()) {
+        const std::string f = dir + "/" + kv["hydrogen"];
+        if (!h2_listening()) h2 = "morceau Hydrogen non chargé (OSC d'Hydrogen absent)";
+        else if (file_size(f) <= 0) h2 = "erreur : " + f + " introuvable";
+        else {
+            h2_string("/Hydrogen/OPEN_SONG", f);
+            usleep(1500000);                         // Hydrogen ne confirme pas : on lui laisse le temps
+            h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
+            g_pattern = std::atoi(kv["pattern"].c_str());
+            if (kv["pattern"].empty()) g_pattern = -1;
+            if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)g_pattern);
+            if (tempo >= 20) h2_float("/Hydrogen/BPM", (float)tempo);
+            h2 = "morceau Hydrogen chargé" + (g_pattern >= 0 ? ", groove " + std::to_string(g_pattern + 1) : std::string());
+        }
+    }
     jack_transport_locate(g_cfg.client, 0);
-    say("chanson « %s » chargée : %d boucle(s), tempo %.2f", name.c_str(), n, tempo);
+    say("chanson « %s » chargée : %d boucle(s), tempo %.2f ; %s", name.c_str(), n, tempo, h2.c_str());
     return "ok chargé « " + name + " » : " + std::to_string(n) + " boucle(s), tempo " +
-           std::to_string((int)std::lround(tempo)) + ". Charge aussi le morceau dans Hydrogen, puis play.";
+           std::to_string((int)std::lround(tempo)) + " ; " + h2 + ". Prêt : play.";
 }
 
 std::string list_songs()
@@ -581,7 +663,9 @@ std::string handle(const std::string &line)
     if (cmd == "load") return load_song(arg);
     if (cmd == "list") return list_songs();
     if (cmd == "status") return status();
-    return "erreur : commande inconnue (play, stop, save NOM, load NOM, list, status)";
+    if (cmd == "groove") return set_groove(arg);
+    if (cmd == "tempo") return set_tempo(arg);
+    return "erreur : commande inconnue (play, stop, save NOM, load NOM, list, status, groove N, tempo BPM)";
 }
 
 void thread_main()
