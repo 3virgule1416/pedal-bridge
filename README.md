@@ -106,7 +106,8 @@ bash scripts/session.sh save NOM   # sauvegarde la chanson (boucles, tempo, morc
 bash scripts/session.sh load NOM   # recharge une chanson, prête à jouer de la mesure 1
 bash scripts/session.sh list       # chansons sauvegardées
 bash scripts/session.sh boucles    # état des boucles (normalisées ou non)
-bash scripts/session.sh groove 3   # pattern 3 d'Hydrogen (1 = premier), retenu par save
+bash scripts/session.sh groove 3   # pattern 3 d'Hydrogen (1 = premier), retenu par save ;
+                                   # cycle SooperLooper = longueur du pattern (1, 2, 4 mesures)
 bash scripts/session.sh stop       # arrêter pont, Hydrogen, SooperLooper
 bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran virtuel et VNC
 ```

@@ -266,10 +266,22 @@ un redémarrage du pont. Partout identique.
   (titre, pattern, BPM). Le groove n'est connu que s'il a été choisi par
   `groove N` : Hydrogen n'annonce pas un pattern cliqué dans son interface.
   `SAVE_SONG_AS` fait aussi de ce fichier le morceau « courant » d'Hydrogen.
-- **Mesure fixe en 4/4** (`pb_timebase --beats 4`, SooperLooper 8 croches par
-  cycle). Un pattern en 3/4, 6/8 ou de plusieurs mesures décalerait les départs
-  et arrêts d'enregistrement : à rendre automatique (taille des patterns lue
-  dans le `.h2song`).
+- **Cycle = longueur du groove** (fait) : le client lit la taille des patterns
+  dans le `.h2song` (au `save` et au `load` ; 48 ticks par noire, 192 = une
+  mesure de 4/4) et, à chaque `groove N` ou `load`, règle `eighth_per_cycle` de
+  SooperLooper = taille / 24. Un groove de 2 mesures donne un cycle de 2
+  mesures : l'enregistrement part au **début du groove** et finit à sa **fin**.
+  Mesuré avec un groove de test (A = 4 coups, B = 1 coup) : A sur les mesures
+  1, 3, 5… ; record appuyé pendant A (mesure 1) → départ mesure 3, stop pendant
+  B (mesure 4) → fin de la mesure 4 (2 mesures) ; record pendant B (mesure 8)
+  → départ mesure 9, stop pendant A (mesure 11) → fin de la mesure 12
+  (4 mesures).
+- Le cycle n'est réglé que pour un morceau passé par `save` ou `load` (taille
+  des patterns connue) ; sinon, 1 mesure.
+- **Mesures autres que 4/4** (3/4, 6/8) : pas encore gérées (`pb_timebase` reste
+  à 4 temps par mesure) ; le client laisse alors le cycle tel quel.
+- Hydrogen crée un fichier `.NOM.autosave.h2song` dans le dossier du morceau
+  ouvert.
 - Un **undo** qui ramène une boucle à son contenu d'avant la normalisation
   (annuler le chargement) n'est pas détecté.
 - Une boucle réenregistrée **pendant que le pont est arrêté**, avec exactement

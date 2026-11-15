@@ -419,6 +419,41 @@ double get_tempo()
  * SAVE_SONG_AS écrit le .h2song. Hydrogen n'annonce PAS le pattern
  * sélectionné : le client retient celui qu'il a demandé (g_pattern). */
 int g_pattern = -1;               // pattern choisi par « groove », à partir de 0
+std::vector<int> g_pat_sizes;     // taille de chaque pattern (ticks Hydrogen), du dernier .h2song lu
+
+/* Lit la taille des patterns d'un .h2song (ordre = numéro de pattern).
+ * Hydrogen compte 48 ticks par noire : une mesure de 4/4 = 192 ticks. */
+void read_pattern_sizes(const std::string &path)
+{
+    std::ifstream f(path);
+    std::string xml((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    g_pat_sizes.clear();
+    const size_t list = xml.find("<patternList>");
+    const size_t end = xml.find("</patternList>");
+    if (list == std::string::npos || end == std::string::npos) return;
+    size_t p = list;
+    while ((p = xml.find("<pattern>", p)) != std::string::npos && p < end) {
+        const size_t s = xml.find("<size>", p), e = xml.find("</pattern>", p);
+        g_pat_sizes.push_back(s != std::string::npos && s < e ? std::atoi(xml.c_str() + s + 6) : 0);
+        p = e == std::string::npos ? end : e;
+    }
+    say("%zu pattern(s) lus dans %s", g_pat_sizes.size(), path.c_str());
+}
+
+/* Cycle de SooperLooper = longueur du groove (départ et fin d'enregistrement
+ * au vrai début et à la vraie fin du groove). Seulement des mesures de 4/4
+ * entières pour l'instant. Retourne une phrase pour la réponse. */
+std::string apply_cycle(int pattern)
+{
+    int size = 192;                                   // inconnu : 1 mesure de 4/4
+    const bool known = pattern >= 0 && pattern < (int)g_pat_sizes.size() && g_pat_sizes[pattern] > 0;
+    if (known) size = g_pat_sizes[pattern];
+    if (size % 192 != 0)
+        return "taille de pattern " + std::to_string(size) + " ticks : mesure autre que 4/4, cycle inchangé";
+    const int bars = size / 192;
+    sl_send("/set", {"eighth_per_cycle"}, {(float)(size / 24)});   // 24 ticks par croche
+    return "cycle SooperLooper " + std::to_string(bars) + " mesure(s)" + (known ? "" : " (taille inconnue)");
+}
 
 void h2_send(const std::string &addr, const std::string *s, const float *f)
 {
@@ -453,7 +488,7 @@ std::string set_groove(const std::string &arg)
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
     h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)(n - 1));
     g_pattern = n - 1;
-    return "ok groove " + std::to_string(n);
+    return "ok groove " + std::to_string(n) + " ; " + apply_cycle(g_pattern);
 }
 
 std::string set_tempo(const std::string &arg)
@@ -549,6 +584,7 @@ std::string save_song(const std::string &name)
         h2_string("/Hydrogen/SAVE_SONG_AS", f);
         if (wait_file(f, 1000, 10.0)) {
             info << "hydrogen=" << name << ".h2song\n" << "mode=pattern\n" << "pattern=" << g_pattern << "\n";
+            read_pattern_sizes(f);
             h2 = "morceau Hydrogen sauvé" + (g_pattern >= 0 ? ", groove " + std::to_string(g_pattern + 1)
                                                              : std::string(", groove inconnu (choisis-le avec groove N)"));
         } else h2 = "erreur : Hydrogen n'a pas écrit " + f;
@@ -605,6 +641,7 @@ std::string load_song(const std::string &name)
         else if (file_size(f) <= 0) h2 = "erreur : " + f + " introuvable";
         else {
             h2_string("/Hydrogen/OPEN_SONG", f);
+            read_pattern_sizes(f);
             usleep(1500000);                         // Hydrogen ne confirme pas : on lui laisse le temps
             h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
             g_pattern = std::atoi(kv["pattern"].c_str());
@@ -612,6 +649,7 @@ std::string load_song(const std::string &name)
             if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)g_pattern);
             if (tempo >= 20) h2_float("/Hydrogen/BPM", (float)tempo);
             h2 = "morceau Hydrogen chargé" + (g_pattern >= 0 ? ", groove " + std::to_string(g_pattern + 1) : std::string());
+            h2 += ", " + apply_cycle(g_pattern);
         }
     }
     jack_transport_locate(g_cfg.client, 0);
