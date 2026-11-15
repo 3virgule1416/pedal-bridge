@@ -177,6 +177,19 @@ moment où on l'ouvre. On s'en sert :
 - Liaison MIDI : impossible sur un choix de fichier, d'où les boutons
   suivant / précédent.
 
+**Résultats avec DLS Test** (PiPedal 2.0.111, 2026-11-15) :
+
+- Le plugin crée lui-même `/var/pipedal/audio_uploads/PedalBridgeTest/` et ses
+  fichiers à l'instanciation (« Dossier créé » allumé) : c'est la solution
+  retenue, aucun changement système.
+- Le sélecteur (`pipedal_ui:directory "PedalBridgeTest"`) liste les fichiers
+  du dossier, filtrés par extension, et affiche le nom **sans l'extension**.
+  Le plugin reçoit le chemin (patch:Set, atom:Path).
+- Le choix est **gardé dans le preset** (changer de preset puis revenir : le
+  fichier est encore sélectionné).
+- À voir encore : fichier supprimé entre-temps, liste mise à jour pendant que
+  le sélecteur est ouvert.
+
 ## 6. Plugin « DLS Looper »
 
 Audio : envoi de l'entrée au looper puis ajout des boucles, lien 1 (§4 bis).
@@ -498,6 +511,21 @@ l'oreille avant la suivante.
    bouton, comportement d'un plugin mono ou stéréo placé en début de chaîne
    mono (§4 bis), et **sélecteur de fichier** : dossiers acceptés, droits
    d'écriture, mise à jour de la liste, ce qui est gardé dans le preset (§5).
+   **Fait avec DLS Test** (2026-11-15) :
+   - titre long (`doap:name` « Davis Loop Station … ») dans la fiche, étiquette
+     courte (`mod:label` « DLS … ») dans la chaîne, coupée vers 14 caractères
+     (« DLS Test (Stér… ») ; `rdfs:comment` des ports affiché en bulle ;
+   - bascule, bouton momentané (`epp:trigger`) et menu : OK ;
+   - **liaison MIDI** d'un CC du Captain (CC 6) au bouton momentané : +1 à
+     chaque appui ;
+   - sorties : voyant (toggled) et voyant clignotant OK ; une sortie avec
+     `lv2:enumeration` affiche son **texte** (« vide », « enregistre »…) : à
+     utiliser pour l'état du Looper et les compteurs ; une sortie numérique
+     simple s'affiche en **barre** (pas de chiffre) ;
+   - noms de sortie courts collés les uns aux autres (« VoyantAppuis… ») :
+     prendre des noms plus longs ;
+   - sélecteur de fichier : voir §5 ;
+   - reste : écoute d'un plugin mono puis stéréo en début de chaîne.
 4. **Fichier de contrôle + DLS Looper** (mono et stéréo, audio intégré :
    envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
    boucle, état) ; `pb_timebase` intégré au client.
