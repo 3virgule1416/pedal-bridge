@@ -1,5 +1,7 @@
 /* Module de contrôle de pedal_bridge : voir controle.h. */
 #include "controle.h"
+#include "pb_ctl.h"
+#include "pb_shm.h"
 
 #include <arpa/inet.h>
 #include <jack/transport.h>
@@ -99,6 +101,13 @@ std::string g_reply_url;
 std::vector<Loop> g_loops;
 uint32_t g_sr = 48000;
 bool g_sl_ok = false;        // SooperLooper a répondu au dernier ping
+
+/* Fichier de contrôle partagé avec DLS Looper (pb_ctl.h). Ouvert par ce
+ * thread ; le callback JACK y écrit le transport (ctl_rt_update). Jamais
+ * démappé avant la fin du programme : le callback peut s'en servir. */
+std::atomic<pb_ctl *> g_ctl{nullptr};
+uint64_t g_ctl_me = 0;
+void publish_states();
 
 enum { SL_RECORD = 2, SL_PLAY = 4, SL_PAUSED = 14 };
 
@@ -212,7 +221,7 @@ void restore_state()
 void sl_refresh()
 {
     const int n = sl_count();
-    if (n <= 0) { g_sl_ok = false; return; }
+    if (n <= 0) { g_sl_ok = false; publish_states(); return; }
     g_sl_ok = true;
     bool restore = false;
     if ((int)g_loops.size() != n) {
@@ -250,6 +259,7 @@ void sl_refresh()
     });
     if (restore) restore_state();
     if (changed) save_state();
+    publish_states();
 }
 
 bool sl_any_recording()
@@ -548,6 +558,120 @@ std::string play_from_start()
     return "ok play (mesure 1, " + std::to_string(n) + " boucle(s))";
 }
 
+
+/* ------------------------------------------------- DLS Looper (pb_ctl) --- */
+
+/* État SooperLooper -> état affiché par le plugin (enum pb_loop_state).
+ * États de SooperLooper : 0 arrêt, 1 attente départ, 2 enregistrement,
+ * 3 attente fin, 4 lecture, 5 overdub, 6 multiply, 7 insert, 8 replace,
+ * 10 muet, 12 une fois, 14 pause, 20 arrêt muet. */
+uint8_t map_state(const Loop &L)
+{
+    if (L.state == 1 || L.state == 3) return PB_LS_WAIT;
+    if (L.state == SL_RECORD) return PB_LS_RECORD;
+    if (L.len <= 0) return PB_LS_EMPTY;
+    switch (L.state) {
+    case 4: case 12:        return PB_LS_PLAY;
+    case 5:                 return PB_LS_OVERDUB;
+    case 10: case 20:       return PB_LS_MUTE;
+    case 0: case SL_PAUSED: return PB_LS_PAUSE;
+    default:                return PB_LS_OTHER;
+    }
+}
+
+void publish_states()
+{
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+    if (!k) return;
+    for (uint32_t i = 0; i < PB_CTL_LOOPS; i++) {
+        const uint8_t st = g_sl_ok && i < g_loops.size() ? map_state(g_loops[i]) : (uint8_t)PB_LS_OFFLINE;
+        PB_STORE_RLX(&k->loop_state[i], st);
+    }
+    PB_STORE_RLX(&k->loop_count, g_sl_ok ? (uint32_t)g_loops.size() : 0u);
+    PB_STORE_REL(&k->sl_ok, g_sl_ok ? 1u : 0u);
+}
+
+/* Ce que le client a déjà vu du plugin propriétaire. */
+uint64_t g_lp_owner = 0;
+uint32_t g_lp_btn[PB_BTN_COUNT];
+uint32_t g_lp_loop = 0;
+uint32_t g_lp_tempo = 0;          // centièmes de BPM
+int g_sel = 0;                     // boucle choisie (0 = boucle 1)
+double g_ctl_next_try = 0;
+bool g_refresh_now = false;
+
+void select_loop(uint32_t v)
+{
+    if (v < 1 || v > PB_CTL_LOOPS) return;
+    g_sel = (int)v - 1;
+    sl_send("/set", {"selected_loop_num"}, {(float)g_sel});
+}
+
+bool transport_rolling()
+{
+    jack_position_t pos;
+    return jack_transport_query(g_cfg.client, &pos) == JackTransportRolling;
+}
+
+std::string looper_button(int b)
+{
+    static const char *names[PB_BTN_COUNT] = {"record", "overdub", "undo", "redo", "mute", "undo_all", "play/stop"};
+    if (b == PB_BTN_PLAYSTOP) return transport_rolling() ? stop_all() : play_from_start();
+    if (!g_sl_ok) return "erreur : SooperLooper ne répond pas";
+    sl_send("/sl/" + std::to_string(g_sel) + "/hit", {names[b]});
+    return std::string("ok ") + names[b] + " (boucle " + std::to_string(g_sel + 1) + ")";
+}
+
+/* Lit les commandes de DLS Looper ; appelé ~200 fois par seconde. */
+void looper_poll()
+{
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+    if (!k) {
+        if (now_s() < g_ctl_next_try) return;
+        g_ctl_next_try = now_s() + 1.0;
+        char err[256];
+        if (pb_ctl_open(&k, 0, err, sizeof err) != 0) return;   // pas encore créé par un plugin
+        g_ctl_me = ((uint64_t)getpid() << 32) | 1u;
+        g_ctl.store(k, std::memory_order_release);
+        say("fichier de contrôle ouvert (DLS Looper)");
+        publish_states();
+    }
+    const uint64_t owner = PB_LOAD_ACQ(&k->looper_owner);
+    if (owner != g_lp_owner) {             // autre instance : se recaler sans rien exécuter
+        g_lp_owner = owner;
+        for (int b = 0; b < PB_BTN_COUNT; b++) g_lp_btn[b] = PB_LOAD_ACQ(&k->looper_btn[b]);
+        g_lp_tempo = PB_LOAD_RLX(&k->looper_tempo);
+        g_lp_loop = PB_LOAD_RLX(&k->looper_loop);
+        if (owner) { select_loop(g_lp_loop); say("DLS Looper actif (boucle %u)", g_lp_loop); }
+        else say("DLS Looper retiré");
+        return;
+    }
+    if (!owner) return;
+    const uint32_t loop = PB_LOAD_RLX(&k->looper_loop);
+    if (loop != g_lp_loop) {
+        g_lp_loop = loop;
+        select_loop(loop);
+        say("DLS Looper : boucle %u", loop);
+    }
+    const uint32_t tempo = PB_LOAD_RLX(&k->looper_tempo);
+    if (tempo != g_lp_tempo) {
+        g_lp_tempo = tempo;
+        char t[32];
+        std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
+        say("DLS Looper : tempo %s -> %s", t, set_tempo(t).c_str());
+    }
+    for (int b = 0; b < PB_BTN_COUNT; b++) {
+        const uint32_t c = PB_LOAD_ACQ(&k->looper_btn[b]);
+        uint32_t d = c - g_lp_btn[b];
+        g_lp_btn[b] = c;
+        if (d > 4) d = 4;                  // garde-fou
+        for (uint32_t j = 0; j < d; j++) {
+            say("DLS Looper : %s", looper_button(b).c_str());
+            g_refresh_now = true;
+        }
+    }
+}
+
 bool valid_name(const std::string &s)
 {
     if (s.empty() || s.size() > 64) return false;
@@ -713,7 +837,7 @@ void thread_main()
         fd_set rs;
         FD_ZERO(&rs);
         FD_SET(g_cmd, &rs);
-        timeval tv{0, 100000};
+        timeval tv{0, 5000};               // 5 ms : boutons de DLS Looper
         if (select(g_cmd + 1, &rs, nullptr, nullptr, &tv) > 0) {
             char buf[512];
             sockaddr_in from{};
@@ -729,8 +853,10 @@ void thread_main()
                 sendto(g_cmd, rep.data(), rep.size(), 0, (sockaddr *)&from, fl);
             }
         }
+        looper_poll();
         /* Surveiller les boucles : un enregistrement neuf est à normaliser. */
-        if (now_s() >= next_poll) {
+        if (now_s() >= next_poll || g_refresh_now) {
+            g_refresh_now = false;
             sl_refresh();
             next_poll = now_s() + 0.2;
         }
@@ -738,6 +864,33 @@ void thread_main()
 }
 
 } // namespace
+
+/* Callback JACK (temps réel) : transport et mesure vers le fichier de contrôle.
+ * jack_transport_query est utilisable dans le callback ; le reste : atomiques. */
+void ctl_rt_update(jack_client_t *c)
+{
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+    if (!k) return;
+    jack_position_t pos;
+    const jack_transport_state_t ts = jack_transport_query(c, &pos);
+    PB_STORE_RLX(&k->rolling, ts == JackTransportRolling ? 1u : 0u);
+    if ((pos.valid & JackPositionBBT) && pos.ticks_per_beat > 0) {
+        double f = pos.tick / pos.ticks_per_beat;
+        if (f < 0) f = 0;
+        if (f > 0.99999) f = 0.99999;
+        PB_STORE_RLX(&k->bar, (uint32_t)pos.bar);
+        PB_STORE_RLX(&k->beat, (uint32_t)pos.beat);
+        PB_STORE_RLX(&k->beats_per_bar, (uint32_t)pos.beats_per_bar);
+        PB_STORE_RLX(&k->beat_frac, (uint32_t)(f * 65536.0));
+        PB_STORE_RLX(&k->bpm, (uint32_t)std::lround(pos.beats_per_minute * 100.0));
+    } else {
+        PB_STORE_RLX(&k->bar, 0u);
+        PB_STORE_RLX(&k->beat, 0u);
+        PB_STORE_RLX(&k->bpm, 0u);
+    }
+    PB_STORE_RLX(&k->client_owner, g_ctl_me);
+    PB_STORE_REL(&k->client_heartbeat, PB_LOAD_RLX(&k->client_heartbeat) + 1u);
+}
 
 bool ctl_start(const CtlConfig &cfg)
 {

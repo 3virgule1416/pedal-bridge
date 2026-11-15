@@ -14,6 +14,11 @@
  *   groove N        pattern N d'Hydrogen (à partir de 1), retenu pour save
  *   tempo BPM       tempo (pb_timebase) + affichage d'Hydrogen
  *
+ * Commandes aussi reçues du plugin DLS Looper par le fichier de contrôle
+ * /dev/shm/pedal-bridge-control (pb_ctl.h) : record, overdub, undo, redo,
+ * mute, effacer sur la boucle choisie, play/stop, tempo. L'état des boucles et
+ * le transport lui sont renvoyés.
+ *
  * Normaliser une boucle : SooperLooper compense la latence en décalant la
  * lecture, et oublie ce décalage quand la boucle repart par « trigger »
  * (mesuré : 22,7 ms de retard). On décale donc l'audio lui-même de
@@ -44,6 +49,11 @@ struct CtlConfig {
 /* Démarre le thread de contrôle. Retourne false si le port est déjà pris. */
 bool ctl_start(const CtlConfig &cfg);
 void ctl_stop();
+
+/* À appeler dans le callback JACK (temps réel) : publie le transport et la
+ * mesure pour DLS Looper. Ne fait rien tant que le fichier de contrôle n'existe
+ * pas (aucun plugin DLS Looper chargé depuis le démarrage de PiPedal). */
+void ctl_rt_update(jack_client_t *c);
 
 /* Mode client : envoie une commande à un pedal_bridge déjà lancé et affiche
  * la réponse. Retourne 0 si la réponse commence par « ok ». */

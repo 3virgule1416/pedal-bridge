@@ -10,3 +10,13 @@
     a lv2:Plugin ;
     lv2:binary <pedal_bridge.so> ;
     rdfs:seeAlso <return.ttl> .
+
+<http://pedal-bridge.local/plugins/looper-mono>
+    a lv2:Plugin ;
+    lv2:binary <pedal_bridge.so> ;
+    rdfs:seeAlso <looper.ttl> .
+
+<http://pedal-bridge.local/plugins/looper-stereo>
+    a lv2:Plugin ;
+    lv2:binary <pedal_bridge.so> ;
+    rdfs:seeAlso <looper.ttl> .

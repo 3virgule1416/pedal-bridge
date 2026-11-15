@@ -211,6 +211,43 @@ Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
 **Temps** et **Sur le 1** (clignotant au tempo, couleur différente sur le 1),
 **Section**.
 
+### Réalisé (1re version, 2026-11-15)
+
+- Plugins **DLS Looper (Mono)** (`.../looper-mono`, étiquette « DLS Looper ») et
+  **DLS Looper (Stéréo)** (`.../looper-stereo`, « DLS Looper St. »), dans le
+  bundle principal. TTL généré par `scripts/gen_looper_ttl.py`.
+- Audio sur le lien 1 (`lv2/io.c`, même comportement que Send/Return en mode
+  Add) : l'entrée part vers SooperLooper **avant** l'ajout des boucles. Mono :
+  même son à gauche et à droite vers le looper, retour ramené à (G + D) / 2.
+- Contrôles : Boucle (1-8), Record, Overdub, Undo, Redo, Mute, Effacer,
+  Play / Stop (boutons momentanés), Tempo (40-240, appliqué quand on le
+  **change** : charger un preset ne change pas le tempo), Volume boucles.
+- Sorties : État de la boucle (texte : hors ligne, vide, attente, enregistre,
+  overdub, lecture, muet, pause, autre), Temps de la mesure (texte), Pulsation
+  et Sur le 1 (voyants au tempo), En lecture, Tempo actuel (texte), Pont actif,
+  Audio connecté.
+- **Fichier de contrôle** `/dev/shm/pedal-bridge-control` (`common/pb_ctl.h`) :
+  créé par le plugin ; compteurs de boutons ; la dernière instance activée
+  commande (changement de preset) ; le client se recale sur ses compteurs sans
+  rien rejouer. Le client y écrit le transport (callback JACK) et l'état des
+  boucles (toutes les 0,2 s, et juste après chaque commande). Il lit les
+  boutons toutes les 5 ms.
+- Exécution dans le client (`controle.cc`) : `/sl/N/hit` record, overdub,
+  undo, redo, mute, undo_all sur la boucle choisie (et `selected_loop_num`
+  pour l'interface de SooperLooper) ; Play / Stop = `stop` (avec normalisation)
+  si le transport roule, sinon `play` depuis la mesure 1.
+- Outils : `pb_ctl` (lire l'état, simuler les boutons), banc
+  `scripts/test-looper.sh` (JACK séparé, SooperLooper, pb_timebase, client) :
+  tempo, play, record (départ et fin au cycle), boucle 2, mute, overdub,
+  stop avec normalisation, play depuis la mesure 1, effacer, changement
+  d'instance. Tout passe. Test hors ligne `test_looper` (40 vérifications,
+  aucun appel système dans `run()`).
+- Limites : SooperLooper suit le transport : **Record ne part que si le
+  transport roule** (appuyer sur Play d'abord). La batterie arrive aussi par le
+  lien 1 tant que DLS Drum n'existe pas (branchement de `session.sh`). Ne pas
+  mettre DLS Send / DLS Return sur le lien 1 en même temps que DLS Looper : la
+  dernière instance activée prend le lien.
+
 À explorer dans SooperLooper : `multiply`, `insert`, `reverse`, `once` (jouer une
 fois), `trigger`, `rate`/`stretch` (« t. stretch » : la boucle suit le tempo ?),
 `sync`/`play sync`, la quantification du mute (`mute_quantized`), et les pistes

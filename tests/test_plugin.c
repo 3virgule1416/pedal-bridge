@@ -275,7 +275,7 @@ int main(int argc, char **argv)
     d->cleanup(C.h);
 
     T_CHECK(fn(1) && !strcmp(fn(1)->URI, "http://pedal-bridge.local/plugins/return"), "descripteur 1 = Return");
-    T_CHECK(fn(2) == NULL, "pas de 3e descripteur");
+    T_CHECK(fn(4) == NULL, "4 descripteurs seulement (Send, Return, Looper mono et stéréo)");
     t_cleanup_dir(dir);
     return t_summary("test_plugin");
 }

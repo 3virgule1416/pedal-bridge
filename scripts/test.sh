@@ -37,9 +37,18 @@ for uri in http://pedal-bridge.local/plugins/send http://pedal-bridge.local/plug
   fi
 done
 
+for uri in http://pedal-bridge.local/plugins/looper-mono http://pedal-bridge.local/plugins/looper-stereo; do
+  out="$(LV2_PATH="$B/lv2:/usr/lib/lv2" lv2info "$uri" 2>&1)" || true
+  if echo "$out" | grep -q "Name:.*Davis Loop Station Looper" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 7 ]      && echo "$out" | grep -q '"enregistre"' && echo "$out" | grep -q '"240"'; then
+    echo "  ok    $uri (7 boutons, états, tempo)"
+  else
+    echo "  ÉCHEC $uri"; echo "$out" | head -40; FAIL=1
+  fi
+done
+
 echo
 echo "=== 3. Temps réel : appels système pendant run()"
-for t in test_plugin test_return; do
+for t in test_plugin test_return test_looper; do
   LOG="$(mktemp /tmp/pb-strace-XXXXXX)"
   if strace -f -qq -o "$LOG" "$B/$t" "$SO" "$BUNDLE/" --rt-loop > /dev/null; then
     # Lignes entre les deux marqueurs getppid().
@@ -48,7 +57,7 @@ for t in test_plugin test_return; do
     if [ "$markers" -ne 2 ]; then
       echo "  ÉCHEC $t : marqueurs strace introuvables ($markers au lieu de 2)"; FAIL=1
     elif [ "$n" -eq 0 ]; then
-      echo "  ok    $t : aucun appel système ni allocation pendant run() (changements de gain, mode, lien, sous-débits)"
+      echo "  ok    $t : aucun appel système ni allocation pendant run() (changements de réglages, boutons, sous-débits)"
     else
       echo "  ÉCHEC $t : $n appel(s) système pendant run() :"
       awk '/getppid\(/{m++; next} m==1' "$LOG" | head -20

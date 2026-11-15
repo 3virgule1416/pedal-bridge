@@ -11,20 +11,20 @@ endif()
 add_compile_options(-Wall -Wextra -Werror -fno-math-errno)
 
 # --- Tampon partagé -----------------------------------------------------------
-add_library(pb_shm STATIC common/pb_shm.c)
+add_library(pb_shm STATIC common/pb_shm.c common/pb_ctl.c)
 target_include_directories(pb_shm PUBLIC common)
 set_target_properties(pb_shm PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # --- Bundle LV2 ---------------------------------------------------------------
 set(PB_BUNDLE_DIR ${CMAKE_BINARY_DIR}/lv2/pedal-bridge.lv2)
-add_library(pedal_bridge MODULE lv2/plugin.c lv2/send.c lv2/return.c)
+add_library(pedal_bridge MODULE lv2/plugin.c lv2/send.c lv2/return.c lv2/io.c lv2/looper.c)
 target_link_libraries(pedal_bridge PRIVATE pb_shm m)
 set_target_properties(pedal_bridge PROPERTIES
   PREFIX ""
   C_VISIBILITY_PRESET hidden
   LIBRARY_OUTPUT_DIRECTORY ${PB_BUNDLE_DIR})
 target_link_options(pedal_bridge PRIVATE -Wl,-z,defs)
-foreach(ttl manifest.ttl send.ttl return.ttl)
+foreach(ttl manifest.ttl send.ttl return.ttl looper.ttl)
   configure_file(lv2/ttl/${ttl} ${PB_BUNDLE_DIR}/${ttl} COPYONLY)
 endforeach()
 
@@ -43,6 +43,8 @@ endforeach()
 # --- Outil de contrôle -------------------------------------------------------
 add_executable(pb_inspect tools/pb_inspect.c)
 target_link_libraries(pb_inspect PRIVATE pb_shm m)
+add_executable(pb_ctl tools/pb_ctl.c)
+target_link_libraries(pb_ctl PRIVATE pb_shm m)
 
 # --- Client JACK --------------------------------------------------------------
 find_package(PkgConfig REQUIRED)
@@ -85,6 +87,11 @@ add_executable(test_return tests/test_return.c)
 target_link_libraries(test_return PRIVATE pb_shm m ${CMAKE_DL_LIBS})
 target_link_options(test_return PRIVATE -rdynamic)
 add_test(NAME return COMMAND test_return $<TARGET_FILE:pedal_bridge> ${PB_BUNDLE_DIR}/)
+
+add_executable(test_looper tests/test_looper.c)
+target_link_libraries(test_looper PRIVATE pb_shm m ${CMAKE_DL_LIBS})
+target_link_options(test_looper PRIVATE -rdynamic)
+add_test(NAME looper COMMAND test_looper $<TARGET_FILE:pedal_bridge> ${PB_BUNDLE_DIR}/)
 
 # Faux PiPedal pour les tests du client JACK (scripts/test-jack.sh).
 add_executable(pb_fakehost tests/pb_fakehost.c)

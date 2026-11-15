@@ -311,6 +311,7 @@ int on_process(jack_nframes_t n, void *)
         if (p->dir == PB_DIR_SEND) process_send(*p, n);
         else process_return(*p, n);
     }
+    ctl_rt_update(g_client);
     g_cycles.fetch_add(1, std::memory_order_release);
     return 0;
 }
