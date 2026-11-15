@@ -1,5 +1,6 @@
 @prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix epp:   <http://lv2plug.in/ns/ext/port-props#> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
@@ -18,8 +19,9 @@
 
 <http://pedal-bridge.local/plugins/test-mono>
     a lv2:Plugin, lv2:UtilityPlugin ;
-    doap:name "Bridge Test (Mono)" ;
-    rdfs:comment "Plugin de test du pont : contrôles, voyants et sélecteur de fichier dans PiPedal." ;
+    doap:name "DLS Test (Mono)" ;
+    doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
+    rdfs:comment "Plugin de test de Davis Loop Station : contrôles, voyants et sélecteur de fichier dans PiPedal." ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:requiredFeature urid:map ;
@@ -78,8 +80,9 @@
 
 <http://pedal-bridge.local/plugins/test-stereo>
     a lv2:Plugin, lv2:UtilityPlugin ;
-    doap:name "Bridge Test (Stéréo)" ;
-    rdfs:comment "Plugin de test du pont : contrôles, voyants et sélecteur de fichier dans PiPedal." ;
+    doap:name "DLS Test (Stéréo)" ;
+    doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
+    rdfs:comment "Plugin de test de Davis Loop Station : contrôles, voyants et sélecteur de fichier dans PiPedal." ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:requiredFeature urid:map ;

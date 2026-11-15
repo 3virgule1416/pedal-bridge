@@ -21,7 +21,7 @@ le début du cycle), jamais au moment approximatif de l'appui.
 
 | Pièce | Rôle | État |
 |---|---|---|
-| Bridge Send / Bridge Return (LV2) | audio PiPedal ↔ JACK | fait, validé à l'oreille |
+| DLS Send / DLS Return (LV2) | audio PiPedal ↔ JACK | fait, validé à l'oreille |
 | `pedal_bridge` (client JACK) | rééchantillonnage, latence déclarée, compensation de SooperLooper par OSC | fait, validé |
 | `pb_timebase` | maître du temps JACK : tempo, mesure et temps corrects | fait, validé (départ sur le 1) |
 | `session.sh` | démarre JACK, VNC, SooperLooper, Hydrogen, le pont | fait |
@@ -42,8 +42,8 @@ Ce qu'on a appris et qui guide la suite :
 
 ```
   MIDI Captain 10 ───── MIDI ──────────> PiPedal               écran OLED (SPI)
-        ▲                                  ├─ liaisons ─> Bridge Batterie (LV2)
-        │ SysEx (DEL), CC 20 (page)        ├─ liaisons ─> Bridge Looper   (LV2)
+        ▲                                  ├─ liaisons ─> DLS Drum (LV2)
+        │ SysEx (DEL), CC 20 (page)        ├─ liaisons ─> DLS Looper   (LV2)
         │                                  │       │ commandes / état
   Axe I/O One ─ MIDI ─> routeur ── court ──┘       ▼ /dev/shm/pedal-bridge-control
   (double switch)       (dans le client)                                ▲
@@ -90,17 +90,17 @@ client, écrivains uniques par champ, atomiques.
 
 ## 4 bis. Audio intégré aux plugins de contrôle (décidé)
 
-Les plugins **Bridge Looper** et **Bridge Batterie** font **leur audio et leurs
+Les plugins **DLS Looper** et **DLS Drum** font **leur audio et leurs
 contrôles** au même endroit de la chaîne. But : pouvoir enregistrer la guitare
 **sèche** et choisir ou changer ses effets **après coup** (réamping), la
 batterie restant hors des effets.
 
 | Plugin | Audio | Lien fixe | Où le placer |
 |---|---|---|---|
-| **Bridge Looper** | copie l'entrée vers SooperLooper (Send) **puis** ajoute les boucles (Return, Add) | lien 1 (send + return) | **début** de chaîne : boucles sèches qui passent dans les effets ; **fin** : boucles enregistrées avec leurs effets |
-| **Bridge Batterie** | ajoute la batterie (Return, Add) | lien 2 (return) | **fin** de chaîne : la batterie ne passe dans aucun effet |
+| **DLS Looper** | copie l'entrée vers SooperLooper (Send) **puis** ajoute les boucles (Return, Add) | lien 1 (send + return) | **début** de chaîne : boucles sèches qui passent dans les effets ; **fin** : boucles enregistrées avec leurs effets |
+| **DLS Drum** | ajoute la batterie (Return, Add) | lien 2 (return) | **fin** de chaîne : la batterie ne passe dans aucun effet |
 
-- Dans Bridge Looper, la copie vers le looper se fait **avant** l'ajout des
+- Dans DLS Looper, la copie vers le looper se fait **avant** l'ajout des
   boucles : les boucles ne peuvent pas se réenregistrer dans elles-mêmes.
 - **La position du plugin décide du son** (sec ou avec effets), sans réglage.
 - Liens fixes : plus de numéro de lien à choisir. Branchements JACK :
@@ -110,19 +110,19 @@ batterie restant hors des effets.
 - **Versions mono et stéréo** de chaque plugin (le nombre de canaux d'un plugin
   LV2 est fixé dans sa description : pas une option). Même code, deux
   descriptions, comme ToobAmp (« TooB Tone (Mono) », « … (Stereo) »).
-  - début d'une chaîne mono : **Bridge Looper (Mono)**, pour que les effets mono
+  - début d'une chaîne mono : **DLS Looper (Mono)**, pour que les effets mono
     qui suivent (NAM) le restent ;
   - fin de chaîne après une réverb stéréo : versions **stéréo**.
   Le tampon partagé reste stéréo : la version mono écrit le même son à gauche
   et à droite, et additionne le retour en mono.
-- Les **Bridge Send / Bridge Return** génériques restent, pour les usages
+- Les **DLS Send / DLS Return** génériques restent, pour les usages
   particuliers (boucle sur sa propre branche d'effets en mode Replace, autre
   programme JACK…).
 - À vérifier dans PiPedal : qu'un plugin mono en début de chaîne garde bien le
   reste de la chaîne en mono, et ce que fait PiPedal d'un plugin stéréo placé
   dans la partie mono.
 
-## 5. Plugin « Bridge Batterie »
+## 5. Plugin « DLS Drum »
 
 Audio : retour de la batterie, lien 2 (§4 bis). Mono et stéréo.
 
@@ -177,7 +177,7 @@ moment où on l'ouvre. On s'en sert :
 - Liaison MIDI : impossible sur un choix de fichier, d'où les boutons
   suivant / précédent.
 
-## 6. Plugin « Bridge Looper »
+## 6. Plugin « DLS Looper »
 
 Audio : envoi de l'entrée au looper puis ajout des boucles, lien 1 (§4 bis).
 Mono et stéréo. Plus un réglage de **gain des boucles**.
@@ -210,9 +210,9 @@ synchronisées entre elles (« sync to loop »).
 - Le **tempo et la grille des mesures** viennent de `pb_timebase`, pas
   d'Hydrogen : SooperLooper se cale (départs, arrêts, longueurs) **sans aucune
   batterie**.
-- La batterie n'arrive dans PiPedal **que par Bridge Batterie**. Preset avec
-  **seulement Bridge Looper** : on n'entend pas la batterie (le pont n'écrit
-  même rien quand aucun plugin n'écoute). On **ajoute Bridge Batterie** (ou on
+- La batterie n'arrive dans PiPedal **que par DLS Drum**. Preset avec
+  **seulement DLS Looper** : on n'entend pas la batterie (le pont n'écrit
+  même rien quand aucun plugin n'écoute). On **ajoute DLS Drum** (ou on
   passe à un preset qui l'a) : la batterie apparaît, déjà calée.
 - Hydrogen **reste lancé**, silencieux, pour être prêt (≈ 27 % d'un cœur).
 - Repères sans batterie : DEL du Captain qui clignotent au tempo (autre couleur
@@ -285,7 +285,7 @@ ajouter un appui long. Proposition :
    - **appui long** sur un des deux boutons → **mode suivant/précédent** :
      CC 20 au Captain (sa page change), mise à jour des DEL et de l'écran.
 3. Le Captain reste branché à PiPedal comme maintenant. Chaque page envoie ses
-   propres CC, liés dans PiPedal aux contrôles de Bridge Batterie, Bridge Looper
+   propres CC, liés dans PiPedal aux contrôles de DLS Drum, DLS Looper
    ou aux effets.
 
 Contrepartie : en appui court, le changement de preset part au **relâchement** et
@@ -498,10 +498,10 @@ l'oreille avant la suivante.
    bouton, comportement d'un plugin mono ou stéréo placé en début de chaîne
    mono (§4 bis), et **sélecteur de fichier** : dossiers acceptés, droits
    d'écriture, mise à jour de la liste, ce qui est gardé dans le preset (§5).
-4. **Fichier de contrôle + Bridge Looper** (mono et stéréo, audio intégré :
+4. **Fichier de contrôle + DLS Looper** (mono et stéréo, audio intégré :
    envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
    boucle, état) ; `pb_timebase` intégré au client.
-5. **Bridge Batterie** (mono et stéréo, retour de la batterie sur le lien 2) :
+5. **DLS Drum** (mono et stéréo, retour de la batterie sur le lien 2) :
    tempo, play/stop, début, tap ; tempo sans saut (§8). Branchements JACK :
    SooperLooper → `return1`, Hydrogen → `return2`.
 6. **Hydrogen OSC** : grooves et fills (OSC activé ; `groove N` fait).

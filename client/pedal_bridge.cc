@@ -3,9 +3,9 @@
  *
  * Pour chaque lien N demandé :
  *   - sendN_L / sendN_R   (sorties JACK) : lit /dev/shm/pedal-bridge-LN-send
- *                                          (écrit par le plugin Bridge Send)
+ *                                          (écrit par le plugin DLS Send)
  *   - returnN_L/returnN_R (entrées JACK) : écrit /dev/shm/pedal-bridge-LN-return
- *                                          (lu par le plugin Bridge Return)
+ *                                          (lu par le plugin DLS Return)
  *
  * PiPedal (ALSA) et JACK ont chacun leur horloge. Un rééchantillonneur
  * zita VResampler par sens absorbe la dérive : son ratio est corrigé par une
@@ -497,7 +497,7 @@ void supervise(Path &p)
             if (!p.warned) {
                 std::printf("Lien %u %s : en attente du plugin %s dans PiPedal (%s)\n",
                             p.link_no, p.dir == PB_DIR_SEND ? "envoi " : "retour",
-                            p.dir == PB_DIR_SEND ? "Bridge Send" : "Bridge Return", err);
+                            p.dir == PB_DIR_SEND ? "DLS Send" : "DLS Return", err);
                 p.warned = true;
             }
             return;

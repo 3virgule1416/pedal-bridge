@@ -1,5 +1,5 @@
 /*
- * Plugin LV2 « Bridge Send » (stéréo).
+ * Plugin LV2 « DLS Send » (stéréo).
  *
  * L'audio passe tel quel (pass-through) ET est copié dans le tampon partagé
  * du lien choisi, quand un lecteur (client JACK) est présent.

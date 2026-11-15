@@ -1,5 +1,5 @@
 /*
- * Plugin LV2 « Bridge Test » (mono et stéréo) : vérifie dans PiPedal
+ * Plugin LV2 « DLS Test » (mono et stéréo) : vérifie dans PiPedal
  *   - le rendu des contrôles : bascule, bouton momentané (trigger), menu ;
  *   - les sorties : voyant, compteur, voyant clignotant, état « texte »
  *     (port de sortie avec liste de valeurs) ;

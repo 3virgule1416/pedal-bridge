@@ -1,5 +1,5 @@
 /*
- * Plugin LV2 « Bridge Return » (stéréo).
+ * Plugin LV2 « DLS Return » (stéréo).
  *
  * Lit le tampon partagé du lien choisi (écrit par le client JACK) et
  *   - mode Add     : l'ajoute au signal qui traverse le plugin ;

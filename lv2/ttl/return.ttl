@@ -1,4 +1,5 @@
 @prefix doap:   <http://usefulinc.com/ns/doap#> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
 @prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
@@ -6,7 +7,8 @@
 
 <http://pedal-bridge.local/plugins/return>
     a lv2:Plugin, lv2:UtilityPlugin ;
-    doap:name "Bridge Return" ;
+    doap:name "DLS Return" ;
+    doap:maintainer [ a foaf:Person ; foaf:name "Davis" ] ;
     rdfs:comment "Reçoit l'audio du client JACK pedal_bridge sur le lien choisi et l'ajoute au signal (Add) ou le remplace (Replace)." ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ;

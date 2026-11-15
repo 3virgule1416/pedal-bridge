@@ -1,7 +1,7 @@
 /*
  * pb_fakehost : faux PiPedal pour tester le client JACK sans toucher au vrai.
  *
- * Charge les vrais plugins Bridge Send et Bridge Return (dlopen) et les fait
+ * Charge les vrais plugins DLS Send et DLS Return (dlopen) et les fait
  * tourner dans un thread temps réel cadencé par l'horloge système, avec un
  * décalage volontaire (--ppm) pour simuler la dérive entre la carte son de
  * PiPedal et l'horloge de JACK.

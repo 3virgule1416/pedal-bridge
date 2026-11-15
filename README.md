@@ -1,11 +1,11 @@
-# pedal-bridge
+# pedal-bridge — Davis Loop Station (DLS)
 
 Pont audio entre **PiPedal** (ALSA direct) et **JACK** (SooperLooper, Hydrogen)
 sur Raspberry Pi 5, par tampons circulaires partagés dans `/dev/shm`.
 
-- **Bridge Send** (LV2, stéréo) : laisse passer l'audio et en envoie une copie
+- **DLS Send** (LV2, stéréo) : laisse passer l'audio et en envoie une copie
   sur un lien (1 à 8).
-- **Bridge Return** (LV2, stéréo) : reçoit l'audio d'un lien et l'ajoute au
+- **DLS Return** (LV2, stéréo) : reçoit l'audio d'un lien et l'ajoute au
   signal (Add) ou le remplace (Replace).
 - **pedal_bridge** (client JACK) : relie les liens aux ports JACK, avec
   rééchantillonnage adaptatif (zita-resampler) contre la dérive des horloges.
@@ -144,7 +144,7 @@ bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran 
 
 ## Utiliser
 
-1. Dans PiPedal, ajouter **Bridge Send** à l'endroit voulu de la chaîne, choisir
+1. Dans PiPedal, ajouter **DLS Send** à l'endroit voulu de la chaîne, choisir
    le **Lien**.
 2. Sur le Pi, vérifier que l'audio arrive :
 
@@ -157,7 +157,7 @@ bash scripts/session.sh stop-all   # arrêter aussi JACK, pb_timebase, l'écran 
    Le voyant **Connecté** du plugin s'allume quand un lecteur (pb_inspect ou le
    client JACK) consomme le lien.
 
-3. Ajouter **Bridge Return** plus loin dans la chaîne (mode **Add**), choisir un
+3. Ajouter **DLS Return** plus loin dans la chaîne (mode **Add**), choisir un
    lien. Sans client JACK, on peut l'essayer avec pb_inspect :
 
    ```bash
