@@ -814,7 +814,7 @@ void drum_poll(pb_ctl *k)
         g_dr_owner = owner;
         for (int b = 0; b < PB_DBTN_COUNT; b++) g_dr_btn[b] = PB_LOAD_ACQ(&k->drum_btn[b]);
         g_dr_tempo = g_dr_tempo_seen = PB_LOAD_RLX(&k->drum_tempo);
-        g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
+        g_dr_groove = 0;                   // groove du preset : choisi au prochain passage (sans démarrer)
         g_taps.clear();
         g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
