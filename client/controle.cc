@@ -1163,7 +1163,9 @@ std::string handle(const std::string &line)
 {
     std::istringstream ss(line);
     std::string cmd, arg;
-    ss >> cmd >> arg;
+    ss >> cmd;
+    std::getline(ss >> std::ws, arg);               // tout le reste (chemins avec espaces)
+    while (!arg.empty() && std::isspace((unsigned char)arg.back())) arg.pop_back();
     if (cmd == "play") return play_from_start();
     if (cmd == "stop") return stop_all();
     if (cmd == "save") return save_song(arg);
