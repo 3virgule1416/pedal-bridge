@@ -535,6 +535,24 @@ double g_bpm_step_t = 0;          // dernier pas de BPM +/-
 const char *g_ui_tempo_skip = nullptr;   // bouton qu'on tourne : ne pas lui renvoyer sa valeur
 uint32_t g_last_tempo_c = 0;      // dernier tempo appliqué, centièmes de BPM
 
+/* Valeurs envoyées à PiPedal dont le plugin va renvoyer l'écho (un peu plus
+ * tard) : chaque écho attendu est ignoré une fois ; oubliés après 2 s. Sans
+ * ça, un écho en retard ramènerait un ancien groove ou un ancien tempo. */
+struct Echo { std::string what; int v; double t; };
+std::vector<Echo> g_echoes;
+
+void expect_echo(const std::string &what, int v) { g_echoes.push_back({what, v, now_s()}); }
+
+bool take_echo(const std::string &what, int v)
+{
+    const double t = now_s();
+    g_echoes.erase(std::remove_if(g_echoes.begin(), g_echoes.end(), [t](const Echo &e) { return t - e.t > 2.0; }),
+                   g_echoes.end());
+    for (auto it = g_echoes.begin(); it != g_echoes.end(); ++it)
+        if (it->what == what && it->v == v) { g_echoes.erase(it); return true; }
+    return false;
+}
+
 int pipedal_port()
 {
     const char *e = std::getenv("PB_PIPEDAL_PORT");
@@ -548,10 +566,10 @@ void ui_flush()
     if (g_ui_tempo_late && now_s() - g_bpm_step_t > 0.4) { g_ui_tempo = g_ui_tempo_late; g_ui_tempo_late = 0; }
     if (!g_ui_groove && !g_ui_tempo) return;
     std::vector<PipedalSet> v;
-    if (g_ui_groove) v.push_back({URI_DRUM, "groove", (float)g_ui_groove});
+    if (g_ui_groove) { v.push_back({URI_DRUM, "groove", (float)g_ui_groove}); expect_echo("groove", g_ui_groove); }
     if (g_ui_tempo) {
-        for (const char *u : {URI_DRUM, URI_LOOPER})
-            if (u != g_ui_tempo_skip) v.push_back({u, "tempo", (float)g_ui_tempo});
+        if (g_ui_tempo_skip != URI_DRUM) { v.push_back({URI_DRUM, "tempo", (float)g_ui_tempo}); expect_echo("drum-tempo", g_ui_tempo * 100); }
+        if (g_ui_tempo_skip != URI_LOOPER) { v.push_back({URI_LOOPER, "tempo", (float)g_ui_tempo}); expect_echo("looper-tempo", g_ui_tempo * 100); }
     }
     g_ui_groove = g_ui_tempo = 0;
     g_ui_tempo_skip = nullptr;
@@ -723,7 +741,7 @@ uint32_t g_dr_tempo = 0, g_dr_tempo_seen = 0;   // centièmes de BPM
 double g_dr_tempo_since = 0;
 std::vector<double> g_taps;                     // instants des derniers appuis Tap
 int g_bpm_delta = 0;                            // pas de BPM +/- pas encore appliqués
-int g_bpm_target = 0;                           // tempo visé pendant une série de pas
+int g_bpm_target = 0;                           // tempo visé
 double g_bpm_apply_t = 0;
 
 /* BPM +/- : pas regroupés, appliqués au plus 10 fois par seconde (Hydrogen
@@ -731,11 +749,10 @@ double g_bpm_apply_t = 0;
 void bpm_steps(pb_ctl *k)
 {
     if (!g_bpm_delta || now_s() - g_bpm_apply_t < 0.1) return;
-    if (!g_bpm_target || now_s() - g_bpm_step_t > 1.0) {    // nouvelle série : part du tempo actuel
-        const uint32_t c = g_last_tempo_c ? g_last_tempo_c : PB_LOAD_RLX(&k->bpm);
-        g_bpm_target = c ? (int)std::lround(c * 0.01) : 120;
-    }
-    g_bpm_target += g_bpm_delta;
+    /* Toujours à partir du tempo actuel (dernier appliqué par le pont : Tap,
+     * bouton Tempo ou BPM +/-), pas d'une ancienne série. */
+    const uint32_t c = g_last_tempo_c ? g_last_tempo_c : PB_LOAD_RLX(&k->bpm);
+    g_bpm_target = (c ? (int)std::lround(c * 0.01) : 120) + g_bpm_delta;
     g_bpm_delta = 0;
     if (g_bpm_target < 40) g_bpm_target = 40;
     if (g_bpm_target > 240) g_bpm_target = 240;
@@ -805,7 +822,7 @@ void drum_poll(pb_ctl *k)
     const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
     if (groove != g_dr_groove) {
         g_dr_groove = groove;
-        if ((int)groove != g_pattern + 1) {            // sinon : c'est le groove qui joue déjà
+        if (!take_echo("groove", (int)groove) && (int)groove != g_pattern + 1) {   // sinon : écho, ou déjà joué
             say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
             g_refresh_now = true;
         }
@@ -819,7 +836,7 @@ void drum_poll(pb_ctl *k)
     if (tempo != g_dr_tempo_seen) { g_dr_tempo_seen = tempo; g_dr_tempo_since = now_s(); }
     if (tempo != g_dr_tempo && now_s() - g_dr_tempo_since >= 0.3) {
         g_dr_tempo = tempo;
-        if (tempo != g_last_tempo_c) {               // sinon : c'est déjà le tempo
+        if (!take_echo("drum-tempo", (int)tempo) && tempo != g_last_tempo_c) {   // sinon : écho, ou déjà le tempo
             char t[32];
             std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
             say("DLS Drum : tempo %s -> %s", t, set_tempo(t).c_str());
@@ -908,7 +925,7 @@ void looper_poll()
     if (tempo != g_tempo_seen) { g_tempo_seen = tempo; g_tempo_since = now_s(); }
     if (tempo != g_lp_tempo && now_s() - g_tempo_since >= 0.3) {
         g_lp_tempo = tempo;
-        if (tempo != g_last_tempo_c) {               // sinon : c'est déjà le tempo
+        if (!take_echo("looper-tempo", (int)tempo) && tempo != g_last_tempo_c) {
             char t[32];
             std::snprintf(t, sizeof t, "%.2f", tempo * 0.01);
             say("DLS Looper : tempo %s -> %s", t, set_tempo(t).c_str());
