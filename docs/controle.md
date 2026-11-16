@@ -603,6 +603,19 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
   (vérifié depuis le mode Song). `session.sh start` l'envoie à chaque démarrage.
 - Fill = pattern dédié, joué une mesure, puis retour au groove. Le client envoie
   le changement juste avant la barre.
+- **À faire : changer de style sans coupure.** Changer de morceau
+  (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
+  un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain
+  Stop. Solution prévue : tous les styles de la collection RP Bardet utilisent
+  la même batterie (GMRockKit), donc on peut les **réunir dans un seul gros
+  morceau** (277 patterns, une plage de patterns par style). Choisir un style =
+  sauter à ses patterns, aussi instantané qu'un groove. À prévoir :
+  - un script qui fusionne les `.h2song` (mêmes instruments vérifiés, patterns
+    renumérotés) et écrit la table style → plage de patterns ;
+  - le sélecteur Song garde un fichier par style (repère), le pont le traduit
+    en plage ; Groove, Previous et Next restent dans la plage du style ;
+  - la liste Groove (1–16) et Playing restent relatives au style ;
+  - vérifier qu'Hydrogen garde un morceau de près de 300 patterns sans problème.
 - Alternative si l'OSC est trop limité : piloter Hydrogen par MIDI (notes et
   changements de programme), ou mettre à jour Hydrogen (§13).
 
