@@ -881,7 +881,10 @@ void drum_song_poll(pb_ctl *k)
         g_dr_song_pending.clear();
         const int groove = g_dr_song_groove;
         say("DLS Drum : %s", open_drum_song(path, groove).c_str());
-        g_dr_groove = (uint32_t)groove;          // déjà appliqué (le menu suit par le websocket)
+        /* Le menu montre encore l'ancien groove jusqu'à ce que PiPedal applique
+         * la mise à jour (websocket) : le considérer comme vu, sinon il serait
+         * réappliqué ici même ; son écho (le nouveau groove) est attendu. */
+        g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
         g_refresh_now = true;
     }
 }
