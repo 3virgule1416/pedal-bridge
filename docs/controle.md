@@ -190,6 +190,68 @@ moment où on l'ouvre. On s'en sert :
 - À voir encore : fichier supprimé entre-temps, liste mise à jour pendant que
   le sélecteur est ouvert.
 
+### Réalisé (1re version, 2026-11-15)
+
+`lv2/drum.c`, URI `…/drum-mono` et `…/drum-stereo` (« DLS Drum », « DLS Drum
+St. »). Batterie du lien 2 **ajoutée** au signal (en mono : (G + D) / 2) ; à
+placer **en fin de chaîne** (la batterie ne passe dans aucun effet). Le Looper
+reste en début de chaîne (lien 1). Testé à l'oreille et sur le Pi.
+
+| Section | Contrôle | Effet |
+|---|---|---|
+| Drums | **Groove** (menu 1–16) | pattern N du morceau d'Hydrogen, **sans démarrer** |
+| | **Previous / Next** | groove précédent / suivant (bornés au nombre de patterns lus dans le `.h2song`) |
+| | **Playing** (sortie) | groove qui joue vraiment (« - » si inconnu) |
+| Transport | **Play / Stop** | le même que celui du Looper (§8 bis) ; marche aussi sans SooperLooper (batterie seule) |
+| | **Tempo** (40–240) | appliqué quand le bouton ne bouge plus depuis 0,3 s |
+| | **BPM + / BPM -** (momentanés) | ±1 BPM ; tenus : répétition après 0,4 s (toutes les 120 ms), plus vite après 2 s (40 ms) |
+| | **Tap** | au moins 3 coups ; le tempo change **une fois**, 1 s après le dernier coup (1,6 intervalle aux tempos lents), BPM entier, moyenne des 8 derniers coups |
+| | **Metronome** (bascule) | métronome d'Hydrogen |
+| | Beat, ♩, 1, ▶, BPM (sorties) | comme le Looper ; Beat compte 3 ou 4 temps selon le groove |
+| Bridge | Volume, Link | gain de la batterie ; état du lien 2 |
+
+Comportements à retenir :
+
+- **Chargement du preset** (ou redémarrage du pont) : le groove du menu et
+  l'interrupteur Metronome sont **appliqués**, sans démarrer la batterie. Les
+  autres réglages (tempo) ne s'appliquent qu'en changeant.
+- **Groove sans démarrer** : `SELECT_ONLY_NEXT_PATTERN` (Hydrogen choisit le
+  pattern tout de suite en mode « pattern sélectionné »). `SELECT_AND_PLAY_PATTERN`
+  démarrait le transport : seul Play démarre maintenant.
+- **Métronome** : l'OSC d'Hydrogen n'a qu'une bascule (`TOGGLE_METRONOME`,
+  argument ignoré). Le client lit le **retour d'état** d'Hydrogen
+  (`/Hydrogen/TOGGLE_METRONOME` 0 ou 1, envoyé à toute adresse qui lui a parlé)
+  et ne bascule que si l'état diffère. État inconnu : un message d'une adresse
+  nouvelle pour Hydrogen lui fait renvoyer tout son état.
+- **BPM + / -** : le plugin compte les pas (répétition dans `run()`, sans
+  appel système) ; le client les regroupe (10 tempos par seconde au plus,
+  sinon Hydrogen déborde) et part toujours du **dernier tempo appliqué**.
+
+**Affichage dans PiPedal par son websocket** (`client/pipedal_ws.cc`) :
+
+- Un plugin LV2 ne peut pas changer ses propres réglages. Après Next/Previous,
+  Tap ou BPM +/-, le client remet **Groove** (Drum) et **Tempo** (Drum et
+  Looper) à la bonne valeur comme le fait la page web : connexion à
+  `ws://127.0.0.1:80/pipedal`, `currentPedalboard` (pour trouver les
+  `instanceId` par URI), puis `setControl` ; connexion fermée aussitôt (pas de
+  `hello` : pas d'abonnement aux notifications). PiPedal marque le preset
+  modifié, comme un changement à la main.
+- **Échos** : le plugin renvoie ensuite la valeur reçue. Chaque valeur envoyée
+  est **attendue et ignorée une fois** (oubliée après 2 s) ; sans ça, un écho en
+  retard ramenait un ancien tempo après un Tap.
+- Le bouton qu'on **tourne** ne reçoit pas sa propre valeur (sinon il se bat
+  avec le geste) ; pendant qu'on **tient** BPM +/-, les boutons Tempo ne sont
+  mis à jour qu'au relâchement.
+- `PB_PIPEDAL_PORT=0` désactive tout ça (banc de test).
+- Le pas des flèches de la case Tempo vient de PiPedal : 10 si la plage dépasse
+  100 (40–240), 1 sinon. D'où BPM + / BPM -.
+
+**Texte dans PiPedal** : un plugin ne peut afficher que des étiquettes
+**écrites d'avance** dans sa description (`lv2:scalePoint`) ; aucun texte qui
+change pendant que ça tourne (`pipedal_ui:text` existe mais n'est pas lu). Le
+nom des patterns ira donc dans la description à l'installation (collection
+fixe) et sur l'écran OLED (§11).
+
 ## 6. Plugin « DLS Looper »
 
 Audio : envoi de l'entrée au looper puis ajout des boucles, lien 1 (§4 bis).
@@ -472,10 +534,25 @@ un redémarrage du pont. Partout identique.
   B (mesure 4) → fin de la mesure 4 (2 mesures) ; record pendant B (mesure 8)
   → départ mesure 9, stop pendant A (mesure 11) → fin de la mesure 12
   (4 mesures).
-- Le cycle n'est réglé que pour un morceau passé par `save` ou `load` (taille
-  des patterns connue) ; sinon, 1 mesure.
-- **Mesures autres que 4/4** (3/4, 6/8) : pas encore gérées (`pb_timebase` reste
-  à 4 temps par mesure) ; le client laisse alors le cycle tel quel.
+- Taille des patterns connue pour le morceau ouvert par `batterie CHEMIN`,
+  `load`, ou au démarrage : le client **retient le morceau qu'il a ouvert**
+  (`travail/morceau-batterie.txt`), car Hydrogen n'écrit son
+  `lastSongFilename` qu'en quittant ; à défaut, ce `lastSongFilename`.
+- **Mesures de 3 temps** (fait) : groove de 144 ticks = 3 temps, 192 = 4 temps.
+  Le client envoie `beats N` à `pb_timebase` (temps par mesure : Beat, voyant 1,
+  mesure 1) et règle le cycle de SooperLooper sur la longueur du groove.
+  Vérifié avec la valse de la collection RP Bardet : compteur 1-2-3, boucle
+  enregistrée juste. Changer le nombre de temps pendant la lecture fait sauter
+  la position (la mesure est comptée depuis la trame 0).
+- **4/4 swing « tassé »** : certains morceaux (Jazz, Shuffle, Swing, une partie
+  de Reggae chez RP Bardet) écrivent une mesure de 4/4 dans 144 ticks (temps à
+  0, 36, 72, 108). `scripts/h2_swing44.py` les réécrit en vraies mesures de
+  192 ticks (positions × 4/3 : triolets à 16 ticks, comme Hydrogen les écrit).
+- **Boucles muettes** (fait) : une boucle muette le reste après Stop puis Play,
+  et un Mute fait à l'arrêt est retenu (État « muted »). SooperLooper efface un
+  `mute_on` reçu avant le vrai départ de la boucle (vérifié) : le client
+  l'envoie juste après le départ du transport et le répète pendant 40 ms. Même
+  idée que la RC-600 (piste arrêtée avec LOOP SYNC : elle revient en place).
 - Hydrogen crée un fichier `.NOM.autosave.h2song` dans le dossier du morceau
   ouvert.
 - Un **undo** qui ramène une boucle à son contenu d'avant la normalisation
@@ -519,7 +596,8 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
   À tester une par une (arguments, comportement en écoute du maître du temps).
 - Pour une chanson : `SAVE_SONG_AS` (le `.h2song` dans le dossier de la chanson),
   `OPEN_SONG` au chargement, mode (`SONG_MODE_ACTIVATION`), pattern retenu par
-  le client (`SELECT_AND_PLAY_PATTERN`), et `BPM` pour que l'affichage
+  le client (`SELECT_ONLY_NEXT_PATTERN` : choisit sans démarrer ;
+  `SELECT_AND_PLAY_PATTERN` démarre le transport), et `BPM` pour que l'affichage
   d'Hydrogen suive `pb_timebase`.
 - **Mode Pattern** : `SONG_MODE_ACTIVATION 0` met Hydrogen en mode Pattern
   (vérifié depuis le mode Song). `session.sh start` l'envoie à chaque démarrage.
@@ -594,6 +672,10 @@ l'oreille avant la suivante.
 5. **DLS Drum** (mono et stéréo, retour de la batterie sur le lien 2) :
    tempo, play/stop, début, tap ; tempo sans saut (§8). Branchements JACK :
    SooperLooper → `return1`, Hydrogen → `return2`.
+   **Fait** (2026-11-15, §5 « Réalisé ») : groove, précédent/suivant, Playing,
+   Play/Stop, Tempo, BPM +/-, Tap, Metronome, mesures de 3 temps, affichage
+   par le websocket de PiPedal. Restent : tempo sans saut (§8), fill, choix du
+   morceau dans PiPedal (collection, sélecteur de fichier).
 6. **Hydrogen OSC** : grooves et fills (OSC activé ; `groove N` fait).
 7. **Sections** (§9).
 8. **Écran** : rendu PNG, puis vrai écran après activation du SPI.
@@ -607,9 +689,10 @@ l'oreille avant la suivante.
   (Le firmware officiel se configure par fichiers sur son lecteur USB.)
 - `pipedal_leds.py` : l'intégrer au client, ou le garder en Python et lui
   transmettre le mode ?
-- PiPedal 2.0.111 : boutons momentanés, voyants de sortie, liaison MIDI sur un
-  bouton momentané (appui ou relâchement) ?
-- Hydrogen 1.2.0-beta : quelles commandes OSC ? Faut-il le mettre à jour (version
-  stable 1.2.x compilée depuis les sources) ?
+- PiPedal 2.0.111 : liaison MIDI sur un bouton momentané à maintien
+  (`mod:preferMomentaryOffByDefault`, BPM +/-) : le Captain doit envoyer 127 à
+  l'appui et 0 au relâchement — à vérifier.
+- Hydrogen 1.2.0-beta : faut-il le mettre à jour (version stable 1.2.x
+  compilée depuis les sources) ? Commandes vérifiées jusqu'ici : voir §5 et §10.
 - SooperLooper : « t. stretch » utilisable au changement de tempo ?
 - Changement de preset au relâchement (appui court) : acceptable à l'usage ?
