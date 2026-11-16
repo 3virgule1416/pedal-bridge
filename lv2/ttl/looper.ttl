@@ -1,12 +1,16 @@
+@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix epp:   <http://lv2plug.in/ns/ext/port-props#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix mod:   <http://moddevices.com/ns/mod#> .
+@prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix pg:    <http://lv2plug.in/ns/ext/port-groups#> .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix state: <http://lv2plug.in/ns/ext/state#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 
 <http://pedal-bridge.local/plugins/looper#boucle_g>

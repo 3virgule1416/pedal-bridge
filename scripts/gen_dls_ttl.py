@@ -10,15 +10,19 @@ HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lv2", "tt
 GROUPS = [("boucle_g", "Loop"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
 G = "http://pedal-bridge.local/plugins/looper#"
 
-PREFIXES = """@prefix doap:  <http://usefulinc.com/ns/doap#> .
+PREFIXES = """@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix epp:   <http://lv2plug.in/ns/ext/port-props#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix mod:   <http://moddevices.com/ns/mod#> .
+@prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix pg:    <http://lv2plug.in/ns/ext/port-groups#> .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix state: <http://lv2plug.in/ns/ext/state#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 
 """
@@ -157,14 +161,18 @@ DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, 
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
+Song picks the Hydrogen song (one style per song) among the .h2song files of the "DLS Drums" folder; it is opened when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" + '"""'
+
+
+SONG = G + "song"
 
 
 def drum_plugin(uri, name, label, stereo):
     p = audio_ports(stereo)
     i = 4 if stereo else 2
+    first = i
     D, T, P = "drum_g", "transport_g", "pont_g"
     # Ordre = enum de lv2/drum.c, rangé par section.
     p.append(ctl_in(i, "groove", "Groove", "Hydrogen pattern to play (1 = first pattern of the song), from the next bar.",
@@ -195,10 +203,46 @@ def drum_plugin(uri, name, label, stereo):
                     "lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db", P)); i += 1
     p.append(ctl_out(i, "liaison", "Link", "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running.",
                      enum(0, 2, [(0, "no bridge"), (1, "no audio"), (2, "OK")]), P)); i += 1
-    return plugin_head(uri, name, label, DRUM_DESC) + " ,\n".join(p) + " .\n\n"
+    # Messages patch du sélecteur de fichier (Song).
+    p.append(f"""    [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
+      lv2:designation lv2:control ; lv2:index {i} ; lv2:symbol "control" ; lv2:name "Control" ]"""); i += 1
+    p.append(f"""    [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
+      lv2:designation lv2:control ; lv2:index {i} ; lv2:symbol "notify" ; lv2:name "Notify" ]"""); i += 1
+    head_ = plugin_head(uri, name, label, DRUM_DESC).replace("    lv2:port\n", f"""    lv2:optionalFeature urid:map ;
+    lv2:extensionData state:interface ;
+    patch:readable <{SONG}> ;
+    patch:writable <{SONG}> ;
+    lv2:port
+""")
+    ui = f"""<{uri}> pipedal_ui:ui <{uri}#ui> .
+
+<{uri}#ui>
+    a pipedal_ui:ui ;
+    pipedal_ui:fileProperties [
+        a pipedal_ui:fileProperty ;
+        rdfs:label "Song" ;
+        pipedal_ui:directory "DLS Drums" ;
+        lv2:index {first} ;
+        lv2:portGroup <{G}drum_g> ;
+        pipedal_ui:patchProperty <{SONG}> ;
+        pipedal_ui:fileTypes [
+            a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;
+            pipedal_ui:fileExtension ".h2song" ; pipedal_ui:mimeType "application/octet-stream"
+        ]
+    ] .
+
+"""
+    return head_ + " ,\n".join(p) + " .\n\n" + ui
 
 
-ttl = head(DRUM_GROUPS) + drum_plugin("http://pedal-bridge.local/plugins/drum-mono", "Drum (Mono)", "DLS Drum", False) \
+SONG_PARAM = f"""<{SONG}>
+    a lv2:Parameter ;
+    rdfs:label "Song" ;
+    mod:fileTypes "h2song" ;
+    rdfs:range atom:Path .
+
+"""
+ttl = head(DRUM_GROUPS) + SONG_PARAM + drum_plugin("http://pedal-bridge.local/plugins/drum-mono", "Drum (Mono)", "DLS Drum", False) \
                         + drum_plugin("http://pedal-bridge.local/plugins/drum-stereo", "Drum (Stéréo)", "DLS Drum St.", True)
 open(os.path.join(HERE, "drum.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
 print("ok")

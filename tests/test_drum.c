@@ -12,7 +12,11 @@
 #include "test_alloc.h"
 
 #include <dlfcn.h>
+#include <lv2/atom/atom.h>
+#include <lv2/atom/forge.h>
 #include <lv2/core/lv2.h>
+#include <lv2/patch/patch.h>
+#include <lv2/urid/urid.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +32,8 @@ enum {
     C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
     C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
-    C_NUM
+    C_NUM,
+    A_CONTROL = C_NUM, A_NOTIFY            /* ports atom du sélecteur de fichier */
 };
 static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN };
 
@@ -63,6 +68,19 @@ static int host_init(Host *t, const LV2_Descriptor *d, const char *bundle, int s
     for (uint32_t k = 0; k < C_NUM; k++) d->connect_port(t->h, na + k, &t->c[k]);
     return 0;
 }
+
+/* --- Carte d'URID minimale (pour le sélecteur de fichier) --- */
+static char g_uris[64][128];
+static uint32_t g_nuris;
+static LV2_URID map_uri(LV2_URID_Map_Handle h, const char *uri)
+{
+    (void)h;
+    for (uint32_t i = 0; i < g_nuris; i++) if (!strcmp(g_uris[i], uri)) return i + 1;
+    if (g_nuris >= 64) return 0;
+    snprintf(g_uris[g_nuris], sizeof g_uris[0], "%s", uri);
+    return ++g_nuris;
+}
+static LV2_URID_Map g_map = { NULL, map_uri };
 
 static void run1(Host *t)
 {
@@ -293,6 +311,59 @@ int main(int argc, char **argv)
     T_CHECK(g_rt_allocs == 0, "aucune allocation pendant run()");
     dm->deactivate(A.h);
     dm->cleanup(A.h);
+    /* --- 6. Morceau (sélecteur de fichier, patch:Set) --- */
+    {
+        const LV2_Feature fmap = { LV2_URID__map, &g_map };
+        const LV2_Feature *feats[] = { &fmap, NULL };
+        Host S;
+        memset(&S, 0, sizeof S);
+        S.d = dm; S.c[C_GROOVE] = 1; S.c[C_TEMPO] = 120;
+        S.h = dm->instantiate(dm, RATE, argv[2], feats);
+        T_CHECK(S.h != NULL, "instanciation avec urid:map");
+        dm->connect_port(S.h, 0, S.in[0]);
+        dm->connect_port(S.h, 1, S.out[0]);
+        for (uint32_t k = 0; k < C_NUM; k++) dm->connect_port(S.h, 2 + k, &S.c[k]);
+        static uint64_t ctl_buf[512], notify_buf[512];   /* alignés sur 8 octets */
+        dm->connect_port(S.h, 2 + A_CONTROL, ctl_buf);
+        dm->connect_port(S.h, 2 + A_NOTIFY, notify_buf);
+        dm->activate(S.h);
+
+        const char *song = "/var/pipedal/audio_uploads/DLS Drums/Rock.h2song";
+        LV2_Atom_Forge forge;
+        lv2_atom_forge_init(&forge, &g_map);
+        lv2_atom_forge_set_buffer(&forge, (uint8_t *)ctl_buf, sizeof ctl_buf);
+        LV2_Atom_Forge_Frame seq, obj;
+        lv2_atom_forge_sequence_head(&forge, &seq, 0);
+        lv2_atom_forge_frame_time(&forge, 0);
+        lv2_atom_forge_object(&forge, &obj, 0, map_uri(NULL, LV2_PATCH__Set));
+        lv2_atom_forge_key(&forge, map_uri(NULL, LV2_PATCH__property));
+        lv2_atom_forge_urid(&forge, map_uri(NULL, "http://pedal-bridge.local/plugins/drum#song"));
+        lv2_atom_forge_key(&forge, map_uri(NULL, LV2_PATCH__value));
+        lv2_atom_forge_path(&forge, song, (uint32_t)strlen(song));
+        lv2_atom_forge_pop(&forge, &obj);
+        lv2_atom_forge_pop(&forge, &seq);
+
+        { const uint32_t cap = sizeof notify_buf - sizeof(LV2_Atom); memcpy(notify_buf, &cap, sizeof cap); }   /* atom.size */
+        const uint32_t s0 = K.ctl->drum_song_seq;
+        run1(&S);
+        T_CHECK(!strcmp(K.ctl->drum_song, song), "morceau choisi -> fichier de contrôle");
+        T_CHECK(K.ctl->drum_song_seq != s0 && (K.ctl->drum_song_seq & 1u) == 0, "numéro de séquence pair et changé");
+        uint32_t nsize;
+        memcpy(&nsize, notify_buf, sizeof nsize);
+        T_CHECK(nsize > sizeof(LV2_Atom_Sequence_Body), "chemin renvoyé à PiPedal (notify)");
+
+        /* Séquence vide au bloc suivant : rien ne change. */
+        lv2_atom_forge_set_buffer(&forge, (uint8_t *)ctl_buf, sizeof ctl_buf);
+        lv2_atom_forge_sequence_head(&forge, &seq, 0);
+        lv2_atom_forge_pop(&forge, &seq);
+        { const uint32_t cap = sizeof notify_buf - sizeof(LV2_Atom); memcpy(notify_buf, &cap, sizeof cap); }   /* atom.size */
+        const uint32_t s1 = K.ctl->drum_song_seq;
+        run1(&S);
+        T_CHECK(K.ctl->drum_song_seq == s1, "pas de nouveau morceau : fichier de contrôle inchangé");
+        dm->deactivate(S.h);
+        dm->cleanup(S.h);
+    }
+
     pb_link_close(&K.ret);
     pb_ctl_close(K.ctl);
     rm_ctl(dir);

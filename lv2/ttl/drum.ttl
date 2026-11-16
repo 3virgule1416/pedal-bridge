@@ -1,12 +1,16 @@
+@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix epp:   <http://lv2plug.in/ns/ext/port-props#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix mod:   <http://moddevices.com/ns/mod#> .
+@prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix pg:    <http://lv2plug.in/ns/ext/port-groups#> .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix state: <http://lv2plug.in/ns/ext/state#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 
 <http://pedal-bridge.local/plugins/drum#drum_g>
@@ -24,6 +28,12 @@
     lv2:name "Bridge" ;
     lv2:symbol "pont_g" .
 
+<http://pedal-bridge.local/plugins/drum#song>
+    a lv2:Parameter ;
+    rdfs:label "Song" ;
+    mod:fileTypes "h2song" ;
+    rdfs:range atom:Path .
+
 <http://pedal-bridge.local/plugins/drum-mono>
     a lv2:Plugin, lv2:UtilityPlugin ;
     doap:name "Davis Loop Station Drum (Mono)" ;
@@ -34,12 +44,16 @@
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
+Song picks the Hydrogen song (one style per song) among the .h2song files of the "DLS Drums" folder; it is opened when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:optionalFeature lv2:hardRTCapable ;
+    lv2:optionalFeature urid:map ;
+    lv2:extensionData state:interface ;
+    patch:readable <http://pedal-bridge.local/plugins/drum#song> ;
+    patch:writable <http://pedal-bridge.local/plugins/drum#song> ;
     lv2:port
     [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "In" ] ,
     [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Out" ] ,
@@ -376,7 +390,28 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
                      [ rdfs:label "no audio" ; rdf:value 1 ] ,
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
-      pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] .
+      pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
+    [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
+      lv2:designation lv2:control ; lv2:index 19 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+    [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
+      lv2:designation lv2:control ; lv2:index 20 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+
+<http://pedal-bridge.local/plugins/drum-mono> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-mono#ui> .
+
+<http://pedal-bridge.local/plugins/drum-mono#ui>
+    a pipedal_ui:ui ;
+    pipedal_ui:fileProperties [
+        a pipedal_ui:fileProperty ;
+        rdfs:label "Song" ;
+        pipedal_ui:directory "DLS Drums" ;
+        lv2:index 2 ;
+        lv2:portGroup <http://pedal-bridge.local/plugins/drum#drum_g> ;
+        pipedal_ui:patchProperty <http://pedal-bridge.local/plugins/drum#song> ;
+        pipedal_ui:fileTypes [
+            a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;
+            pipedal_ui:fileExtension ".h2song" ; pipedal_ui:mimeType "application/octet-stream"
+        ]
+    ] .
 
 <http://pedal-bridge.local/plugins/drum-stereo>
     a lv2:Plugin, lv2:UtilityPlugin ;
@@ -388,12 +423,16 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
+Song picks the Hydrogen song (one style per song) among the .h2song files of the "DLS Drums" folder; it is opened when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" ;
     doap:license <http://opensource.org/licenses/isc> ;
     lv2:minorVersion 1 ; lv2:microVersion 0 ;
     lv2:optionalFeature lv2:hardRTCapable ;
+    lv2:optionalFeature urid:map ;
+    lv2:extensionData state:interface ;
+    patch:readable <http://pedal-bridge.local/plugins/drum#song> ;
+    patch:writable <http://pedal-bridge.local/plugins/drum#song> ;
     lv2:port
     [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in_l" ; lv2:name "In L" ] ,
     [ a lv2:AudioPort, lv2:InputPort ; lv2:index 1 ; lv2:symbol "in_r" ; lv2:name "In R" ] ,
@@ -732,5 +771,26 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
                      [ rdfs:label "no audio" ; rdf:value 1 ] ,
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
-      pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] .
+      pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
+    [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
+      lv2:designation lv2:control ; lv2:index 21 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+    [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
+      lv2:designation lv2:control ; lv2:index 22 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+
+<http://pedal-bridge.local/plugins/drum-stereo> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-stereo#ui> .
+
+<http://pedal-bridge.local/plugins/drum-stereo#ui>
+    a pipedal_ui:ui ;
+    pipedal_ui:fileProperties [
+        a pipedal_ui:fileProperty ;
+        rdfs:label "Song" ;
+        pipedal_ui:directory "DLS Drums" ;
+        lv2:index 4 ;
+        lv2:portGroup <http://pedal-bridge.local/plugins/drum#drum_g> ;
+        pipedal_ui:patchProperty <http://pedal-bridge.local/plugins/drum#song> ;
+        pipedal_ui:fileTypes [
+            a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;
+            pipedal_ui:fileExtension ".h2song" ; pipedal_ui:mimeType "application/octet-stream"
+        ]
+    ] .
 

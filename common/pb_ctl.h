@@ -33,6 +33,7 @@ extern "C" {
 #define PB_CTL_MAGIC    0x54434250u /* "PBCT" en mémoire little-endian */
 #define PB_CTL_VERSION  1u
 #define PB_CTL_BYTES    4096u
+#define PB_CTL_PATH     512u          /* chemin du morceau (DLS Drum) */
 #define PB_CTL_LOOPS    8u
 #define PB_CTL_BUTTONS  16u
 
@@ -127,9 +128,17 @@ typedef struct pb_ctl {
     uint32_t groove_count;      /* patterns du morceau (0 = inconnu) */
     uint8_t  pad7[52];
 
+    /* Ligne 8 et suivantes : morceau Hydrogen choisi dans DLS Drum (sélecteur
+     * de fichier). Verrou de séquence : le plugin met drum_song_seq impair,
+     * copie le chemin, puis le remet pair ; le client relit si le numéro a
+     * changé pendant sa copie. Chemin vide = aucun morceau choisi. */
+    uint32_t drum_song_seq;
+    uint8_t  pad8[60];
+    char     drum_song[PB_CTL_PATH];
+
     /* Réservé. Un fichier créé par une version plus ancienne a des zéros ici :
      * les nouveaux champs ne font qu'ajouter, la version reste 1. */
-    uint8_t  reserved[PB_CTL_BYTES - 8 * 64];
+    uint8_t  reserved[PB_CTL_BYTES - 9 * 64 - PB_CTL_PATH];
 } pb_ctl;
 
 #ifdef __cplusplus
@@ -141,6 +150,7 @@ static_assert(offsetof(pb_ctl, sl_ok) == 256, "ligne sooperlooper");
 static_assert(offsetof(pb_ctl, drum_owner) == 320, "ligne drum");
 static_assert(offsetof(pb_ctl, drum_btn) == 384, "ligne boutons drum");
 static_assert(offsetof(pb_ctl, h2_ok) == 448, "ligne hydrogen");
+static_assert(offsetof(pb_ctl, drum_song_seq) == 512 && offsetof(pb_ctl, drum_song) == 576, "ligne morceau");
 #else
 _Static_assert(sizeof(pb_ctl) == PB_CTL_BYTES, "pb_ctl");
 _Static_assert(offsetof(pb_ctl, looper_owner) == 64, "ligne looper");
@@ -150,6 +160,7 @@ _Static_assert(offsetof(pb_ctl, sl_ok) == 256, "ligne sooperlooper");
 _Static_assert(offsetof(pb_ctl, drum_owner) == 320, "ligne drum");
 _Static_assert(offsetof(pb_ctl, drum_btn) == 384, "ligne boutons drum");
 _Static_assert(offsetof(pb_ctl, h2_ok) == 448, "ligne hydrogen");
+_Static_assert(offsetof(pb_ctl, drum_song_seq) == 512 && offsetof(pb_ctl, drum_song) == 576, "ligne morceau");
 #endif
 
 /* Hors temps réel. Chemin : $PB_SHM_DIR (ou /dev/shm)/pedal-bridge-control.

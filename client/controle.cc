@@ -843,6 +843,43 @@ void tap_finish()
     say("DLS Drum : tap (%zu coups) -> %s", n, set_tempo(b).c_str());
 }
 
+std::string g_drum_song;           // morceau Hydrogen ouvert par le pont (chemin)
+std::string open_drum_song(const std::string &path, int groove = 1);
+
+/* Morceau choisi dans DLS Drum (sélecteur de fichier) : lu sous verrou de
+ * séquence ; ouvert seulement à l'arrêt (Hydrogen recharge tout). */
+uint32_t g_dr_song_seq = 1;                     // impair : jamais lu
+std::string g_dr_song_pending;                  // à ouvrir au prochain arrêt
+
+void drum_song_poll(pb_ctl *k)
+{
+    const uint32_t s1 = PB_LOAD_ACQ(&k->drum_song_seq);
+    if (s1 != g_dr_song_seq && !(s1 & 1u)) {
+        char buf[PB_CTL_PATH];
+        std::memcpy(buf, k->drum_song, sizeof buf);
+        std::atomic_thread_fence(std::memory_order_acquire);
+        if (PB_LOAD_ACQ(&k->drum_song_seq) == s1) {   // pas réécrit pendant la copie
+            g_dr_song_seq = s1;
+            buf[sizeof buf - 1] = 0;
+            const std::string path(buf);
+            if (!path.empty() && path != g_drum_song) {
+                g_dr_song_pending = path;
+                if (transport_rolling()) say("DLS Drum : morceau %s ouvert au prochain Stop", path.c_str());
+            } else {
+                g_dr_song_pending.clear();
+            }
+        }
+    }
+    if (!g_dr_song_pending.empty() && !transport_rolling()) {
+        const std::string path = g_dr_song_pending;
+        g_dr_song_pending.clear();
+        const int groove = (int)PB_LOAD_RLX(&k->drum_groove);
+        say("DLS Drum : %s", open_drum_song(path, groove).c_str());
+        g_dr_groove = (uint32_t)groove;          // déjà appliqué
+        g_refresh_now = true;
+    }
+}
+
 void drum_poll(pb_ctl *k)
 {
     const uint64_t owner = PB_LOAD_ACQ(&k->drum_owner);
@@ -853,10 +890,12 @@ void drum_poll(pb_ctl *k)
         g_dr_groove = 0;                   // groove du preset : choisi au prochain passage (sans démarrer)
         g_taps.clear();
         g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
+        g_dr_song_seq = 1;                 // morceau du preset : relu (ouvert s'il change)
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
         return;
     }
     if (!owner) return;
+    drum_song_poll(k);
     const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
     if (groove != g_dr_groove) {
         g_dr_groove = groove;
@@ -927,7 +966,7 @@ void read_h2_current_song()
     {
         std::ifstream m(drum_song_file());
         std::string path;
-        if (std::getline(m, path) && file_size(path) > 0) { read_pattern_sizes(path); return; }
+        if (std::getline(m, path) && file_size(path) > 0) { read_pattern_sizes(path); g_drum_song = path; return; }
     }
     const char *home = std::getenv("HOME");
     if (!home) return;
@@ -1093,6 +1132,7 @@ std::string load_song(const std::string &name)
             h2_string("/Hydrogen/OPEN_SONG", f);
             read_pattern_sizes(f);
             remember_drum_song(f);
+            g_drum_song = f;
             usleep(1500000);                         // Hydrogen ne confirme pas : on lui laisse le temps
             h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
             g_pattern = std::atoi(kv["pattern"].c_str());
@@ -1111,7 +1151,7 @@ std::string load_song(const std::string &name)
 
 /* Ouvre un morceau Hydrogen (.h2song, chemin absolu) : mode Pattern,
  * groove 1, cycle et temps par mesure selon ce groove. À l'arrêt seulement. */
-std::string open_drum_song(const std::string &path)
+std::string open_drum_song(const std::string &path, int groove)
 {
     if (path.empty() || path[0] != '/') return "erreur : batterie CHEMIN (chemin absolu d'un .h2song)";
     if (file_size(path) <= 0) return "erreur : " + path + " introuvable";
@@ -1120,9 +1160,10 @@ std::string open_drum_song(const std::string &path)
     h2_string("/Hydrogen/OPEN_SONG", path);
     read_pattern_sizes(path);
     remember_drum_song(path);
+    g_drum_song = path;
     usleep(1500000);                                  // Hydrogen ne confirme pas : on lui laisse le temps
     g_pattern = -1;
-    const std::string r = set_groove("1");
+    const std::string r = set_groove(std::to_string(groove < 1 ? 1 : groove));
     jack_transport_locate(g_cfg.client, 0);
     return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " groove(s) ; " + r;
 }
