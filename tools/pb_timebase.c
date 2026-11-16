@@ -11,7 +11,10 @@
  *   pb_timebase --set 115                                change le tempo
  *   pb_timebase --get                                    affiche le tempo
  *
- * Le changement de tempo passe par UDP sur 127.0.0.1:9980 (texte : un nombre).
+ * Le changement de tempo passe par UDP sur 127.0.0.1:9980 (texte : un nombre ;
+ * « beats N » change le nombre de temps par mesure, ex. 3 pour une valse).
+ * La mesure est comptée depuis la trame 0 : changer le nombre de temps
+ * pendant la lecture fait sauter la position (à faire de préférence à l'arrêt).
  * Le callback JACK ne fait que du calcul.
  */
 #define _GNU_SOURCE
@@ -34,11 +37,13 @@ static volatile sig_atomic_t g_stop;
 static void on_sig(int s) { (void)s; g_stop = 1; }
 
 static double g_bpm_req = 120.0;   /* demandé (écrit par le thread principal) */
-static double g_beats = 4.0;
+static double g_beats = 4.0;       /* temps par mesure (écrit par le thread principal) */
 
 /* Lecture/écriture atomiques du tempo (double : versions génériques de GCC). */
 static double bpm_get(void) { double v; __atomic_load(&g_bpm_req, &v, __ATOMIC_RELAXED); return v; }
 static void bpm_set(double v) { __atomic_store(&g_bpm_req, &v, __ATOMIC_RELAXED); }
+static double beats_get(void) { double v; __atomic_load(&g_beats, &v, __ATOMIC_RELAXED); return v; }
+static void beats_set(double v) { __atomic_store(&g_beats, &v, __ATOMIC_RELAXED); }
 static jack_nframes_t g_sr = 48000;
 
 /* Tempo vu par le callback. */
@@ -55,19 +60,20 @@ static void timebase(jack_transport_state_t state, jack_nframes_t nframes,
      * à 1,98 temps au lieu de 1,00). Prix : changer le tempo pendant la lecture
      * fait sauter la position. */
     cb_bpm = bpm_get();
+    const double beats = beats_get();
     const jack_nframes_t f = pos->frame;
     double total = (double)f * cb_bpm / (60.0 * g_sr);
     if (total < 0) total = 0;
-    const double bars = floor(total / g_beats);
-    const double in_bar = total - bars * g_beats;
+    const double bars = floor(total / beats);
+    const double in_bar = total - bars * beats;
     const double beat = floor(in_bar);
 
     pos->valid = JackPositionBBT;
     pos->bar = (int32_t)bars + 1;
     pos->beat = (int32_t)beat + 1;
     pos->tick = (int32_t)((in_bar - beat) * TPB);
-    pos->bar_start_tick = bars * g_beats * TPB;
-    pos->beats_per_bar = (float)g_beats;
+    pos->bar_start_tick = bars * beats * TPB;
+    pos->beats_per_bar = (float)beats;
     pos->beat_type = 4.0f;
     pos->ticks_per_beat = TPB;
     pos->beats_per_minute = cb_bpm;
@@ -152,7 +158,17 @@ int main(int argc, char **argv)
         if (n <= 0) continue;
         buf[n] = 0;
         char rep[128];
-        if (buf[0] != '?') {
+        if (!strncmp(buf, "beats ", 6)) {
+            const double v = atof(buf + 6);
+            if (v >= 1 && v <= 16) {
+                beats_set(v);
+                jack_position_t p;
+                if (jack_transport_query(c, &p) == JackTransportStopped)
+                    jack_transport_locate(c, p.frame);
+                printf("temps par mesure : %g\n", v);
+                fflush(stdout);
+            }
+        } else if (buf[0] != '?') {
             double v = atof(buf);
             if (v >= 20 && v <= 400) {
                 bpm_set(v);
@@ -166,7 +182,7 @@ int main(int argc, char **argv)
             }
         }
         snprintf(rep, sizeof rep, "tempo %.2f BPM, %g temps par mesure",
-                 bpm_get(), g_beats);
+                 bpm_get(), beats_get());
         sendto(s, rep, strlen(rep), 0, (struct sockaddr *)&from, fl);
     }
     jack_release_timebase(c);

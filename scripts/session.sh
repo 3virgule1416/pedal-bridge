@@ -16,6 +16,7 @@
 #   bash scripts/session.sh list      chansons sauvegardées
 #   bash scripts/session.sh boucles   état des boucles (normalisées ou non)
 #   bash scripts/session.sh groove N  pattern N d'Hydrogen (1 = premier), retenu par save
+#   bash scripts/session.sh batterie F  ouvre le morceau Hydrogen F (.h2song, chemin absolu)
 #   bash scripts/session.sh stop      arrête le pont, Hydrogen et SooperLooper
 #   bash scripts/session.sh stop-all  arrête aussi JACK, pb_timebase, l'écran virtuel et VNC
 #
@@ -238,6 +239,7 @@ case "${1:-}" in
     # par le client si possible : il met aussi à jour l'affichage d'Hydrogen
     if running pedal_bridge; then "$B/pedal_bridge" --cmd "tempo $2"; else "$B/pb_timebase" --set "$2"; fi ;;
   groove) "$B/pedal_bridge" --cmd "groove ${2:-}" ;;   # pattern N d'Hydrogen (à partir de 1)
+  batterie) "$B/pedal_bridge" --cmd "batterie ${2:-}" ;;
   # Commandes musicales : exécutées par le client pedal_bridge (voir client/controle.h)
   play)  "$B/pedal_bridge" --cmd play ;;            # tout repart de la mesure 1, ensemble
   pause) "$B/pedal_bridge" --cmd stop ;;            # tout s'arrête ; nouvelles boucles normalisées

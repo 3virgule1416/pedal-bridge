@@ -466,18 +466,27 @@ void read_pattern_sizes(const std::string &path)
 }
 
 /* Cycle de SooperLooper = longueur du groove (départ et fin d'enregistrement
- * au vrai début et à la vraie fin du groove). Seulement des mesures de 4/4
- * entières pour l'instant. Retourne une phrase pour la réponse. */
+ * au vrai début et à la vraie fin du groove), et nombre de temps par mesure
+ * de pb_timebase (voyants, mesure 1). Mesures de 4 temps (192 ticks) ou de
+ * 3 temps (144 ticks : valse). Retourne une phrase pour la réponse. */
+int g_beats_cur = 0;              // temps par mesure envoyés à pb_timebase (0 = pas encore)
+
 std::string apply_cycle(int pattern)
 {
     int size = 192;                                   // inconnu : 1 mesure de 4/4
     const bool known = pattern >= 0 && pattern < (int)g_pat_sizes.size() && g_pat_sizes[pattern] > 0;
     if (known) size = g_pat_sizes[pattern];
-    if (size % 192 != 0)
-        return "taille de pattern " + std::to_string(size) + " ticks : mesure autre que 4/4, cycle inchangé";
-    const int bars = size / 192;
+    const int beats = size % 192 == 0 ? 4 : size % 144 == 0 ? 3 : 0;
+    if (!beats)
+        return "taille de pattern " + std::to_string(size) + " ticks : ni 4 ni 3 temps par mesure, cycle inchangé";
+    std::string bpb;
+    if (beats != g_beats_cur) {
+        if (timebase("beats " + std::to_string(beats)).empty()) bpb = " ; erreur : pb_timebase ne répond pas";
+        else { g_beats_cur = beats; bpb = " ; " + std::to_string(beats) + " temps par mesure"; }
+    }
+    const int bars = size / (48 * beats);
     sl_send("/set", {"eighth_per_cycle"}, {(float)(size / 24)});   // 24 ticks par croche
-    return "cycle SooperLooper " + std::to_string(bars) + " mesure(s)" + (known ? "" : " (taille inconnue)");
+    return "cycle SooperLooper " + std::to_string(bars) + " mesure(s)" + (known ? "" : " (taille inconnue)") + bpb;
 }
 
 void h2_send(const std::string &addr, const std::string *s, const float *f)
@@ -1056,6 +1065,23 @@ std::string load_song(const std::string &name)
            std::to_string((int)std::lround(tempo)) + " ; " + h2 + ". Prêt : play.";
 }
 
+/* Ouvre un morceau Hydrogen (.h2song, chemin absolu) : mode Pattern,
+ * groove 1, cycle et temps par mesure selon ce groove. À l'arrêt seulement. */
+std::string open_drum_song(const std::string &path)
+{
+    if (path.empty() || path[0] != '/') return "erreur : batterie CHEMIN (chemin absolu d'un .h2song)";
+    if (file_size(path) <= 0) return "erreur : " + path + " introuvable";
+    if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
+    if (transport_rolling()) return "erreur : arrête la lecture d'abord (Play/Stop)";
+    h2_string("/Hydrogen/OPEN_SONG", path);
+    read_pattern_sizes(path);
+    usleep(1500000);                                  // Hydrogen ne confirme pas : on lui laisse le temps
+    g_pattern = -1;
+    const std::string r = set_groove("1");
+    jack_transport_locate(g_cfg.client, 0);
+    return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " groove(s) ; " + r;
+}
+
 std::string list_songs()
 {
     std::string r = "ok chansons :";
@@ -1100,6 +1126,7 @@ std::string handle(const std::string &line)
     if (cmd == "list") return list_songs();
     if (cmd == "status") return status();
     if (cmd == "groove") return set_groove(arg);
+    if (cmd == "batterie") return open_drum_song(arg);
     if (cmd == "tempo") return set_tempo(arg);
     return "erreur : commande inconnue (play, stop, save NOM, load NOM, list, status, groove N, tempo BPM)";
 }

@@ -12,6 +12,7 @@
  *   list            liste les chansons sauvegardées
  *   status          état des boucles
  *   groove N        pattern N d'Hydrogen (à partir de 1), retenu pour save
+ *   batterie CHEMIN ouvre un morceau Hydrogen (.h2song) : groove 1, cycle et temps par mesure
  *   tempo BPM       tempo (pb_timebase) + affichage d'Hydrogen
  *
  * Commandes aussi reçues du plugin DLS Looper par le fichier de contrôle
