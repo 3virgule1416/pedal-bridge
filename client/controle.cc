@@ -437,7 +437,9 @@ double get_tempo()
 
 /* ------------------------------------------------------------ Hydrogen --- */
 /* OSC d'Hydrogen (port 9000, à activer dans ~/.hydrogen/hydrogen.conf).
- * Vérifié sur la 1.2.0-beta : SELECT_AND_PLAY_PATTERN compte à partir de 0,
+ * Vérifié sur la 1.2.0-beta : les patterns comptent à partir de 0 ;
+ * SELECT_ONLY_NEXT_PATTERN choisit le pattern SANS démarrer (SELECT_AND_PLAY_PATTERN,
+ * lui, démarre le transport : c'est le pont qui démarre, avec Play),
  * BPM change l'affichage, SONG_MODE_ACTIVATION 0 = mode Pattern,
  * SAVE_SONG_AS écrit le .h2song. Hydrogen n'annonce PAS le pattern
  * sélectionné : le client retient celui qu'il a demandé (g_pattern). */
@@ -586,7 +588,7 @@ std::string set_groove(const std::string &arg)
     if (n < 1 || n > 999) return "erreur : groove N, N à partir de 1 (1er pattern d'Hydrogen)";
     if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
-    h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)(n - 1));
+    h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)(n - 1));
     g_pattern = n - 1;
     if (n <= 16) g_ui_groove = n;                      // menu Groove : 1 à 16
     return "ok groove " + std::to_string(n) + " ; " + apply_cycle(g_pattern);
@@ -655,7 +657,7 @@ std::string play_from_start()
      * n'est chargé (« No song set yet ») et reste alors en mode Song. */
     if (h2_listening()) {
         h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
-        if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)g_pattern);
+        if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)g_pattern);
     }
     usleep(40000);                         // laisser SooperLooper armer les boucles
     jack_transport_start(g_cfg.client);
@@ -1042,7 +1044,7 @@ std::string load_song(const std::string &name)
             h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
             g_pattern = std::atoi(kv["pattern"].c_str());
             if (kv["pattern"].empty()) g_pattern = -1;
-            if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_AND_PLAY_PATTERN", (float)g_pattern);
+            if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)g_pattern);
             if (tempo >= 20) h2_float("/Hydrogen/BPM", (float)tempo);
             h2 = "morceau Hydrogen chargé" + (g_pattern >= 0 ? ", groove " + std::to_string(g_pattern + 1) : std::string());
             h2 += ", " + apply_cycle(g_pattern);
