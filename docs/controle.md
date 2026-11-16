@@ -156,7 +156,7 @@ moment où on l'ouvre. On s'en sert :
   ils ne sont pas proposés.
 - Choisir un fichier : le plugin transmet le chemin au client par le fichier de
   contrôle (§4), le client lit le numéro au début du nom, sélectionne le pattern
-  (`SELECT_AND_PLAY_PATTERN`) et règle le cycle.
+  (`SELECT_ONLY_NEXT_PATTERN`, sans démarrer) et règle le cycle.
 - **Secours** si le sélecteur ne convient pas : menu « Groove 1 à 16 » ; le vrai
   nom et la longueur s'affichent sur l'écran OLED (et l'écran du Captain) ; un
   numéro inexistant ou incompatible allume « Groove refusé » et le groove
