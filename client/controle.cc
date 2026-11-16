@@ -911,8 +911,24 @@ void drum_poll(pb_ctl *k)
 /* Morceau courant d'Hydrogen au démarrage (lastSongFilename de son fichier
  * de réglages) : taille de ses patterns, pour régler le cycle de SooperLooper
  * dès le premier changement de groove. */
+/* Morceau ouvert par le pont (batterie, load) : retenu dans un fichier, car
+ * Hydrogen n'écrit son lastSongFilename qu'en quittant ; après un redémarrage
+ * du pont, c'est ce fichier qui dit quel morceau joue vraiment. */
+std::string drum_song_file() { return work_dir() + "/morceau-batterie.txt"; }
+
+void remember_drum_song(const std::string &path)
+{
+    mkdirs(work_dir());
+    std::ofstream(drum_song_file(), std::ios::trunc) << path << '\n';
+}
+
 void read_h2_current_song()
 {
+    {
+        std::ifstream m(drum_song_file());
+        std::string path;
+        if (std::getline(m, path) && file_size(path) > 0) { read_pattern_sizes(path); return; }
+    }
     const char *home = std::getenv("HOME");
     if (!home) return;
     std::ifstream f(std::string(home) + "/.hydrogen/hydrogen.conf");
@@ -1076,6 +1092,7 @@ std::string load_song(const std::string &name)
         else {
             h2_string("/Hydrogen/OPEN_SONG", f);
             read_pattern_sizes(f);
+            remember_drum_song(f);
             usleep(1500000);                         // Hydrogen ne confirme pas : on lui laisse le temps
             h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
             g_pattern = std::atoi(kv["pattern"].c_str());
@@ -1102,6 +1119,7 @@ std::string open_drum_song(const std::string &path)
     if (transport_rolling()) return "erreur : arrête la lecture d'abord (Play/Stop)";
     h2_string("/Hydrogen/OPEN_SONG", path);
     read_pattern_sizes(path);
+    remember_drum_song(path);
     usleep(1500000);                                  // Hydrogen ne confirme pas : on lui laisse le temps
     g_pattern = -1;
     const std::string r = set_groove("1");
