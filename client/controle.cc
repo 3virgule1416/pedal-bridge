@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cctype>
 #include <cstdarg>
@@ -754,21 +755,37 @@ std::string step_groove(int dir)
     return set_groove(std::to_string(n));
 }
 
-/* Tap tempo : moyenne des intervalles des derniers appuis (3 à 5 appuis ;
- * une pause de plus de 2 s recommence le compte). */
+/* Tap tempo : on tape au moins 3 coups ; le tempo change UNE fois, quand on
+ * arrête de taper (pas de coup depuis 1 s, ou 1,6 intervalle aux tempos
+ * lents), avec la moyenne des 8 derniers coups. La batterie ne saute donc pas
+ * à chaque coup. */
+double tap_period()
+{
+    return g_taps.size() < 2 ? 0 : (g_taps.back() - g_taps.front()) / (double)(g_taps.size() - 1);
+}
+
 std::string tap_tempo()
 {
-    const double t = now_s();
-    if (!g_taps.empty() && t - g_taps.back() > 2.0) g_taps.clear();
-    g_taps.push_back(t);
-    if (g_taps.size() > 5) g_taps.erase(g_taps.begin());
-    if (g_taps.size() < 3) return "ok tap " + std::to_string(g_taps.size());
-    const double period = (g_taps.back() - g_taps.front()) / (double)(g_taps.size() - 1);
+    g_taps.push_back(now_s());
+    if (g_taps.size() > 8) g_taps.erase(g_taps.begin());
+    return "ok tap " + std::to_string(g_taps.size());
+}
+
+/* Appelé à chaque passage : applique le tempo tapé quand on a fini. */
+void tap_finish()
+{
+    if (g_taps.empty()) return;
+    const double wait = std::max(1.0, 1.6 * tap_period());
+    if (now_s() - g_taps.back() < wait) return;
+    const size_t n = g_taps.size();
+    const double period = tap_period();
+    g_taps.clear();
+    if (n < 3) { say("DLS Drum : tap ignoré (%zu coup(s), il en faut 3)", n); return; }
     const double bpm = 60.0 / period;
-    if (bpm < 40 || bpm > 240) return "erreur : tap hors limites (40 à 240 BPM)";
+    if (bpm < 40 || bpm > 240) { say("DLS Drum : tap hors limites (%.1f BPM ; 40 à 240)", bpm); return; }
     char b[32];
     std::snprintf(b, sizeof b, "%.0f", bpm);         // entier : comme le bouton Tempo
-    return set_tempo(b);
+    say("DLS Drum : tap (%zu coups) -> %s", n, set_tempo(b).c_str());
 }
 
 void drum_poll(pb_ctl *k)
@@ -833,6 +850,7 @@ void drum_poll(pb_ctl *k)
         }
     }
     bpm_steps(k);
+    tap_finish();
 }
 
 /* Morceau courant d'Hydrogen au démarrage (lastSongFilename de son fichier
