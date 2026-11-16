@@ -850,6 +850,8 @@ std::string open_drum_song(const std::string &path, int groove = 1);
  * séquence ; ouvert seulement à l'arrêt (Hydrogen recharge tout). */
 uint32_t g_dr_song_seq = 1;                     // impair : jamais lu
 std::string g_dr_song_pending;                  // à ouvrir au prochain arrêt
+int g_dr_song_groove = 1;                       // groove de départ du morceau en attente
+bool g_dr_song_preset = false;                  // prochaine lecture = morceau du preset
 
 void drum_song_poll(pb_ctl *k)
 {
@@ -862,6 +864,10 @@ void drum_song_poll(pb_ctl *k)
             g_dr_song_seq = s1;
             buf[sizeof buf - 1] = 0;
             const std::string path(buf);
+            /* Morceau du preset : avec le groove du menu (sauvegardé avec lui).
+             * Morceau choisi à la main : nouveau style, on repart au Groove 1. */
+            g_dr_song_groove = g_dr_song_preset ? (int)PB_LOAD_RLX(&k->drum_groove) : 1;
+            g_dr_song_preset = false;
             if (!path.empty() && path != g_drum_song) {
                 g_dr_song_pending = path;
                 if (transport_rolling()) say("DLS Drum : morceau %s ouvert au prochain Stop", path.c_str());
@@ -873,9 +879,9 @@ void drum_song_poll(pb_ctl *k)
     if (!g_dr_song_pending.empty() && !transport_rolling()) {
         const std::string path = g_dr_song_pending;
         g_dr_song_pending.clear();
-        const int groove = (int)PB_LOAD_RLX(&k->drum_groove);
+        const int groove = g_dr_song_groove;
         say("DLS Drum : %s", open_drum_song(path, groove).c_str());
-        g_dr_groove = (uint32_t)groove;          // déjà appliqué
+        g_dr_groove = (uint32_t)groove;          // déjà appliqué (le menu suit par le websocket)
         g_refresh_now = true;
     }
 }
@@ -891,6 +897,7 @@ void drum_poll(pb_ctl *k)
         g_taps.clear();
         g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
         g_dr_song_seq = 1;                 // morceau du preset : relu (ouvert s'il change)
+        g_dr_song_preset = true;
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
         return;
     }
