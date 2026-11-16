@@ -669,7 +669,6 @@ std::string play_from_start()
     for (size_t i = 0; i < g_loops.size(); i++)
         if (g_loops[i].len > 0) {
             sl_send("/sl/" + std::to_string(i) + "/hit", {"trigger"});
-            if (g_loops[i].keep_muted) sl_send("/sl/" + std::to_string(i) + "/hit", {"mute_on"});   // reste muette
             n++;
         }
     /* Hydrogen en mode Pattern (et le groove retenu) à chaque départ : au
@@ -681,6 +680,14 @@ std::string play_from_start()
     }
     usleep(40000);                         // laisser SooperLooper armer les boucles
     jack_transport_start(g_cfg.client);
+    /* Boucles muettes au dernier Stop : SooperLooper efface un mute reçu avant
+     * le vrai départ de la boucle (vérifié) ; on l'envoie au départ puis on le
+     * répète pendant 40 ms (mute_on ne fait rien si elle l'est déjà). */
+    for (int delay : {0, 5000, 10000, 25000}) {
+        if (delay) usleep(delay);
+        for (size_t i = 0; i < g_loops.size(); i++)
+            if (g_loops[i].len > 0 && g_loops[i].keep_muted) sl_send("/sl/" + std::to_string(i) + "/hit", {"mute_on"});
+    }
     return "ok play (mesure 1, " + std::to_string(n) + " boucle(s))";
 }
 
