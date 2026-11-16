@@ -93,6 +93,7 @@ struct Loop {
     bool dirty = false;     // enregistrement neuf pas encore normalisé
     uint32_t norm_d = 0;    // délai appliqué à la normalisation (pour information)
     uint32_t rec_d = 0;     // délai du trajet au moment de l'enregistrement
+    bool keep_muted = false; // muette au dernier Stop : le reste au prochain Play
 };
 
 CtlConfig g_cfg;
@@ -633,6 +634,12 @@ std::string stop_all()
         return "ok stop (SooperLooper absent : batterie seule)";
     }
     if (sl_any_recording()) return "erreur : un enregistrement est en cours, termine-le d'abord";
+    /* Retenir les boucles muettes : la pause efface l'état muet, et Play
+     * (trigger) remettrait le son. Boucle en pause : on garde ce qu'on savait. */
+    for (Loop &L : g_loops) {
+        if (L.state == 10 || L.state == 20) L.keep_muted = true;          // muette
+        else if (L.state == 4 || L.state == 5 || L.state == 12) L.keep_muted = false;
+    }
     transport_stop_and_pause();
     usleep(30000);
     const uint32_t D = g_cfg.comp_frames ? g_cfg.comp_frames() : 0;
@@ -660,7 +667,11 @@ std::string play_from_start()
     usleep(30000);
     int n = 0;
     for (size_t i = 0; i < g_loops.size(); i++)
-        if (g_loops[i].len > 0) { sl_send("/sl/" + std::to_string(i) + "/hit", {"trigger"}); n++; }
+        if (g_loops[i].len > 0) {
+            sl_send("/sl/" + std::to_string(i) + "/hit", {"trigger"});
+            if (g_loops[i].keep_muted) sl_send("/sl/" + std::to_string(i) + "/hit", {"mute_on"});   // reste muette
+            n++;
+        }
     /* Hydrogen en mode Pattern (et le groove retenu) à chaque départ : au
      * démarrage de la session, il ignore la commande tant qu'aucun morceau
      * n'est chargé (« No song set yet ») et reste alors en mode Song. */
@@ -689,7 +700,7 @@ uint8_t map_state(const Loop &L)
     case 4: case 12:        return PB_LS_PLAY;
     case 5:                 return PB_LS_OVERDUB;
     case 10: case 20:       return PB_LS_MUTE;
-    case 0: case SL_PAUSED: return PB_LS_PAUSE;
+    case 0: case SL_PAUSED: return L.keep_muted ? PB_LS_MUTE : PB_LS_PAUSE;   // muette au prochain Play
     default:                return PB_LS_OTHER;
     }
 }
@@ -738,6 +749,15 @@ std::string looper_button(int b)
     static const char *names[PB_BTN_COUNT] = {"record", "overdub", "undo", "redo", "mute", "undo_all", "play/stop"};
     if (b == PB_BTN_PLAYSTOP) return transport_rolling() ? stop_all() : play_from_start();
     if (!g_sl_ok) return "erreur : SooperLooper ne répond pas";
+    /* Mute à l'arrêt : SooperLooper ne le garde pas sur une boucle en pause ;
+     * le pont le retient et l'applique au prochain Play. */
+    if (b == PB_BTN_MUTE && !transport_rolling() && g_sel >= 0 && g_sel < (int)g_loops.size()) {
+        Loop &L = g_loops[g_sel];
+        L.keep_muted = !L.keep_muted;
+        publish_states();
+        return std::string("ok boucle ") + std::to_string(g_sel + 1) +
+               (L.keep_muted ? " muette au prochain Play" : " avec le son au prochain Play");
+    }
     sl_send("/sl/" + std::to_string(g_sel) + "/hit", {names[b]});
     return std::string("ok ") + names[b] + " (boucle " + std::to_string(g_sel + 1) + ")";
 }
