@@ -189,6 +189,7 @@ def drum_plugin(uri, name, label, stereo):
                     enum(1, 160, [(k, f"Groove {k}") for k in range(1, 161)]), D)); i += 1
     p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
     p.append(button(i, "suivant", "Next", "Next groove, from the next bar.", D)); i += 1
+    p.append(button(i, "fill", "Fill", "Plays a fill of the current part during the next bar, then back to the groove.", D)); i += 1
     p.append(ctl_out(i, "groove_joue", "Playing", "Groove being played (- when unknown).",
                      enum(0, 160, [(0, "-")] + [(k, str(k)) for k in range(1, 161)]), D)); i += 1
 

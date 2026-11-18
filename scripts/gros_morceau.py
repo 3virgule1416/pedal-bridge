@@ -67,6 +67,56 @@ def patterns(text):
     return [lighten("<pattern>" + p[:p.rfind("</pattern>") + len("</pattern>")]) for p in body.split("<pattern>")[1:]]
 
 
+# --- Structure des parties (à la BeatBuddy) ---------------------------------
+# Rôle de chaque pattern d'après sa catégorie (midi2h2 : la partie) ou son nom
+# (styles DLS : Intro, Verse, Verse fill… ; RP Bardet : Pattern N, Break N).
+PARTS = ["Verse", "Pre-Chorus", "Chorus", "Bridge", "Groove"]          # parties jouables, dans l'ordre
+
+
+def role_of(pattern):
+    name = (re.search(r"<name>([^<]*)</name>", pattern) or [None, ""])[1]
+    cat = (re.search(r"<category>([^<]*)</category>", pattern) or [None, ""])[1]
+    if cat in ("Count", "Intro", "Intro Fill", "Verse", "Verse Fill", "Pre-Chorus", "Chorus", "Chorus Fill",
+               "Transition", "Bridge", "Bridge Fill", "Groove", "Fill", "Hits", "Outro", "Outro Fill"):
+        return cat
+    n = name.lower()
+    if re.match(r"break\s*\d*", n):                       # RP Bardet
+        return "Fill"
+    if re.match(r"pattern\s*\d*", n):
+        return "Groove"
+    for key, role in (("verse fill", "Verse Fill"), ("chorus fill", "Chorus Fill"), ("intro", "Intro"),
+                      ("verse", "Verse"), ("chorus", "Chorus"), ("transition", "Transition"),
+                      ("ending", "Outro"), ("outro", "Outro"), ("fill", "Fill")):
+        if key in n:
+            return role
+    return "Groove"
+
+
+def structure(pats):
+    """-> {clé: [numéros de groove dans la chanson, à partir de 1]}.
+    Clés : part:<Partie> (grooves), fill:<Partie>, fill:* (fills communs),
+    intro, outro, transition, hits."""
+    st = {}
+    for j, p in enumerate(pats, 1):
+        r = role_of(p)
+        if r in PARTS:
+            key = f"part:{r}"
+        elif r.endswith(" Fill") and r[:-5] in PARTS:
+            key = f"fill:{r[:-5]}"
+        elif r == "Fill":
+            key = "fill:*"
+        elif r in ("Intro", "Count", "Intro Fill"):
+            key = "intro"
+        elif r in ("Outro", "Outro Fill"):
+            key = "outro"
+        else:
+            key = r.lower()                                   # transition, hits
+        st.setdefault(key, []).append(j)
+    if not any(k.startswith("part:") for k in st):           # rien de jouable : tout devient groove
+        st = {"part:Groove": list(range(1, len(pats) + 1))}
+    return st
+
+
 def main():
     if len(sys.argv) != 4:
         print(__doc__)
@@ -95,7 +145,8 @@ def main():
             p = re.sub(r"<name>([^<]*)</name>", lambda m: f"<name>C{k:03d} {m.group(1)}</name>", p, count=1)
             sizes.append(int(re.search(r"<size>(\d+)</size>", p).group(1)))
             all_pats.append(p)
-        index[rel] = {"first": len(all_pats) - len(pats), "count": len(pats), "sizes": sizes}
+        index[rel] = {"first": len(all_pats) - len(pats), "count": len(pats), "sizes": sizes,
+                      "parts": structure(pats)}
     a, b = template.find("<patternList>"), template.find("</patternList>")
     s, e = template.find("<patternSequence>"), template.find("</patternSequence>")
     first = re.search(r"<name>([^<]*)</name>", all_pats[0]).group(1)
@@ -111,6 +162,11 @@ def main():
     with open(out_path + ".index.txt", "w", encoding="utf-8", newline="\n") as f:
         for rel, e in index.items():
             f.write(f"{e['first']}\t{e['count']}\t{rel}\n")
+    # Structure des parties, pour le pont : « chemin<TAB>clé<TAB>1,2,3 ».
+    with open(out_path + ".parts.txt", "w", encoding="utf-8", newline="\n") as f:
+        for rel, e in index.items():
+            for key, nums in e["parts"].items():
+                f.write(f"{rel}\t{key}\t{','.join(map(str, nums))}\n")
     os.replace(out_path + ".tmp", out_path)               # le morceau en dernier : l'index est prêt
     print(f"{out_path} : {len(index)} chansons, {len(all_pats)} patterns, "
           f"{os.path.getsize(out_path) / 1e6:.1f} Mo, {time.time() - t0:.1f} s")

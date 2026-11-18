@@ -481,6 +481,23 @@ fast, extreme ; noms en anglais). Exemples : `Metal/Straight/Lamb Chops very fas
 Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style ; Style ◀ ▶ : appui très long (voir le tableau)
 en file, d'un groupe à l'autre.
 
+### Structure des parties et Fill (fait, 2026-11-18)
+
+- `gros_morceau.py` écrit `<kit>.h2song.parts.txt` : pour chaque chanson,
+  `part:<Partie>` (grooves), `fill:<Partie>`, `fill:*` (fills communs),
+  `intro`, `outro`, `transition`, `hits` -> numéros de groove dans la chanson.
+  Rôle tiré de la catégorie (midi2h2 : la partie) ou du nom (DLS : Verse,
+  Chorus fill… ; RP Bardet : Pattern = groove, Break = fill). Exemple Classic
+  S03 : intro 1-3, Verse 4-13 + fills 14-19, Chorus 20-27 + fills 28-31,
+  transitions 32-33, Bridge 34-35, outro 37-39.
+- **Fill** (bouton de DLS Drum, `PB_DBTN_FILL`) : un fill de la partie en cours
+  (sinon un fill commun) pendant la mesure suivante, puis retour au groove ; les
+  fills tournent à chaque appui ; un fill plus court qu'une mesure finit avec
+  elle. Le pont envoie le changement ~10 ms avant la barre (heure tirée de la
+  position du transport JACK) ; le cycle de SooperLooper ne change pas.
+  Vérifié : fill parti à « mesure 2 temps 4 +99 % », retour à « mesure 3 temps
+  4 +99 % ».
+
 ### Fonctions de batterie (définitions)
 
 Chaque chanson (style) devient une petite chanson à la BeatBuddy, construite à

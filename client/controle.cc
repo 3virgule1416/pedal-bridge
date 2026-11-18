@@ -1032,10 +1032,30 @@ bool build_big(const std::string &big, const std::string &kit, const std::string
     return rc == 0 && file_size(big) > 0;
 }
 
+/* Structure des parties de chaque chanson (gros_morceau.py, .parts.txt) :
+ * chanson -> clé (part:Verse, fill:Verse, fill:*, intro, outro, transition)
+ * -> numéros de groove dans la chanson (à partir de 1). */
+std::map<std::string, std::map<std::string, std::vector<int>>> g_parts;
+std::string g_song_rel;                               // chanson en cours (chemin relatif)
+
 void load_index(const std::string &big)
 {
     g_index.clear();
     g_index_for = big;
+    g_parts.clear();
+    {
+        std::ifstream pf(big + ".parts.txt");
+        std::string l;
+        while (std::getline(pf, l)) {
+            const size_t a = l.find('\t'), b = l.find('\t', a + 1);
+            if (a == std::string::npos || b == std::string::npos) continue;
+            std::vector<int> nums;
+            std::stringstream ss(l.substr(b + 1));
+            std::string n;
+            while (std::getline(ss, n, ',')) if (!n.empty()) nums.push_back(std::atoi(n.c_str()));
+            g_parts[l.substr(0, a)][l.substr(a + 1, b - a - 1)] = nums;
+        }
+    }
     std::ifstream f(big + ".index.txt");
     std::string line;
     while (std::getline(f, line)) {
@@ -1095,6 +1115,7 @@ bool apply_big_choice(pb_ctl *k)
     }
     g_off = it->second.first;
     g_cnt = it->second.second;
+    g_song_rel = it->first;
     say("DLS Drum : %s (patterns %d à %d) ; %s", song_rel(g_dr_song_sel).c_str(), g_off + 1, g_off + g_cnt,
         set_groove(std::to_string(std::min(std::max(g_dr_song_groove, 1), g_cnt))).c_str());
     /* Le menu montre encore l'ancien groove jusqu'à ce que PiPedal applique
@@ -1143,6 +1164,101 @@ void drum_song_poll(pb_ctl *k)
          * réappliqué ici même ; son écho (le nouveau groove) est attendu. */
         g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
         g_refresh_now = true;
+    }
+}
+
+/* --- Fill (à la BeatBuddy) -------------------------------------------------
+ * Un appui : un fill de la partie en cours joue pendant la mesure suivante
+ * (un fill plus court qu'une mesure finit avec elle), puis le groove reprend.
+ * Les fills de la partie tournent à chaque appui. Hydrogen change de pattern
+ * tout de suite quand on le lui demande : le pont envoie le changement ~10 ms
+ * avant la barre (heure calculée depuis la position du transport JACK). Le
+ * cycle de SooperLooper ne change pas (choix direct, sans set_groove). */
+struct FillPlan { int phase = 0; double t_on = 0, t_off = 0; int abs = -1; };
+FillPlan g_fill;
+std::map<std::string, size_t> g_fill_turn;            // rotation des fills (chanson + partie)
+
+/* Partie qui contient le groove en cours ("" si inconnue). */
+std::string current_part()
+{
+    const auto s = g_parts.find(g_song_rel);
+    if (s == g_parts.end()) return "";
+    const int n = groove_rel();
+    for (const auto &kv : s->second)
+        if (kv.first.compare(0, 5, "part:") == 0 &&
+            std::find(kv.second.begin(), kv.second.end(), n) != kv.second.end())
+            return kv.first.substr(5);
+    return "";
+}
+
+/* Secondes jusqu'à la prochaine barre, et durée d'une mesure ; false si arrêté. */
+bool bar_timing(double &to_bar, double &bar_s, int &beats_per_bar)
+{
+    jack_position_t pos;
+    if (jack_transport_query(g_cfg.client, &pos) != JackTransportRolling) return false;
+    if (!(pos.valid & JackPositionBBT) || pos.beats_per_minute <= 0) return false;
+    const double beat_s = 60.0 / pos.beats_per_minute;
+    beats_per_bar = (int)lrintf(pos.beats_per_bar);
+    const double in_bar = (pos.beat - 1) + pos.tick / pos.ticks_per_beat;
+    bar_s = pos.beats_per_bar * beat_s;
+    to_bar = (pos.beats_per_bar - in_bar) * beat_s;
+    return true;
+}
+
+std::string fill_request()
+{
+    if (g_fill.phase) return "fill déjà prévu";
+    if (g_pattern < 0) return "erreur : pas de groove en cours";
+    const auto s = g_parts.find(g_song_rel);
+    if (s == g_parts.end()) return "erreur : structure des parties inconnue pour cette chanson";
+    const std::string part = current_part();
+    const std::vector<int> *fills = nullptr;
+    for (const std::string &key : {"fill:" + part, std::string("fill:*")}) {
+        const auto f = s->second.find(key);
+        if (f != s->second.end() && !f->second.empty()) { fills = &f->second; break; }
+    }
+    if (!fills) return "pas de fill dans cette chanson";
+    double to_bar, bar_s;
+    int bpb;
+    if (!bar_timing(to_bar, bar_s, bpb)) return "à l'arrêt : pas de fill";
+    size_t &turn = g_fill_turn[g_song_rel + "/" + part];
+    const int rel = (*fills)[turn++ % fills->size()];
+    const int abs = g_off + rel - 1;
+    const int size = abs < (int)g_pat_sizes.size() ? g_pat_sizes[abs] : 192;
+    const double len_s = size / 48.0 * (bar_s / bpb);          // 48 ticks par temps
+    /* Trop près de la barre pour y arriver à temps : la suivante. */
+    if (to_bar < 0.03) to_bar += bar_s;
+    const double now = now_s();
+    const double start = now + to_bar + (len_s < bar_s ? bar_s - len_s : 0.0);
+    g_fill = {1, start, start + len_s, abs};
+    char b[160];
+    std::snprintf(b, sizeof b, "ok fill %d (%s) dans %.2f s, %.2f s", rel, part.empty() ? "?" : part.c_str(),
+                  start - now, len_s);
+    return b;
+}
+
+/* Appelé à chaque passage (~5 ms). */
+void fill_tick()
+{
+    if (!g_fill.phase) return;
+    const double now = now_s();
+    if (!transport_rolling()) { g_fill.phase = 0; return; }        // arrêté entre-temps
+    const double early = 0.010;
+    auto where = []() {                                           // pour le journal
+        jack_position_t pos;
+        jack_transport_query(g_cfg.client, &pos);
+        char w[48];
+        std::snprintf(w, sizeof w, "mesure %d temps %d +%.0f%%", pos.bar, pos.beat, 100.0 * pos.tick / pos.ticks_per_beat);
+        return std::string(w);
+    };
+    if (g_fill.phase == 1 && now >= g_fill.t_on - early) {
+        h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)g_fill.abs);
+        g_fill.phase = 2;
+        say("DLS Drum : fill parti (%s)", where().c_str());
+    } else if (g_fill.phase == 2 && now >= g_fill.t_off - early) {
+        h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)g_pattern);   // retour au groove
+        g_fill.phase = 0;
+        say("DLS Drum : retour au groove (%s)", where().c_str());
     }
 }
 
@@ -1206,6 +1322,7 @@ void drum_poll(pb_ctl *k)
             case PB_DBTN_PREV:     r = step_groove(-1); break;
             case PB_DBTN_NEXT:     r = step_groove(+1); break;
             case PB_DBTN_TAP:      r = tap_tempo(); break;
+            case PB_DBTN_FILL:     r = fill_request(); break;
             }
             say("DLS Drum : %s", r.c_str());
             g_refresh_now = true;
@@ -1213,6 +1330,7 @@ void drum_poll(pb_ctl *k)
     }
     bpm_steps(k);
     tap_finish();
+    fill_tick();
 }
 
 /* Morceau courant d'Hydrogen au démarrage (lastSongFilename de son fichier

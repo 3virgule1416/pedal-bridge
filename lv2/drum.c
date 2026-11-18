@@ -44,7 +44,7 @@
  * une nouvelle boîte dès que la section change d'un port au suivant). */
 enum {
     /* Drums */
-    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, O_GROOVE,
+    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, C_FILL, O_GROOVE,
     /* Transport */
     C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
@@ -55,7 +55,7 @@ enum {
 };
 
 /* Port de chaque bouton, dans l'ordre de enum pb_drum_btn. */
-static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN };
+static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN, C_FILL };
 
 enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
 

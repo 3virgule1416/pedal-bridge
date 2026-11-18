@@ -29,13 +29,13 @@
 
 /* Ports de contrôle (voir lv2/drum.c), après les ports audio. */
 enum {
-    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, O_GROOVE,
+    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, C_FILL, O_GROOVE,
     C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
     C_NUM,
     A_CONTROL = C_NUM, A_NOTIFY            /* ports atom du sélecteur de fichier */
 };
-static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN };
+static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN, C_FILL };
 
 typedef struct {
     const LV2_Descriptor *d;
