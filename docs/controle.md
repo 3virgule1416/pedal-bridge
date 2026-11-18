@@ -449,9 +449,17 @@ relâchement).
 | | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
 | **Haut** (explorer, préparer) | Tap | BPM - | BPM + | Groove ◀ | Groove ▶ |
-| *long* | Métronome on/off | BPM - en continu | BPM + en continu | Style ◀ | Style ▶ |
+| *long* | Métronome on/off | BPM - en continu | BPM + en continu | Beat ◀ | Beat ▶ |
+| *très long* (> 1,5 s) | — | — | — | Style ◀ | Style ▶ |
 | **Bas** (en jouant) | Fill | Variation | Batterie on/off | Partie ◀ | Break |
 | *long* | Crash / accent | Batterie légère | — | Intro | Fill long |
+
+Navigation au pied dans la liste Song (Style / Groupe / Beat) : **Groove ◀ ▶**
+(court) parcourt les patterns du beat ; **Beat ◀ ▶** (long) parcourt les beats
+du style **en file**, d'un groupe à l'autre ; **Style ◀ ▶** (très long, plus de
+1,5 s) change de style. Le tempo ne change jamais avec ces choix. Sans écran,
+on ne voit pas où on est : l'écran OLED (§11) affichera « Style / Groupe /
+Beat / Groove ».
 
 La rangée du haut est fixée. La rangée du bas est la proposition retenue ; on la
 confirmera après avoir essayé les fonctions dans PiPedal (boutons de DLS Drum),
@@ -470,7 +478,7 @@ rapide, extrême). Exemples : `Metal/Straight/Lamb Chops très rapide`,
 `Rock/Rock droit/Classic S03`, `Latin/Bossa et Samba/Bossa`. Gros morceau :
 3 134 patterns, ouvert en 3,5 s.
 
-Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style
+Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style ; Style ◀ ▶ : appui très long (voir le tableau)
 en file, d'un groupe à l'autre.
 
 ### Fonctions de batterie (définitions)
@@ -495,7 +503,8 @@ enchaînées automatiquement comme un seul groove.
 | Fonction | Effet |
 |---|---|
 | **Groove ◀ ▶** | pattern précédent/suivant de la chanson, tous confondus : pour explorer |
-| **Style ◀ ▶** | chanson précédente/suivante du même dossier de style (instantané : gros morceau) |
+| **Beat ◀ ▶** | beat précédent/suivant du style, en file à travers les groupes (instantané : gros morceau) |
+| **Style ◀ ▶** | style précédent/suivant (Metal, Rock…) ; premier beat du style |
 | **Partie ◀ ▶** | section précédente/suivante : fill de transition, puis le groove de la partie, au début de la mesure |
 | **Variation** | autre version du groove de la partie en cours (Verse A → B → C → A), sans fill ni changement de partie |
 | **Fill** | un fill de la partie en cours pendant 1 mesure, puis retour automatique au groove ; les fills de la partie tournent à chaque appui ; compte comme une mesure normale pour les boucles |
