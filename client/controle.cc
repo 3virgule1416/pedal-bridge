@@ -1390,7 +1390,7 @@ std::string load_song(const std::string &name)
 
 /* Ouvre un morceau Hydrogen (.h2song, chemin absolu) : mode Pattern,
  * groove 1, cycle et temps par mesure selon ce groove. À l'arrêt seulement. */
-/* Temps processeur cumulé (ticks) des processus « hydrogen ». */
+/* Temps processeur cumulé (ticks) des processus « hydrogen » (ou « h2cli », sans fenêtre). */
 long hydrogen_cpu_ticks()
 {
     long total = 0;
@@ -1400,7 +1400,9 @@ long hydrogen_cpu_ticks()
             std::ifstream f(std::string("/proc/") + e->d_name + "/stat");
             std::string st((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
             const size_t a = st.find('('), b = st.rfind(')');
-            if (a == std::string::npos || b == std::string::npos || st.substr(a + 1, b - a - 1) != "hydrogen") continue;
+            if (a == std::string::npos || b == std::string::npos) continue;
+            const std::string comm = st.substr(a + 1, b - a - 1);
+            if (comm != "hydrogen" && comm != "h2cli") continue;           // avec ou sans fenêtre
             std::istringstream rest(st.substr(b + 2));
             std::string tok;
             long utime = 0, stime = 0;
