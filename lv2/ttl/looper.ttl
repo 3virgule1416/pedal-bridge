@@ -48,7 +48,6 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
     [ a lv2:AudioPort, lv2:InputPort ; lv2:index 0 ; lv2:symbol "in" ; lv2:name "In" ] ,
     [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 1 ; lv2:symbol "out" ; lv2:name "Out" ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 2 ; lv2:symbol "boucle" ; lv2:name "Loop" ;
-      rdfs:comment "Loop that the buttons act on (SooperLooper loop 1 to 8)." ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "Loop 1" ; rdf:value 1 ] ,
                      [ rdfs:label "Loop 2" ; rdf:value 2 ] ,
@@ -372,7 +371,6 @@ Needs the pedal_bridge client and SooperLooper running on the Raspberry Pi (scri
     [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 2 ; lv2:symbol "out_l" ; lv2:name "Out L" ] ,
     [ a lv2:AudioPort, lv2:OutputPort ; lv2:index 3 ; lv2:symbol "out_r" ; lv2:name "Out R" ] ,
     [ a lv2:ControlPort, lv2:InputPort ; lv2:index 4 ; lv2:symbol "boucle" ; lv2:name "Loop" ;
-      rdfs:comment "Loop that the buttons act on (SooperLooper loop 1 to 8)." ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "Loop 1" ; rdf:value 1 ] ,
                      [ rdfs:label "Loop 2" ; rdf:value 2 ] ,

@@ -53,8 +53,11 @@ def port(kind, idx, sym, name, comment, rest, group, color=None):
     extra = f' ;\n      pg:group <{G}{group}>'
     if color:
         extra += f' ;\n      pipedal_ui:ledColor "{color}"'
-    return f"""    [ a lv2:ControlPort, {kind} ; lv2:index {idx} ; lv2:symbol "{sym}" ; lv2:name "{name}" ;
-      rdfs:comment "{comment}" ;
+    # Pas de description (comment vide) : pas de bulle d'aide. Pour les listes :
+    # PiPedal affiche la bulle du réglage qui garde le focus quand la page est
+    # mise à jour (websocket du pont), même si on a cliqué ailleurs.
+    desc = f'\n      rdfs:comment "{comment}" ;' if comment else ""
+    return f"""    [ a lv2:ControlPort, {kind} ; lv2:index {idx} ; lv2:symbol "{sym}" ; lv2:name "{name}" ;{desc}
       {rest}{extra} ]"""
 
 
@@ -114,7 +117,7 @@ def plugin(uri, name, label, stereo):
     B, T, P = "boucle_g", "transport_g", "pont_g"
 
     # Ordre = enum de lv2/looper.c, rangé par section.
-    p.append(ctl_in(i, "boucle", "Loop", "Loop that the buttons act on (SooperLooper loop 1 to 8).",
+    p.append(ctl_in(i, "boucle", "Loop", "",
                     "lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;\n"
                     "      lv2:scalePoint " + scale([(k, f"Loop {k}") for k in range(1, 9)]), B)); i += 1
     for sym, nm, cm in [
@@ -179,10 +182,10 @@ def drum_plugin(uri, name, label, stereo):
     i = 4 if stereo else 2
     D, T, P = "drum_g", "transport_g", "pont_g"
     # Ordre = enum de lv2/drum.c, rangé par section.
-    p.append(ctl_in(i, "kit", "Kit", "Drum kit for every song. Loaded when the transport is stopped.",
+    p.append(ctl_in(i, "kit", "Kit", "",
                     enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), D)); i += 1
     song_index = i
-    p.append(ctl_in(i, "groove", "Groove", "Hydrogen pattern to play (1 = first pattern of the song), from the next bar.",
+    p.append(ctl_in(i, "groove", "Groove", "",
                     enum(1, 160, [(k, f"Groove {k}") for k in range(1, 161)]), D)); i += 1
     p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
     p.append(button(i, "suivant", "Next", "Next groove, from the next bar.", D)); i += 1
