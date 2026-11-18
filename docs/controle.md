@@ -622,7 +622,18 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
     fabrique le modèle à partir du `drumkit.xml` ; `--gain 5` pour DeathMetal,
     enregistré trop bas (mesuré : 0,03 au plus fort contre 0,27 pour Black
     Pearl ; 0,16 après).
-- **À faire : changer de style sans coupure.** Changer de morceau
+- **Gros morceau unique (fait, 2026-11-17)** : `scripts/gros_morceau.py` réunit
+  toutes les chansons du dossier DLS Drums (et sous-dossiers de style), rendues
+  pour un kit, dans `~/dls-batterie/gros/<kit>.h2song` (+ `.index.txt` :
+  premier pattern et nombre par chanson). Mesuré : 88 chansons, 2 609
+  patterns, 28 Mo, fabriqué en 1,7 s, chargé en moins de 4 s ; Hydrogen passe
+  de 515 Mo à 1 Go de mémoire (2,4 Go restent libres), processeur inchangé.
+  Le pont : changer de **chanson** = sauter à sa fenêtre de patterns (Groove,
+  Previous/Next, Playing comptés dans la chanson), **même en jouant** (vérifié :
+  la lecture continue) ; changer de **kit** = charger le gros morceau de ce kit,
+  à l'arrêt ; le gros morceau est refait s'il manque ou s'il est plus vieux
+  qu'une chanson, que le `.kit` ou que le script.
+- Ancienne note : changer de style sans coupure. Changer de morceau
   (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
   un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain
   Stop. Solution prévue : tous les styles de la collection RP Bardet utilisent

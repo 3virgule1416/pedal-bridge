@@ -8,7 +8,10 @@ de chanson devient alors un saut vers d'autres patterns, sans recharger
 
 Écrit aussi SORTIE.index.json : pour chaque chanson (chemin relatif au
 dossier), le numéro de son premier pattern dans le gros morceau (à partir
-de 0), son nombre de patterns et leurs tailles en ticks.
+de 0), son nombre de patterns et leurs tailles en ticks ; et SORTIE.index.txt,
+le même en lignes « premier<TAB>nombre<TAB>chemin » (lu par le pont).
+Le fichier est d'abord écrit à côté puis renommé : un gros morceau à moitié
+écrit n'est jamais ouvert.
 """
 import importlib.util
 import json
@@ -85,10 +88,16 @@ def main():
     out = (template[:a] + "<patternList>\n  " + "\n  ".join(all_pats) + "\n " + template[b:s] +
            f"<patternSequence>\n  <group>\n   <patternID>{first}</patternID>\n  </group>\n " + template[e:])
     out = re.sub(r"<mode>[^<]*</mode>", "<mode>pattern</mode>", out, count=1)
-    with open(out_path, "w", encoding="utf-8", newline="") as f:
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path + ".tmp", "w", encoding="utf-8", newline="") as f:
         f.write(out)
     with open(out_path + ".index.json", "w", encoding="utf-8") as f:
         json.dump({"kit": info.get("KIT"), "songs": index}, f, ensure_ascii=False)
+    # Même index, simple à lire pour le pont : « premier<TAB>nombre<TAB>chemin ».
+    with open(out_path + ".index.txt", "w", encoding="utf-8", newline="\n") as f:
+        for rel, e in index.items():
+            f.write(f"{e['first']}\t{e['count']}\t{rel}\n")
+    os.replace(out_path + ".tmp", out_path)               # le morceau en dernier : l'index est prêt
     print(f"{out_path} : {len(index)} chansons, {len(all_pats)} patterns, "
           f"{os.path.getsize(out_path) / 1e6:.1f} Mo, {time.time() - t0:.1f} s")
     return 0

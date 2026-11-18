@@ -447,6 +447,15 @@ double get_tempo()
 int g_pattern = -1;               // pattern choisi par « groove », à partir de 0
 std::vector<int> g_pat_sizes;     // taille de chaque pattern (ticks Hydrogen), du dernier .h2song lu
 
+/* Gros morceau (toutes les chansons d'un kit dans un seul .h2song) : la
+ * chanson choisie est une fenêtre de patterns [g_off, g_off + g_cnt). Groove,
+ * Previous/Next et Playing sont comptés à partir de 1 DANS la fenêtre. Hors
+ * gros morceau : g_off = 0, g_cnt = 0 (tout le morceau). */
+int g_off = 0;
+int g_cnt = 0;
+int groove_count() { return g_cnt > 0 ? g_cnt : (int)g_pat_sizes.size(); }
+int groove_rel() { return g_pattern >= 0 ? g_pattern - g_off + 1 : 0; }
+
 /* Lit la taille des patterns d'un .h2song (ordre = numéro de pattern).
  * Hydrogen compte 48 ticks par noire : une mesure de 4/4 = 192 ticks. */
 void read_pattern_sizes(const std::string &path)
@@ -595,11 +604,14 @@ void ui_flush()
 std::string set_groove(const std::string &arg)
 {
     const int n = std::atoi(arg.c_str());
-    if (n < 1 || n > 999) return "erreur : groove N, N à partir de 1 (1er pattern d'Hydrogen)";
+    const int count = groove_count();
+    if (n < 1 || n > 999 || (count > 0 && n > count))
+        return "erreur : groove N, de 1 à " + std::to_string(count > 0 ? count : 999);
     if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
+    const int abs = g_off + n - 1;                     // pattern dans le morceau d'Hydrogen
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
-    h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)(n - 1));
-    g_pattern = n - 1;
+    h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)abs);
+    g_pattern = abs;
     if (n <= (int)PB_CTL_GROOVES) g_ui_groove = n;     // menu Groove : 1 à 160
     return "ok groove " + std::to_string(n) + " ; " + apply_cycle(g_pattern);
 }
@@ -722,8 +734,8 @@ void publish_states()
     }
     PB_STORE_RLX(&k->loop_count, g_sl_ok ? (uint32_t)g_loops.size() : 0u);
     PB_STORE_REL(&k->sl_ok, g_sl_ok ? 1u : 0u);
-    PB_STORE_RLX(&k->groove_cur, g_pattern >= 0 ? (uint32_t)g_pattern + 1u : 0u);
-    PB_STORE_RLX(&k->groove_count, (uint32_t)g_pat_sizes.size());
+    PB_STORE_RLX(&k->groove_cur, (uint32_t)groove_rel());
+    PB_STORE_RLX(&k->groove_count, (uint32_t)groove_count());
     PB_STORE_REL(&k->h2_ok, h2_listening() ? 1u : 0u);
 }
 
@@ -803,8 +815,8 @@ void bpm_steps(pb_ctl *k)
 /* Groove précédent / suivant (à partir du groove retenu). */
 std::string step_groove(int dir)
 {
-    const int count = g_pat_sizes.empty() ? 16 : (int)g_pat_sizes.size();
-    int n = g_pattern < 0 ? 1 : g_pattern + 1 + dir;          // à partir de 1
+    const int count = groove_count() > 0 ? groove_count() : 16;
+    int n = g_pattern < 0 ? 1 : groove_rel() + dir;           // à partir de 1, dans la chanson
     if (n < 1) n = 1;
     if (n > count) n = count;
     return set_groove(std::to_string(n));
@@ -948,6 +960,120 @@ std::string render_song(const std::string &song, const std::string &kit)
     return out;
 }
 
+/* Gros morceau du kit : ~/dls-batterie/gros/<kit>.h2song (+ .index.txt). */
+std::map<std::string, std::pair<int, int>> g_index;   // chanson (chemin relatif) -> (premier, nombre)
+std::string g_index_for;                              // gros morceau dont l'index est chargé
+
+std::string kit_name(const std::string &kit)
+{
+    std::string n = kit.substr(kit.rfind('/') + 1);
+    if (n.size() > 4 && n.compare(n.size() - 4, 4, ".kit") == 0) n.resize(n.size() - 4);
+    return n;
+}
+
+std::string big_song_path(const std::string &kit)
+{
+    return kit.empty() ? std::string() : home_dir() + "/dls-batterie/gros/" + kit_name(kit) + ".h2song";
+}
+
+/* Dossier des chansons et chemin relatif d'une chanson (« Rock/DLS Rock.h2song »). */
+const char *SONGS_MARKER = "/DLS Drums/";
+std::string songs_dir_of(const std::string &song)
+{
+    const size_t m = song.find(SONGS_MARKER);
+    return m == std::string::npos ? std::string() : song.substr(0, m + std::strlen(SONGS_MARKER) - 1);
+}
+std::string song_rel(const std::string &song)
+{
+    const size_t m = song.find(SONGS_MARKER);
+    return m == std::string::npos ? song : song.substr(m + std::strlen(SONGS_MARKER));
+}
+
+/* Date du plus récent .h2song du dossier (et de ses sous-dossiers). */
+long newest_song(const std::string &dir)
+{
+    long best = -1;
+    if (DIR *d = opendir(dir.c_str())) {
+        while (dirent *e = readdir(d)) {
+            const std::string n = e->d_name;
+            if (n == "." || n == "..") continue;
+            const std::string f = dir + "/" + n;
+            struct stat st;
+            if (stat(f.c_str(), &st) != 0) continue;
+            if (S_ISDIR(st.st_mode)) best = std::max(best, newest_song(f));
+            else if (n.size() > 7 && n.compare(n.size() - 7, 7, ".h2song") == 0) best = std::max(best, (long)st.st_mtime);
+        }
+        closedir(d);
+    }
+    return best;
+}
+
+bool big_stale(const std::string &big, const std::string &kit, const std::string &songs)
+{
+    const long t = mtime(big);
+    return t < 0 || mtime(big + ".index.txt") < 0 || t < mtime(kit) || t < newest_song(songs) ||
+           t < mtime(scripts_dir() + "/gros_morceau.py");
+}
+
+bool build_big(const std::string &big, const std::string &kit, const std::string &songs)
+{
+    mkdirs(big.substr(0, big.rfind('/')));
+    const std::string cmd = "python3 " + shell_quote(scripts_dir() + "/gros_morceau.py") + " " + shell_quote(songs) +
+                            " " + shell_quote(kit) + " " + shell_quote(big) + " 2>&1";
+    std::string msg;
+    int rc = -1;
+    if (FILE *f = popen(cmd.c_str(), "r")) {
+        char line[512];
+        while (std::fgets(line, sizeof line, f)) msg = line;      // la dernière ligne résume
+        rc = pclose(f);
+    }
+    while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) msg.pop_back();
+    say("DLS Drum : gros morceau %s : %s", kit_name(kit).c_str(), rc == 0 ? msg.c_str() : ("échec : " + msg).c_str());
+    return rc == 0 && file_size(big) > 0;
+}
+
+void load_index(const std::string &big)
+{
+    g_index.clear();
+    g_index_for = big;
+    std::ifstream f(big + ".index.txt");
+    std::string line;
+    while (std::getline(f, line)) {
+        const size_t a = line.find('\t'), b = line.find('\t', a + 1);
+        if (a == std::string::npos || b == std::string::npos) continue;
+        g_index[line.substr(b + 1)] = {std::atoi(line.c_str()), std::atoi(line.c_str() + a + 1)};
+    }
+}
+
+/* Choix (kit, chanson) avec le gros morceau. Retourne false si on doit
+ * attendre l'arrêt (kit à charger pendant la lecture). */
+bool apply_big_choice(pb_ctl *k)
+{
+    const std::string big = big_song_path(g_dr_kit_sel);
+    const std::string songs = songs_dir_of(g_dr_song_sel);
+    if (big.empty() || songs.empty()) return true;           // pas de gros morceau : géré ailleurs
+    const bool stale = big_stale(big, g_dr_kit_sel, songs);
+    const bool load = stale || big != g_drum_song;
+    if (load && transport_rolling()) return false;          // Hydrogen arrête tout en ouvrant : au Stop
+    if (stale && !build_big(big, g_dr_kit_sel, songs)) return true;
+    if (load) say("DLS Drum : %s", open_drum_song(big, 0).c_str());
+    if (g_index_for != big || stale) load_index(big);
+    const auto it = g_index.find(song_rel(g_dr_song_sel));
+    if (it == g_index.end()) {
+        say("DLS Drum : %s absent du gros morceau", song_rel(g_dr_song_sel).c_str());
+        return true;
+    }
+    g_off = it->second.first;
+    g_cnt = it->second.second;
+    say("DLS Drum : %s (patterns %d à %d) ; %s", song_rel(g_dr_song_sel).c_str(), g_off + 1, g_off + g_cnt,
+        set_groove(std::to_string(std::min(std::max(g_dr_song_groove, 1), g_cnt))).c_str());
+    /* Le menu montre encore l'ancien groove jusqu'à ce que PiPedal applique
+     * la mise à jour (websocket) : le considérer comme vu ; son écho est attendu. */
+    g_dr_groove = PB_LOAD_RLX(&k->drum_groove);
+    g_refresh_now = true;
+    return true;
+}
+
 void drum_song_poll(pb_ctl *k)
 {
     std::string path;
@@ -959,7 +1085,7 @@ void drum_song_poll(pb_ctl *k)
         g_dr_kit_sel = path;
         changed = true;
         /* Même style sur un autre kit : on garde le groove qui joue. */
-        g_dr_song_groove = g_pattern >= 0 ? g_pattern + 1 : (int)PB_LOAD_RLX(&k->drum_groove);
+        g_dr_song_groove = g_pattern >= 0 ? groove_rel() : (int)PB_LOAD_RLX(&k->drum_groove);
     }
     if (read_seq_path(&k->drum_song_seq, k->drum_song, g_dr_song_seq, path)) {
         /* Choix du preset : avec le groove du menu (sauvegardé avec lui).
@@ -969,9 +1095,13 @@ void drum_song_poll(pb_ctl *k)
         g_dr_song_preset = false;
         if (path != g_dr_song_sel) { g_dr_song_sel = path; changed = true; }
     }
-    if (changed && !g_dr_song_sel.empty()) {
-        g_dr_song_pending = true;
-        if (transport_rolling()) say("DLS Drum : kit / morceau chargés au prochain Stop");
+    if (changed && !g_dr_song_sel.empty()) g_dr_song_pending = true;
+    /* Avec un kit et une chanson du dossier : gros morceau (changer de
+     * chanson = sauter, même en jouant ; changer de kit = recharger, à l'arrêt). */
+    if (g_dr_song_pending && !g_dr_kit_sel.empty() && !songs_dir_of(g_dr_song_sel).empty()) {
+        if (apply_big_choice(k)) g_dr_song_pending = false;
+        else if (changed) say("DLS Drum : nouveau kit chargé au prochain Stop");
+        return;
     }
     if (g_dr_song_pending && !transport_rolling()) {
         g_dr_song_pending = false;
@@ -1007,7 +1137,7 @@ void drum_poll(pb_ctl *k)
     const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
     if (groove != g_dr_groove) {
         g_dr_groove = groove;
-        if (!take_echo("groove", (int)groove) && (int)groove != g_pattern + 1) {   // sinon : écho, ou déjà joué
+        if (!take_echo("groove", (int)groove) && (int)groove != groove_rel()) {   // sinon : écho, ou déjà joué
             say("DLS Drum : %s", set_groove(std::to_string(groove)).c_str());
             g_refresh_now = true;
         }
@@ -1243,6 +1373,7 @@ std::string load_song(const std::string &name)
             g_drum_song = f;
             usleep(1500000);                         // Hydrogen ne confirme pas : on lui laisse le temps
             h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
+            g_off = g_cnt = 0;
             g_pattern = std::atoi(kv["pattern"].c_str());
             if (kv["pattern"].empty()) g_pattern = -1;
             if (g_pattern >= 0) h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)g_pattern);
@@ -1269,11 +1400,14 @@ std::string open_drum_song(const std::string &path, int groove)
     read_pattern_sizes(path);
     remember_drum_song(path);
     g_drum_song = path;
-    usleep(1500000);                                  // Hydrogen ne confirme pas : on lui laisse le temps
+    g_off = g_cnt = 0;
+    /* Hydrogen ne confirme pas : on lui laisse le temps (1,5 s, plus 0,1 s par
+     * Mo : un gros morceau de 28 Mo se charge en moins de 4 s, mesuré). */
+    usleep((useconds_t)(1500000 + file_size(path) / 10));
     g_pattern = -1;
-    const std::string r = set_groove(std::to_string(groove < 1 ? 1 : groove));
+    const std::string r = groove > 0 ? set_groove(std::to_string(groove)) : std::string("groove non choisi");
     jack_transport_locate(g_cfg.client, 0);
-    return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " groove(s) ; " + r;
+    return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " pattern(s) ; " + r;
 }
 
 std::string list_songs()
