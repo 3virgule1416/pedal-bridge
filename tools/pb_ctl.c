@@ -11,7 +11,7 @@
  *   pb_ctl tempo BPM            réglage Tempo
  *   pb_ctl drum-take            devient le « DLS Drum » propriétaire
  *   pb_ctl drum-press NOM       appui : play prev next tap bpm+ bpm-
- *   pb_ctl drum-groove N        menu Groove (1-16)
+ *   pb_ctl drum-groove N        menu Groove (1-160)
  *   pb_ctl drum-tempo BPM       réglage Tempo de DLS Drum
  *   pb_ctl drum-metro 0|1       interrupteur Metronome de DLS Drum
  *
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
         printf("ok drum %s\n", DBTN[b]);
     } else if (!strcmp(cmd, "drum-groove") && argc > 2) {
         const int v = atoi(argv[2]);
-        if (v < 1 || v > 16) { pb_ctl_close(c); return usage(); }
+        if (v < 1 || v > (int)PB_CTL_GROOVES) { pb_ctl_close(c); return usage(); }
         PB_STORE_RLX(&c->drum_groove, (uint32_t)v);
         printf("ok groove %d\n", v);
     } else if (!strcmp(cmd, "drum-tempo") && argc > 2) {

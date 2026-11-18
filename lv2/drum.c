@@ -277,7 +277,7 @@ static void run(LV2_Handle h, uint32_t n)
     }
     int groove = (int)lrintf(port(p, C_GROOVE, 1.0f));
     if (groove < 1) groove = 1;
-    if (groove > 16) groove = 16;
+    if (groove > (int)PB_CTL_GROOVES) groove = (int)PB_CTL_GROOVES;
 
     pb_ctl *ctl = p->ctl;
     if (!ctl) {

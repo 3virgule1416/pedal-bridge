@@ -60,7 +60,7 @@ enum pb_drum_btn {
     PB_DBTN_COUNT
 };
 
-#define PB_CTL_GROOVES  32u     /* grooves affichables (patterns d'Hydrogen) */
+#define PB_CTL_GROOVES  160u    /* grooves du menu et affichables (patterns d'Hydrogen) */
 
 /* État d'une boucle, tel qu'affiché par le plugin (port « État »). */
 enum pb_loop_state {

@@ -600,7 +600,7 @@ std::string set_groove(const std::string &arg)
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
     h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", (float)(n - 1));
     g_pattern = n - 1;
-    if (n <= 16) g_ui_groove = n;                      // menu Groove : 1 à 16
+    if (n <= (int)PB_CTL_GROOVES) g_ui_groove = n;     // menu Groove : 1 à 160
     return "ok groove " + std::to_string(n) + " ; " + apply_cycle(g_pattern);
 }
 
@@ -919,9 +919,14 @@ std::string render_song(const std::string &song, const std::string &kit)
     auto base = [](const std::string &f) { const size_t p = f.rfind('/'); return p == std::string::npos ? f : f.substr(p + 1); };
     std::string kname = base(kit);
     if (kname.size() > 4 && kname.compare(kname.size() - 4, 4, ".kit") == 0) kname.resize(kname.size() - 4);
-    const std::string dir = home_dir() + "/dls-batterie/rendus/" + kname;
-    const std::string out = dir + "/" + base(song);
+    /* Même rangement que le dossier des morceaux (sous-dossiers de style) :
+     * deux morceaux de même nom dans deux styles ne se mélangent pas. */
+    const std::string marker = "/DLS Drums/";
+    const size_t m = song.find(marker);
+    const std::string rel = m == std::string::npos ? base(song) : song.substr(m + marker.size());
+    const std::string out = home_dir() + "/dls-batterie/rendus/" + kname + "/" + rel;
     if (mtime(out) >= 0 && mtime(out) >= mtime(song) && mtime(out) >= mtime(kit)) return out;
+    const std::string dir = out.substr(0, out.rfind('/'));
     mkdirs(dir);
     const std::string scripts = scripts_dir();
     const std::string cmd = "python3 " + shell_quote(scripts + "/rendu_kit.py") + " " + shell_quote(song) + " " +

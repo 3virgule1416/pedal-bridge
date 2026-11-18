@@ -161,7 +161,7 @@ DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, 
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Kit picks the drum kit and Song the style (a .h2song file of the "DLS Drums" folder): every song plays on the chosen kit. A new choice is loaded when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
+Kit picks the drum kit and Song the style (a .h2song file of the "DLS Drums" folder): every song plays on the chosen kit. A new choice is loaded when the transport is stopped. Groove selects the Hydrogen pattern (1 to 160); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" + '"""'
 
@@ -183,11 +183,11 @@ def drum_plugin(uri, name, label, stereo):
                     enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), D)); i += 1
     song_index = i
     p.append(ctl_in(i, "groove", "Groove", "Hydrogen pattern to play (1 = first pattern of the song), from the next bar.",
-                    enum(1, 16, [(k, f"Groove {k}") for k in range(1, 17)]), D)); i += 1
+                    enum(1, 160, [(k, f"Groove {k}") for k in range(1, 161)]), D)); i += 1
     p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
     p.append(button(i, "suivant", "Next", "Next groove, from the next bar.", D)); i += 1
     p.append(ctl_out(i, "groove_joue", "Playing", "Groove being played (- when unknown).",
-                     enum(0, 32, [(0, "-")] + [(k, str(k)) for k in range(1, 33)]), D)); i += 1
+                     enum(0, 160, [(0, "-")] + [(k, str(k)) for k in range(1, 161)]), D)); i += 1
 
     p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", T)); i += 1
     p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
