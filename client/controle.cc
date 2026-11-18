@@ -1116,6 +1116,16 @@ bool apply_big_choice(pb_ctl *k)
     g_off = it->second.first;
     g_cnt = it->second.second;
     g_song_rel = it->first;
+    /* Nouvelle chanson (groove 1 demandé) : premier groove de la première
+     * partie jouable (couplet…), pas l'intro, comme au BeatBuddy. */
+    if (g_dr_song_groove <= 1) {
+        const auto ps = g_parts.find(g_song_rel);
+        if (ps != g_parts.end())
+            for (const char *p : {"part:Verse", "part:Pre-Chorus", "part:Chorus", "part:Bridge", "part:Groove"}) {
+                const auto q = ps->second.find(p);
+                if (q != ps->second.end() && !q->second.empty()) { g_dr_song_groove = q->second.front(); break; }
+            }
+    }
     say("DLS Drum : %s (patterns %d à %d) ; %s", song_rel(g_dr_song_sel).c_str(), g_off + 1, g_off + g_cnt,
         set_groove(std::to_string(std::min(std::max(g_dr_song_groove, 1), g_cnt))).c_str());
     /* Le menu montre encore l'ancien groove jusqu'à ce que PiPedal applique
@@ -1184,10 +1194,13 @@ std::string current_part()
     const auto s = g_parts.find(g_song_rel);
     if (s == g_parts.end()) return "";
     const int n = groove_rel();
-    for (const auto &kv : s->second)
-        if (kv.first.compare(0, 5, "part:") == 0 &&
-            std::find(kv.second.begin(), kv.second.end(), n) != kv.second.end())
-            return kv.first.substr(5);
+    for (const auto &kv : s->second) {
+        const bool in = std::find(kv.second.begin(), kv.second.end(), n) != kv.second.end();
+        if (!in) continue;
+        if (kv.first.compare(0, 5, "part:") == 0) return kv.first.substr(5);
+        if (kv.first == "intro") return "Intro";
+        if (kv.first == "outro") return "Outro";
+    }
     return "";
 }
 
@@ -1217,6 +1230,9 @@ std::string fill_request()
         const auto f = s->second.find(key);
         if (f != s->second.end() && !f->second.empty()) { fills = &f->second; break; }
     }
+    if (!fills)                                       // à défaut : n'importe quel fill de la chanson
+        for (const auto &kv : s->second)
+            if (kv.first.compare(0, 5, "fill:") == 0 && !kv.second.empty()) { fills = &kv.second; break; }
     if (!fills) return "pas de fill dans cette chanson";
     double to_bar, bar_s;
     int bpb;

@@ -94,8 +94,8 @@ def role_of(pattern):
 
 def structure(pats):
     """-> {clé: [numéros de groove dans la chanson, à partir de 1]}.
-    Clés : part:<Partie> (grooves), fill:<Partie>, fill:* (fills communs),
-    intro, outro, transition, hits."""
+    Clés : part:<Partie> (grooves), fill:<Partie> (aussi fill:Intro et
+    fill:Outro), fill:* (fills communs), intro, outro, transition, hits."""
     st = {}
     for j, p in enumerate(pats, 1):
         r = role_of(p)
@@ -105,10 +105,14 @@ def structure(pats):
             key = f"fill:{r[:-5]}"
         elif r == "Fill":
             key = "fill:*"
-        elif r in ("Intro", "Count", "Intro Fill"):
+        elif r in ("Intro", "Count"):
             key = "intro"
-        elif r in ("Outro", "Outro Fill"):
+        elif r == "Intro Fill":
+            key = "fill:Intro"
+        elif r == "Outro":
             key = "outro"
+        elif r == "Outro Fill":
+            key = "fill:Outro"
         else:
             key = r.lower()                                   # transition, hits
         st.setdefault(key, []).append(j)
