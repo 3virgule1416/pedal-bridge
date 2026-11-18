@@ -64,211 +64,72 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "GM Rock Kit" ; rdf:value 2 ] ,
                      [ rdfs:label "Red Zeppelin" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 3 ; lv2:symbol "groove" ; lv2:name "Groove" ;
-      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 160 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "Groove 1" ; rdf:value 1 ] ,
-                     [ rdfs:label "Groove 2" ; rdf:value 2 ] ,
-                     [ rdfs:label "Groove 3" ; rdf:value 3 ] ,
-                     [ rdfs:label "Groove 4" ; rdf:value 4 ] ,
-                     [ rdfs:label "Groove 5" ; rdf:value 5 ] ,
-                     [ rdfs:label "Groove 6" ; rdf:value 6 ] ,
-                     [ rdfs:label "Groove 7" ; rdf:value 7 ] ,
-                     [ rdfs:label "Groove 8" ; rdf:value 8 ] ,
-                     [ rdfs:label "Groove 9" ; rdf:value 9 ] ,
-                     [ rdfs:label "Groove 10" ; rdf:value 10 ] ,
-                     [ rdfs:label "Groove 11" ; rdf:value 11 ] ,
-                     [ rdfs:label "Groove 12" ; rdf:value 12 ] ,
-                     [ rdfs:label "Groove 13" ; rdf:value 13 ] ,
-                     [ rdfs:label "Groove 14" ; rdf:value 14 ] ,
-                     [ rdfs:label "Groove 15" ; rdf:value 15 ] ,
-                     [ rdfs:label "Groove 16" ; rdf:value 16 ] ,
-                     [ rdfs:label "Groove 17" ; rdf:value 17 ] ,
-                     [ rdfs:label "Groove 18" ; rdf:value 18 ] ,
-                     [ rdfs:label "Groove 19" ; rdf:value 19 ] ,
-                     [ rdfs:label "Groove 20" ; rdf:value 20 ] ,
-                     [ rdfs:label "Groove 21" ; rdf:value 21 ] ,
-                     [ rdfs:label "Groove 22" ; rdf:value 22 ] ,
-                     [ rdfs:label "Groove 23" ; rdf:value 23 ] ,
-                     [ rdfs:label "Groove 24" ; rdf:value 24 ] ,
-                     [ rdfs:label "Groove 25" ; rdf:value 25 ] ,
-                     [ rdfs:label "Groove 26" ; rdf:value 26 ] ,
-                     [ rdfs:label "Groove 27" ; rdf:value 27 ] ,
-                     [ rdfs:label "Groove 28" ; rdf:value 28 ] ,
-                     [ rdfs:label "Groove 29" ; rdf:value 29 ] ,
-                     [ rdfs:label "Groove 30" ; rdf:value 30 ] ,
-                     [ rdfs:label "Groove 31" ; rdf:value 31 ] ,
-                     [ rdfs:label "Groove 32" ; rdf:value 32 ] ,
-                     [ rdfs:label "Groove 33" ; rdf:value 33 ] ,
-                     [ rdfs:label "Groove 34" ; rdf:value 34 ] ,
-                     [ rdfs:label "Groove 35" ; rdf:value 35 ] ,
-                     [ rdfs:label "Groove 36" ; rdf:value 36 ] ,
-                     [ rdfs:label "Groove 37" ; rdf:value 37 ] ,
-                     [ rdfs:label "Groove 38" ; rdf:value 38 ] ,
-                     [ rdfs:label "Groove 39" ; rdf:value 39 ] ,
-                     [ rdfs:label "Groove 40" ; rdf:value 40 ] ,
-                     [ rdfs:label "Groove 41" ; rdf:value 41 ] ,
-                     [ rdfs:label "Groove 42" ; rdf:value 42 ] ,
-                     [ rdfs:label "Groove 43" ; rdf:value 43 ] ,
-                     [ rdfs:label "Groove 44" ; rdf:value 44 ] ,
-                     [ rdfs:label "Groove 45" ; rdf:value 45 ] ,
-                     [ rdfs:label "Groove 46" ; rdf:value 46 ] ,
-                     [ rdfs:label "Groove 47" ; rdf:value 47 ] ,
-                     [ rdfs:label "Groove 48" ; rdf:value 48 ] ,
-                     [ rdfs:label "Groove 49" ; rdf:value 49 ] ,
-                     [ rdfs:label "Groove 50" ; rdf:value 50 ] ,
-                     [ rdfs:label "Groove 51" ; rdf:value 51 ] ,
-                     [ rdfs:label "Groove 52" ; rdf:value 52 ] ,
-                     [ rdfs:label "Groove 53" ; rdf:value 53 ] ,
-                     [ rdfs:label "Groove 54" ; rdf:value 54 ] ,
-                     [ rdfs:label "Groove 55" ; rdf:value 55 ] ,
-                     [ rdfs:label "Groove 56" ; rdf:value 56 ] ,
-                     [ rdfs:label "Groove 57" ; rdf:value 57 ] ,
-                     [ rdfs:label "Groove 58" ; rdf:value 58 ] ,
-                     [ rdfs:label "Groove 59" ; rdf:value 59 ] ,
-                     [ rdfs:label "Groove 60" ; rdf:value 60 ] ,
-                     [ rdfs:label "Groove 61" ; rdf:value 61 ] ,
-                     [ rdfs:label "Groove 62" ; rdf:value 62 ] ,
-                     [ rdfs:label "Groove 63" ; rdf:value 63 ] ,
-                     [ rdfs:label "Groove 64" ; rdf:value 64 ] ,
-                     [ rdfs:label "Groove 65" ; rdf:value 65 ] ,
-                     [ rdfs:label "Groove 66" ; rdf:value 66 ] ,
-                     [ rdfs:label "Groove 67" ; rdf:value 67 ] ,
-                     [ rdfs:label "Groove 68" ; rdf:value 68 ] ,
-                     [ rdfs:label "Groove 69" ; rdf:value 69 ] ,
-                     [ rdfs:label "Groove 70" ; rdf:value 70 ] ,
-                     [ rdfs:label "Groove 71" ; rdf:value 71 ] ,
-                     [ rdfs:label "Groove 72" ; rdf:value 72 ] ,
-                     [ rdfs:label "Groove 73" ; rdf:value 73 ] ,
-                     [ rdfs:label "Groove 74" ; rdf:value 74 ] ,
-                     [ rdfs:label "Groove 75" ; rdf:value 75 ] ,
-                     [ rdfs:label "Groove 76" ; rdf:value 76 ] ,
-                     [ rdfs:label "Groove 77" ; rdf:value 77 ] ,
-                     [ rdfs:label "Groove 78" ; rdf:value 78 ] ,
-                     [ rdfs:label "Groove 79" ; rdf:value 79 ] ,
-                     [ rdfs:label "Groove 80" ; rdf:value 80 ] ,
-                     [ rdfs:label "Groove 81" ; rdf:value 81 ] ,
-                     [ rdfs:label "Groove 82" ; rdf:value 82 ] ,
-                     [ rdfs:label "Groove 83" ; rdf:value 83 ] ,
-                     [ rdfs:label "Groove 84" ; rdf:value 84 ] ,
-                     [ rdfs:label "Groove 85" ; rdf:value 85 ] ,
-                     [ rdfs:label "Groove 86" ; rdf:value 86 ] ,
-                     [ rdfs:label "Groove 87" ; rdf:value 87 ] ,
-                     [ rdfs:label "Groove 88" ; rdf:value 88 ] ,
-                     [ rdfs:label "Groove 89" ; rdf:value 89 ] ,
-                     [ rdfs:label "Groove 90" ; rdf:value 90 ] ,
-                     [ rdfs:label "Groove 91" ; rdf:value 91 ] ,
-                     [ rdfs:label "Groove 92" ; rdf:value 92 ] ,
-                     [ rdfs:label "Groove 93" ; rdf:value 93 ] ,
-                     [ rdfs:label "Groove 94" ; rdf:value 94 ] ,
-                     [ rdfs:label "Groove 95" ; rdf:value 95 ] ,
-                     [ rdfs:label "Groove 96" ; rdf:value 96 ] ,
-                     [ rdfs:label "Groove 97" ; rdf:value 97 ] ,
-                     [ rdfs:label "Groove 98" ; rdf:value 98 ] ,
-                     [ rdfs:label "Groove 99" ; rdf:value 99 ] ,
-                     [ rdfs:label "Groove 100" ; rdf:value 100 ] ,
-                     [ rdfs:label "Groove 101" ; rdf:value 101 ] ,
-                     [ rdfs:label "Groove 102" ; rdf:value 102 ] ,
-                     [ rdfs:label "Groove 103" ; rdf:value 103 ] ,
-                     [ rdfs:label "Groove 104" ; rdf:value 104 ] ,
-                     [ rdfs:label "Groove 105" ; rdf:value 105 ] ,
-                     [ rdfs:label "Groove 106" ; rdf:value 106 ] ,
-                     [ rdfs:label "Groove 107" ; rdf:value 107 ] ,
-                     [ rdfs:label "Groove 108" ; rdf:value 108 ] ,
-                     [ rdfs:label "Groove 109" ; rdf:value 109 ] ,
-                     [ rdfs:label "Groove 110" ; rdf:value 110 ] ,
-                     [ rdfs:label "Groove 111" ; rdf:value 111 ] ,
-                     [ rdfs:label "Groove 112" ; rdf:value 112 ] ,
-                     [ rdfs:label "Groove 113" ; rdf:value 113 ] ,
-                     [ rdfs:label "Groove 114" ; rdf:value 114 ] ,
-                     [ rdfs:label "Groove 115" ; rdf:value 115 ] ,
-                     [ rdfs:label "Groove 116" ; rdf:value 116 ] ,
-                     [ rdfs:label "Groove 117" ; rdf:value 117 ] ,
-                     [ rdfs:label "Groove 118" ; rdf:value 118 ] ,
-                     [ rdfs:label "Groove 119" ; rdf:value 119 ] ,
-                     [ rdfs:label "Groove 120" ; rdf:value 120 ] ,
-                     [ rdfs:label "Groove 121" ; rdf:value 121 ] ,
-                     [ rdfs:label "Groove 122" ; rdf:value 122 ] ,
-                     [ rdfs:label "Groove 123" ; rdf:value 123 ] ,
-                     [ rdfs:label "Groove 124" ; rdf:value 124 ] ,
-                     [ rdfs:label "Groove 125" ; rdf:value 125 ] ,
-                     [ rdfs:label "Groove 126" ; rdf:value 126 ] ,
-                     [ rdfs:label "Groove 127" ; rdf:value 127 ] ,
-                     [ rdfs:label "Groove 128" ; rdf:value 128 ] ,
-                     [ rdfs:label "Groove 129" ; rdf:value 129 ] ,
-                     [ rdfs:label "Groove 130" ; rdf:value 130 ] ,
-                     [ rdfs:label "Groove 131" ; rdf:value 131 ] ,
-                     [ rdfs:label "Groove 132" ; rdf:value 132 ] ,
-                     [ rdfs:label "Groove 133" ; rdf:value 133 ] ,
-                     [ rdfs:label "Groove 134" ; rdf:value 134 ] ,
-                     [ rdfs:label "Groove 135" ; rdf:value 135 ] ,
-                     [ rdfs:label "Groove 136" ; rdf:value 136 ] ,
-                     [ rdfs:label "Groove 137" ; rdf:value 137 ] ,
-                     [ rdfs:label "Groove 138" ; rdf:value 138 ] ,
-                     [ rdfs:label "Groove 139" ; rdf:value 139 ] ,
-                     [ rdfs:label "Groove 140" ; rdf:value 140 ] ,
-                     [ rdfs:label "Groove 141" ; rdf:value 141 ] ,
-                     [ rdfs:label "Groove 142" ; rdf:value 142 ] ,
-                     [ rdfs:label "Groove 143" ; rdf:value 143 ] ,
-                     [ rdfs:label "Groove 144" ; rdf:value 144 ] ,
-                     [ rdfs:label "Groove 145" ; rdf:value 145 ] ,
-                     [ rdfs:label "Groove 146" ; rdf:value 146 ] ,
-                     [ rdfs:label "Groove 147" ; rdf:value 147 ] ,
-                     [ rdfs:label "Groove 148" ; rdf:value 148 ] ,
-                     [ rdfs:label "Groove 149" ; rdf:value 149 ] ,
-                     [ rdfs:label "Groove 150" ; rdf:value 150 ] ,
-                     [ rdfs:label "Groove 151" ; rdf:value 151 ] ,
-                     [ rdfs:label "Groove 152" ; rdf:value 152 ] ,
-                     [ rdfs:label "Groove 153" ; rdf:value 153 ] ,
-                     [ rdfs:label "Groove 154" ; rdf:value 154 ] ,
-                     [ rdfs:label "Groove 155" ; rdf:value 155 ] ,
-                     [ rdfs:label "Groove 156" ; rdf:value 156 ] ,
-                     [ rdfs:label "Groove 157" ; rdf:value 157 ] ,
-                     [ rdfs:label "Groove 158" ; rdf:value 158 ] ,
-                     [ rdfs:label "Groove 159" ; rdf:value 159 ] ,
-                     [ rdfs:label "Groove 160" ; rdf:value 160 ] ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 3 ; lv2:symbol "intro" ; lv2:name "Intro" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 27 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "Off" ; rdf:value 0 ] ,
+                     [ rdfs:label "Metronome" ; rdf:value 1 ] ,
+                     [ rdfs:label "A" ; rdf:value 2 ] ,
+                     [ rdfs:label "B" ; rdf:value 3 ] ,
+                     [ rdfs:label "C" ; rdf:value 4 ] ,
+                     [ rdfs:label "D" ; rdf:value 5 ] ,
+                     [ rdfs:label "E" ; rdf:value 6 ] ,
+                     [ rdfs:label "F" ; rdf:value 7 ] ,
+                     [ rdfs:label "G" ; rdf:value 8 ] ,
+                     [ rdfs:label "H" ; rdf:value 9 ] ,
+                     [ rdfs:label "I" ; rdf:value 10 ] ,
+                     [ rdfs:label "J" ; rdf:value 11 ] ,
+                     [ rdfs:label "K" ; rdf:value 12 ] ,
+                     [ rdfs:label "L" ; rdf:value 13 ] ,
+                     [ rdfs:label "M" ; rdf:value 14 ] ,
+                     [ rdfs:label "N" ; rdf:value 15 ] ,
+                     [ rdfs:label "O" ; rdf:value 16 ] ,
+                     [ rdfs:label "P" ; rdf:value 17 ] ,
+                     [ rdfs:label "Q" ; rdf:value 18 ] ,
+                     [ rdfs:label "R" ; rdf:value 19 ] ,
+                     [ rdfs:label "S" ; rdf:value 20 ] ,
+                     [ rdfs:label "T" ; rdf:value 21 ] ,
+                     [ rdfs:label "U" ; rdf:value 22 ] ,
+                     [ rdfs:label "V" ; rdf:value 23 ] ,
+                     [ rdfs:label "W" ; rdf:value 24 ] ,
+                     [ rdfs:label "X" ; rdf:value 25 ] ,
+                     [ rdfs:label "Y" ; rdf:value 26 ] ,
+                     [ rdfs:label "Z" ; rdf:value 27 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 4 ; lv2:symbol "precedent" ; lv2:name "Previous" ;
-      rdfs:comment "Previous groove, from the next bar." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 4 ; lv2:symbol "part" ; lv2:name "Part" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "Verse" ; rdf:value 0 ] ,
+                     [ rdfs:label "Pre-Chorus" ; rdf:value 1 ] ,
+                     [ rdfs:label "Chorus" ; rdf:value 2 ] ,
+                     [ rdfs:label "Bridge" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "suivant" ; lv2:name "Next" ;
-      rdfs:comment "Next groove, from the next bar." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
-      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "fill" ; lv2:name "Fill" ;
-      rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
-      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 7 ; lv2:symbol "groove_joue" ; lv2:name "Playing" ;
-      rdfs:comment "Groove being played (- when unknown)." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 160 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
-                     [ rdfs:label "1" ; rdf:value 1 ] ,
-                     [ rdfs:label "2" ; rdf:value 2 ] ,
-                     [ rdfs:label "3" ; rdf:value 3 ] ,
-                     [ rdfs:label "4" ; rdf:value 4 ] ,
-                     [ rdfs:label "5" ; rdf:value 5 ] ,
-                     [ rdfs:label "6" ; rdf:value 6 ] ,
-                     [ rdfs:label "7" ; rdf:value 7 ] ,
-                     [ rdfs:label "8" ; rdf:value 8 ] ,
-                     [ rdfs:label "9" ; rdf:value 9 ] ,
-                     [ rdfs:label "10" ; rdf:value 10 ] ,
-                     [ rdfs:label "11" ; rdf:value 11 ] ,
-                     [ rdfs:label "12" ; rdf:value 12 ] ,
-                     [ rdfs:label "13" ; rdf:value 13 ] ,
-                     [ rdfs:label "14" ; rdf:value 14 ] ,
-                     [ rdfs:label "15" ; rdf:value 15 ] ,
-                     [ rdfs:label "16" ; rdf:value 16 ] ,
-                     [ rdfs:label "17" ; rdf:value 17 ] ,
-                     [ rdfs:label "18" ; rdf:value 18 ] ,
-                     [ rdfs:label "19" ; rdf:value 19 ] ,
-                     [ rdfs:label "20" ; rdf:value 20 ] ,
-                     [ rdfs:label "21" ; rdf:value 21 ] ,
-                     [ rdfs:label "22" ; rdf:value 22 ] ,
-                     [ rdfs:label "23" ; rdf:value 23 ] ,
-                     [ rdfs:label "24" ; rdf:value 24 ] ,
-                     [ rdfs:label "25" ; rdf:value 25 ] ,
-                     [ rdfs:label "26" ; rdf:value 26 ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "variation" ; lv2:name "Variation" ;
+      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ,
                      [ rdfs:label "27" ; rdf:value 27 ] ,
                      [ rdfs:label "28" ; rdf:value 28 ] ,
                      [ rdfs:label "29" ; rdf:value 29 ] ,
@@ -370,65 +231,230 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "125" ; rdf:value 125 ] ,
                      [ rdfs:label "126" ; rdf:value 126 ] ,
                      [ rdfs:label "127" ; rdf:value 127 ] ,
-                     [ rdfs:label "128" ; rdf:value 128 ] ,
-                     [ rdfs:label "129" ; rdf:value 129 ] ,
-                     [ rdfs:label "130" ; rdf:value 130 ] ,
-                     [ rdfs:label "131" ; rdf:value 131 ] ,
-                     [ rdfs:label "132" ; rdf:value 132 ] ,
-                     [ rdfs:label "133" ; rdf:value 133 ] ,
-                     [ rdfs:label "134" ; rdf:value 134 ] ,
-                     [ rdfs:label "135" ; rdf:value 135 ] ,
-                     [ rdfs:label "136" ; rdf:value 136 ] ,
-                     [ rdfs:label "137" ; rdf:value 137 ] ,
-                     [ rdfs:label "138" ; rdf:value 138 ] ,
-                     [ rdfs:label "139" ; rdf:value 139 ] ,
-                     [ rdfs:label "140" ; rdf:value 140 ] ,
-                     [ rdfs:label "141" ; rdf:value 141 ] ,
-                     [ rdfs:label "142" ; rdf:value 142 ] ,
-                     [ rdfs:label "143" ; rdf:value 143 ] ,
-                     [ rdfs:label "144" ; rdf:value 144 ] ,
-                     [ rdfs:label "145" ; rdf:value 145 ] ,
-                     [ rdfs:label "146" ; rdf:value 146 ] ,
-                     [ rdfs:label "147" ; rdf:value 147 ] ,
-                     [ rdfs:label "148" ; rdf:value 148 ] ,
-                     [ rdfs:label "149" ; rdf:value 149 ] ,
-                     [ rdfs:label "150" ; rdf:value 150 ] ,
-                     [ rdfs:label "151" ; rdf:value 151 ] ,
-                     [ rdfs:label "152" ; rdf:value 152 ] ,
-                     [ rdfs:label "153" ; rdf:value 153 ] ,
-                     [ rdfs:label "154" ; rdf:value 154 ] ,
-                     [ rdfs:label "155" ; rdf:value 155 ] ,
-                     [ rdfs:label "156" ; rdf:value 156 ] ,
-                     [ rdfs:label "157" ; rdf:value 157 ] ,
-                     [ rdfs:label "158" ; rdf:value 158 ] ,
-                     [ rdfs:label "159" ; rdf:value 159 ] ,
-                     [ rdfs:label "160" ; rdf:value 160 ] ;
+                     [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "outro" ; lv2:name "Outro" ;
+      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 26 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
+      rdfs:comment "Previous variation of the current part, from the next bar." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
+      rdfs:comment "Next variation of the current part, from the next bar." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "fill" ; lv2:name "Fill" ;
+      rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
+      rdfs:comment "Previous part (verse, chorus…), with a transition fill." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
+      rdfs:comment "Next part (verse, chorus…), with a transition fill." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "fin" ; lv2:name "End" ;
+      rdfs:comment "Plays the outro (chosen in Outro), then stops everything." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Intro" ; rdf:value 1 ] ,
+                     [ rdfs:label "Verse" ; rdf:value 2 ] ,
+                     [ rdfs:label "Pre-Chorus" ; rdf:value 3 ] ,
+                     [ rdfs:label "Chorus" ; rdf:value 4 ] ,
+                     [ rdfs:label "Bridge" ; rdf:value 5 ] ,
+                     [ rdfs:label "Groove" ; rdf:value 6 ] ,
+                     [ rdfs:label "Outro" ; rdf:value 7 ] ,
+                     [ rdfs:label "Fill" ; rdf:value 8 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ,
+                     [ rdfs:label "27" ; rdf:value 27 ] ,
+                     [ rdfs:label "28" ; rdf:value 28 ] ,
+                     [ rdfs:label "29" ; rdf:value 29 ] ,
+                     [ rdfs:label "30" ; rdf:value 30 ] ,
+                     [ rdfs:label "31" ; rdf:value 31 ] ,
+                     [ rdfs:label "32" ; rdf:value 32 ] ,
+                     [ rdfs:label "33" ; rdf:value 33 ] ,
+                     [ rdfs:label "34" ; rdf:value 34 ] ,
+                     [ rdfs:label "35" ; rdf:value 35 ] ,
+                     [ rdfs:label "36" ; rdf:value 36 ] ,
+                     [ rdfs:label "37" ; rdf:value 37 ] ,
+                     [ rdfs:label "38" ; rdf:value 38 ] ,
+                     [ rdfs:label "39" ; rdf:value 39 ] ,
+                     [ rdfs:label "40" ; rdf:value 40 ] ,
+                     [ rdfs:label "41" ; rdf:value 41 ] ,
+                     [ rdfs:label "42" ; rdf:value 42 ] ,
+                     [ rdfs:label "43" ; rdf:value 43 ] ,
+                     [ rdfs:label "44" ; rdf:value 44 ] ,
+                     [ rdfs:label "45" ; rdf:value 45 ] ,
+                     [ rdfs:label "46" ; rdf:value 46 ] ,
+                     [ rdfs:label "47" ; rdf:value 47 ] ,
+                     [ rdfs:label "48" ; rdf:value 48 ] ,
+                     [ rdfs:label "49" ; rdf:value 49 ] ,
+                     [ rdfs:label "50" ; rdf:value 50 ] ,
+                     [ rdfs:label "51" ; rdf:value 51 ] ,
+                     [ rdfs:label "52" ; rdf:value 52 ] ,
+                     [ rdfs:label "53" ; rdf:value 53 ] ,
+                     [ rdfs:label "54" ; rdf:value 54 ] ,
+                     [ rdfs:label "55" ; rdf:value 55 ] ,
+                     [ rdfs:label "56" ; rdf:value 56 ] ,
+                     [ rdfs:label "57" ; rdf:value 57 ] ,
+                     [ rdfs:label "58" ; rdf:value 58 ] ,
+                     [ rdfs:label "59" ; rdf:value 59 ] ,
+                     [ rdfs:label "60" ; rdf:value 60 ] ,
+                     [ rdfs:label "61" ; rdf:value 61 ] ,
+                     [ rdfs:label "62" ; rdf:value 62 ] ,
+                     [ rdfs:label "63" ; rdf:value 63 ] ,
+                     [ rdfs:label "64" ; rdf:value 64 ] ,
+                     [ rdfs:label "65" ; rdf:value 65 ] ,
+                     [ rdfs:label "66" ; rdf:value 66 ] ,
+                     [ rdfs:label "67" ; rdf:value 67 ] ,
+                     [ rdfs:label "68" ; rdf:value 68 ] ,
+                     [ rdfs:label "69" ; rdf:value 69 ] ,
+                     [ rdfs:label "70" ; rdf:value 70 ] ,
+                     [ rdfs:label "71" ; rdf:value 71 ] ,
+                     [ rdfs:label "72" ; rdf:value 72 ] ,
+                     [ rdfs:label "73" ; rdf:value 73 ] ,
+                     [ rdfs:label "74" ; rdf:value 74 ] ,
+                     [ rdfs:label "75" ; rdf:value 75 ] ,
+                     [ rdfs:label "76" ; rdf:value 76 ] ,
+                     [ rdfs:label "77" ; rdf:value 77 ] ,
+                     [ rdfs:label "78" ; rdf:value 78 ] ,
+                     [ rdfs:label "79" ; rdf:value 79 ] ,
+                     [ rdfs:label "80" ; rdf:value 80 ] ,
+                     [ rdfs:label "81" ; rdf:value 81 ] ,
+                     [ rdfs:label "82" ; rdf:value 82 ] ,
+                     [ rdfs:label "83" ; rdf:value 83 ] ,
+                     [ rdfs:label "84" ; rdf:value 84 ] ,
+                     [ rdfs:label "85" ; rdf:value 85 ] ,
+                     [ rdfs:label "86" ; rdf:value 86 ] ,
+                     [ rdfs:label "87" ; rdf:value 87 ] ,
+                     [ rdfs:label "88" ; rdf:value 88 ] ,
+                     [ rdfs:label "89" ; rdf:value 89 ] ,
+                     [ rdfs:label "90" ; rdf:value 90 ] ,
+                     [ rdfs:label "91" ; rdf:value 91 ] ,
+                     [ rdfs:label "92" ; rdf:value 92 ] ,
+                     [ rdfs:label "93" ; rdf:value 93 ] ,
+                     [ rdfs:label "94" ; rdf:value 94 ] ,
+                     [ rdfs:label "95" ; rdf:value 95 ] ,
+                     [ rdfs:label "96" ; rdf:value 96 ] ,
+                     [ rdfs:label "97" ; rdf:value 97 ] ,
+                     [ rdfs:label "98" ; rdf:value 98 ] ,
+                     [ rdfs:label "99" ; rdf:value 99 ] ,
+                     [ rdfs:label "100" ; rdf:value 100 ] ,
+                     [ rdfs:label "101" ; rdf:value 101 ] ,
+                     [ rdfs:label "102" ; rdf:value 102 ] ,
+                     [ rdfs:label "103" ; rdf:value 103 ] ,
+                     [ rdfs:label "104" ; rdf:value 104 ] ,
+                     [ rdfs:label "105" ; rdf:value 105 ] ,
+                     [ rdfs:label "106" ; rdf:value 106 ] ,
+                     [ rdfs:label "107" ; rdf:value 107 ] ,
+                     [ rdfs:label "108" ; rdf:value 108 ] ,
+                     [ rdfs:label "109" ; rdf:value 109 ] ,
+                     [ rdfs:label "110" ; rdf:value 110 ] ,
+                     [ rdfs:label "111" ; rdf:value 111 ] ,
+                     [ rdfs:label "112" ; rdf:value 112 ] ,
+                     [ rdfs:label "113" ; rdf:value 113 ] ,
+                     [ rdfs:label "114" ; rdf:value 114 ] ,
+                     [ rdfs:label "115" ; rdf:value 115 ] ,
+                     [ rdfs:label "116" ; rdf:value 116 ] ,
+                     [ rdfs:label "117" ; rdf:value 117 ] ,
+                     [ rdfs:label "118" ; rdf:value 118 ] ,
+                     [ rdfs:label "119" ; rdf:value 119 ] ,
+                     [ rdfs:label "120" ; rdf:value 120 ] ,
+                     [ rdfs:label "121" ; rdf:value 121 ] ,
+                     [ rdfs:label "122" ; rdf:value 122 ] ,
+                     [ rdfs:label "123" ; rdf:value 123 ] ,
+                     [ rdfs:label "124" ; rdf:value 124 ] ,
+                     [ rdfs:label "125" ; rdf:value 125 ] ,
+                     [ rdfs:label "126" ; rdf:value 126 ] ,
+                     [ rdfs:label "127" ; rdf:value 127 ] ,
+                     [ rdfs:label "128" ; rdf:value 128 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart drums and loops together from bar 1." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 16 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
       rdfs:comment "Raise the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 18 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
       rdfs:comment "Lower the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "tap" ; lv2:name "Tap" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "tap" ; lv2:name "Tap" ;
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 20 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
       rdfs:comment "Hydrogen metronome click on or off." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 14 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 21 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -441,22 +467,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 22 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 23 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 17 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 24 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 25 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -662,11 +688,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 26 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 20 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 27 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
@@ -674,9 +700,9 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
     [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
-      lv2:designation lv2:control ; lv2:index 21 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+      lv2:designation lv2:control ; lv2:index 28 ; lv2:symbol "control" ; lv2:name "Control" ] ,
     [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
-      lv2:designation lv2:control ; lv2:index 22 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+      lv2:designation lv2:control ; lv2:index 29 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
 
 <http://pedal-bridge.local/plugins/drum-mono> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-mono#ui> .
 
@@ -727,211 +753,72 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "GM Rock Kit" ; rdf:value 2 ] ,
                      [ rdfs:label "Red Zeppelin" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "groove" ; lv2:name "Groove" ;
-      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 160 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "Groove 1" ; rdf:value 1 ] ,
-                     [ rdfs:label "Groove 2" ; rdf:value 2 ] ,
-                     [ rdfs:label "Groove 3" ; rdf:value 3 ] ,
-                     [ rdfs:label "Groove 4" ; rdf:value 4 ] ,
-                     [ rdfs:label "Groove 5" ; rdf:value 5 ] ,
-                     [ rdfs:label "Groove 6" ; rdf:value 6 ] ,
-                     [ rdfs:label "Groove 7" ; rdf:value 7 ] ,
-                     [ rdfs:label "Groove 8" ; rdf:value 8 ] ,
-                     [ rdfs:label "Groove 9" ; rdf:value 9 ] ,
-                     [ rdfs:label "Groove 10" ; rdf:value 10 ] ,
-                     [ rdfs:label "Groove 11" ; rdf:value 11 ] ,
-                     [ rdfs:label "Groove 12" ; rdf:value 12 ] ,
-                     [ rdfs:label "Groove 13" ; rdf:value 13 ] ,
-                     [ rdfs:label "Groove 14" ; rdf:value 14 ] ,
-                     [ rdfs:label "Groove 15" ; rdf:value 15 ] ,
-                     [ rdfs:label "Groove 16" ; rdf:value 16 ] ,
-                     [ rdfs:label "Groove 17" ; rdf:value 17 ] ,
-                     [ rdfs:label "Groove 18" ; rdf:value 18 ] ,
-                     [ rdfs:label "Groove 19" ; rdf:value 19 ] ,
-                     [ rdfs:label "Groove 20" ; rdf:value 20 ] ,
-                     [ rdfs:label "Groove 21" ; rdf:value 21 ] ,
-                     [ rdfs:label "Groove 22" ; rdf:value 22 ] ,
-                     [ rdfs:label "Groove 23" ; rdf:value 23 ] ,
-                     [ rdfs:label "Groove 24" ; rdf:value 24 ] ,
-                     [ rdfs:label "Groove 25" ; rdf:value 25 ] ,
-                     [ rdfs:label "Groove 26" ; rdf:value 26 ] ,
-                     [ rdfs:label "Groove 27" ; rdf:value 27 ] ,
-                     [ rdfs:label "Groove 28" ; rdf:value 28 ] ,
-                     [ rdfs:label "Groove 29" ; rdf:value 29 ] ,
-                     [ rdfs:label "Groove 30" ; rdf:value 30 ] ,
-                     [ rdfs:label "Groove 31" ; rdf:value 31 ] ,
-                     [ rdfs:label "Groove 32" ; rdf:value 32 ] ,
-                     [ rdfs:label "Groove 33" ; rdf:value 33 ] ,
-                     [ rdfs:label "Groove 34" ; rdf:value 34 ] ,
-                     [ rdfs:label "Groove 35" ; rdf:value 35 ] ,
-                     [ rdfs:label "Groove 36" ; rdf:value 36 ] ,
-                     [ rdfs:label "Groove 37" ; rdf:value 37 ] ,
-                     [ rdfs:label "Groove 38" ; rdf:value 38 ] ,
-                     [ rdfs:label "Groove 39" ; rdf:value 39 ] ,
-                     [ rdfs:label "Groove 40" ; rdf:value 40 ] ,
-                     [ rdfs:label "Groove 41" ; rdf:value 41 ] ,
-                     [ rdfs:label "Groove 42" ; rdf:value 42 ] ,
-                     [ rdfs:label "Groove 43" ; rdf:value 43 ] ,
-                     [ rdfs:label "Groove 44" ; rdf:value 44 ] ,
-                     [ rdfs:label "Groove 45" ; rdf:value 45 ] ,
-                     [ rdfs:label "Groove 46" ; rdf:value 46 ] ,
-                     [ rdfs:label "Groove 47" ; rdf:value 47 ] ,
-                     [ rdfs:label "Groove 48" ; rdf:value 48 ] ,
-                     [ rdfs:label "Groove 49" ; rdf:value 49 ] ,
-                     [ rdfs:label "Groove 50" ; rdf:value 50 ] ,
-                     [ rdfs:label "Groove 51" ; rdf:value 51 ] ,
-                     [ rdfs:label "Groove 52" ; rdf:value 52 ] ,
-                     [ rdfs:label "Groove 53" ; rdf:value 53 ] ,
-                     [ rdfs:label "Groove 54" ; rdf:value 54 ] ,
-                     [ rdfs:label "Groove 55" ; rdf:value 55 ] ,
-                     [ rdfs:label "Groove 56" ; rdf:value 56 ] ,
-                     [ rdfs:label "Groove 57" ; rdf:value 57 ] ,
-                     [ rdfs:label "Groove 58" ; rdf:value 58 ] ,
-                     [ rdfs:label "Groove 59" ; rdf:value 59 ] ,
-                     [ rdfs:label "Groove 60" ; rdf:value 60 ] ,
-                     [ rdfs:label "Groove 61" ; rdf:value 61 ] ,
-                     [ rdfs:label "Groove 62" ; rdf:value 62 ] ,
-                     [ rdfs:label "Groove 63" ; rdf:value 63 ] ,
-                     [ rdfs:label "Groove 64" ; rdf:value 64 ] ,
-                     [ rdfs:label "Groove 65" ; rdf:value 65 ] ,
-                     [ rdfs:label "Groove 66" ; rdf:value 66 ] ,
-                     [ rdfs:label "Groove 67" ; rdf:value 67 ] ,
-                     [ rdfs:label "Groove 68" ; rdf:value 68 ] ,
-                     [ rdfs:label "Groove 69" ; rdf:value 69 ] ,
-                     [ rdfs:label "Groove 70" ; rdf:value 70 ] ,
-                     [ rdfs:label "Groove 71" ; rdf:value 71 ] ,
-                     [ rdfs:label "Groove 72" ; rdf:value 72 ] ,
-                     [ rdfs:label "Groove 73" ; rdf:value 73 ] ,
-                     [ rdfs:label "Groove 74" ; rdf:value 74 ] ,
-                     [ rdfs:label "Groove 75" ; rdf:value 75 ] ,
-                     [ rdfs:label "Groove 76" ; rdf:value 76 ] ,
-                     [ rdfs:label "Groove 77" ; rdf:value 77 ] ,
-                     [ rdfs:label "Groove 78" ; rdf:value 78 ] ,
-                     [ rdfs:label "Groove 79" ; rdf:value 79 ] ,
-                     [ rdfs:label "Groove 80" ; rdf:value 80 ] ,
-                     [ rdfs:label "Groove 81" ; rdf:value 81 ] ,
-                     [ rdfs:label "Groove 82" ; rdf:value 82 ] ,
-                     [ rdfs:label "Groove 83" ; rdf:value 83 ] ,
-                     [ rdfs:label "Groove 84" ; rdf:value 84 ] ,
-                     [ rdfs:label "Groove 85" ; rdf:value 85 ] ,
-                     [ rdfs:label "Groove 86" ; rdf:value 86 ] ,
-                     [ rdfs:label "Groove 87" ; rdf:value 87 ] ,
-                     [ rdfs:label "Groove 88" ; rdf:value 88 ] ,
-                     [ rdfs:label "Groove 89" ; rdf:value 89 ] ,
-                     [ rdfs:label "Groove 90" ; rdf:value 90 ] ,
-                     [ rdfs:label "Groove 91" ; rdf:value 91 ] ,
-                     [ rdfs:label "Groove 92" ; rdf:value 92 ] ,
-                     [ rdfs:label "Groove 93" ; rdf:value 93 ] ,
-                     [ rdfs:label "Groove 94" ; rdf:value 94 ] ,
-                     [ rdfs:label "Groove 95" ; rdf:value 95 ] ,
-                     [ rdfs:label "Groove 96" ; rdf:value 96 ] ,
-                     [ rdfs:label "Groove 97" ; rdf:value 97 ] ,
-                     [ rdfs:label "Groove 98" ; rdf:value 98 ] ,
-                     [ rdfs:label "Groove 99" ; rdf:value 99 ] ,
-                     [ rdfs:label "Groove 100" ; rdf:value 100 ] ,
-                     [ rdfs:label "Groove 101" ; rdf:value 101 ] ,
-                     [ rdfs:label "Groove 102" ; rdf:value 102 ] ,
-                     [ rdfs:label "Groove 103" ; rdf:value 103 ] ,
-                     [ rdfs:label "Groove 104" ; rdf:value 104 ] ,
-                     [ rdfs:label "Groove 105" ; rdf:value 105 ] ,
-                     [ rdfs:label "Groove 106" ; rdf:value 106 ] ,
-                     [ rdfs:label "Groove 107" ; rdf:value 107 ] ,
-                     [ rdfs:label "Groove 108" ; rdf:value 108 ] ,
-                     [ rdfs:label "Groove 109" ; rdf:value 109 ] ,
-                     [ rdfs:label "Groove 110" ; rdf:value 110 ] ,
-                     [ rdfs:label "Groove 111" ; rdf:value 111 ] ,
-                     [ rdfs:label "Groove 112" ; rdf:value 112 ] ,
-                     [ rdfs:label "Groove 113" ; rdf:value 113 ] ,
-                     [ rdfs:label "Groove 114" ; rdf:value 114 ] ,
-                     [ rdfs:label "Groove 115" ; rdf:value 115 ] ,
-                     [ rdfs:label "Groove 116" ; rdf:value 116 ] ,
-                     [ rdfs:label "Groove 117" ; rdf:value 117 ] ,
-                     [ rdfs:label "Groove 118" ; rdf:value 118 ] ,
-                     [ rdfs:label "Groove 119" ; rdf:value 119 ] ,
-                     [ rdfs:label "Groove 120" ; rdf:value 120 ] ,
-                     [ rdfs:label "Groove 121" ; rdf:value 121 ] ,
-                     [ rdfs:label "Groove 122" ; rdf:value 122 ] ,
-                     [ rdfs:label "Groove 123" ; rdf:value 123 ] ,
-                     [ rdfs:label "Groove 124" ; rdf:value 124 ] ,
-                     [ rdfs:label "Groove 125" ; rdf:value 125 ] ,
-                     [ rdfs:label "Groove 126" ; rdf:value 126 ] ,
-                     [ rdfs:label "Groove 127" ; rdf:value 127 ] ,
-                     [ rdfs:label "Groove 128" ; rdf:value 128 ] ,
-                     [ rdfs:label "Groove 129" ; rdf:value 129 ] ,
-                     [ rdfs:label "Groove 130" ; rdf:value 130 ] ,
-                     [ rdfs:label "Groove 131" ; rdf:value 131 ] ,
-                     [ rdfs:label "Groove 132" ; rdf:value 132 ] ,
-                     [ rdfs:label "Groove 133" ; rdf:value 133 ] ,
-                     [ rdfs:label "Groove 134" ; rdf:value 134 ] ,
-                     [ rdfs:label "Groove 135" ; rdf:value 135 ] ,
-                     [ rdfs:label "Groove 136" ; rdf:value 136 ] ,
-                     [ rdfs:label "Groove 137" ; rdf:value 137 ] ,
-                     [ rdfs:label "Groove 138" ; rdf:value 138 ] ,
-                     [ rdfs:label "Groove 139" ; rdf:value 139 ] ,
-                     [ rdfs:label "Groove 140" ; rdf:value 140 ] ,
-                     [ rdfs:label "Groove 141" ; rdf:value 141 ] ,
-                     [ rdfs:label "Groove 142" ; rdf:value 142 ] ,
-                     [ rdfs:label "Groove 143" ; rdf:value 143 ] ,
-                     [ rdfs:label "Groove 144" ; rdf:value 144 ] ,
-                     [ rdfs:label "Groove 145" ; rdf:value 145 ] ,
-                     [ rdfs:label "Groove 146" ; rdf:value 146 ] ,
-                     [ rdfs:label "Groove 147" ; rdf:value 147 ] ,
-                     [ rdfs:label "Groove 148" ; rdf:value 148 ] ,
-                     [ rdfs:label "Groove 149" ; rdf:value 149 ] ,
-                     [ rdfs:label "Groove 150" ; rdf:value 150 ] ,
-                     [ rdfs:label "Groove 151" ; rdf:value 151 ] ,
-                     [ rdfs:label "Groove 152" ; rdf:value 152 ] ,
-                     [ rdfs:label "Groove 153" ; rdf:value 153 ] ,
-                     [ rdfs:label "Groove 154" ; rdf:value 154 ] ,
-                     [ rdfs:label "Groove 155" ; rdf:value 155 ] ,
-                     [ rdfs:label "Groove 156" ; rdf:value 156 ] ,
-                     [ rdfs:label "Groove 157" ; rdf:value 157 ] ,
-                     [ rdfs:label "Groove 158" ; rdf:value 158 ] ,
-                     [ rdfs:label "Groove 159" ; rdf:value 159 ] ,
-                     [ rdfs:label "Groove 160" ; rdf:value 160 ] ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "intro" ; lv2:name "Intro" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 27 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "Off" ; rdf:value 0 ] ,
+                     [ rdfs:label "Metronome" ; rdf:value 1 ] ,
+                     [ rdfs:label "A" ; rdf:value 2 ] ,
+                     [ rdfs:label "B" ; rdf:value 3 ] ,
+                     [ rdfs:label "C" ; rdf:value 4 ] ,
+                     [ rdfs:label "D" ; rdf:value 5 ] ,
+                     [ rdfs:label "E" ; rdf:value 6 ] ,
+                     [ rdfs:label "F" ; rdf:value 7 ] ,
+                     [ rdfs:label "G" ; rdf:value 8 ] ,
+                     [ rdfs:label "H" ; rdf:value 9 ] ,
+                     [ rdfs:label "I" ; rdf:value 10 ] ,
+                     [ rdfs:label "J" ; rdf:value 11 ] ,
+                     [ rdfs:label "K" ; rdf:value 12 ] ,
+                     [ rdfs:label "L" ; rdf:value 13 ] ,
+                     [ rdfs:label "M" ; rdf:value 14 ] ,
+                     [ rdfs:label "N" ; rdf:value 15 ] ,
+                     [ rdfs:label "O" ; rdf:value 16 ] ,
+                     [ rdfs:label "P" ; rdf:value 17 ] ,
+                     [ rdfs:label "Q" ; rdf:value 18 ] ,
+                     [ rdfs:label "R" ; rdf:value 19 ] ,
+                     [ rdfs:label "S" ; rdf:value 20 ] ,
+                     [ rdfs:label "T" ; rdf:value 21 ] ,
+                     [ rdfs:label "U" ; rdf:value 22 ] ,
+                     [ rdfs:label "V" ; rdf:value 23 ] ,
+                     [ rdfs:label "W" ; rdf:value 24 ] ,
+                     [ rdfs:label "X" ; rdf:value 25 ] ,
+                     [ rdfs:label "Y" ; rdf:value 26 ] ,
+                     [ rdfs:label "Z" ; rdf:value 27 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "precedent" ; lv2:name "Previous" ;
-      rdfs:comment "Previous groove, from the next bar." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "part" ; lv2:name "Part" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "Verse" ; rdf:value 0 ] ,
+                     [ rdfs:label "Pre-Chorus" ; rdf:value 1 ] ,
+                     [ rdfs:label "Chorus" ; rdf:value 2 ] ,
+                     [ rdfs:label "Bridge" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "suivant" ; lv2:name "Next" ;
-      rdfs:comment "Next groove, from the next bar." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
-      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "fill" ; lv2:name "Fill" ;
-      rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
-      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 9 ; lv2:symbol "groove_joue" ; lv2:name "Playing" ;
-      rdfs:comment "Groove being played (- when unknown)." ;
-      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 160 ; lv2:portProperty lv2:integer, lv2:enumeration ;
-      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
-                     [ rdfs:label "1" ; rdf:value 1 ] ,
-                     [ rdfs:label "2" ; rdf:value 2 ] ,
-                     [ rdfs:label "3" ; rdf:value 3 ] ,
-                     [ rdfs:label "4" ; rdf:value 4 ] ,
-                     [ rdfs:label "5" ; rdf:value 5 ] ,
-                     [ rdfs:label "6" ; rdf:value 6 ] ,
-                     [ rdfs:label "7" ; rdf:value 7 ] ,
-                     [ rdfs:label "8" ; rdf:value 8 ] ,
-                     [ rdfs:label "9" ; rdf:value 9 ] ,
-                     [ rdfs:label "10" ; rdf:value 10 ] ,
-                     [ rdfs:label "11" ; rdf:value 11 ] ,
-                     [ rdfs:label "12" ; rdf:value 12 ] ,
-                     [ rdfs:label "13" ; rdf:value 13 ] ,
-                     [ rdfs:label "14" ; rdf:value 14 ] ,
-                     [ rdfs:label "15" ; rdf:value 15 ] ,
-                     [ rdfs:label "16" ; rdf:value 16 ] ,
-                     [ rdfs:label "17" ; rdf:value 17 ] ,
-                     [ rdfs:label "18" ; rdf:value 18 ] ,
-                     [ rdfs:label "19" ; rdf:value 19 ] ,
-                     [ rdfs:label "20" ; rdf:value 20 ] ,
-                     [ rdfs:label "21" ; rdf:value 21 ] ,
-                     [ rdfs:label "22" ; rdf:value 22 ] ,
-                     [ rdfs:label "23" ; rdf:value 23 ] ,
-                     [ rdfs:label "24" ; rdf:value 24 ] ,
-                     [ rdfs:label "25" ; rdf:value 25 ] ,
-                     [ rdfs:label "26" ; rdf:value 26 ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "variation" ; lv2:name "Variation" ;
+      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ,
                      [ rdfs:label "27" ; rdf:value 27 ] ,
                      [ rdfs:label "28" ; rdf:value 28 ] ,
                      [ rdfs:label "29" ; rdf:value 29 ] ,
@@ -1033,65 +920,230 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "125" ; rdf:value 125 ] ,
                      [ rdfs:label "126" ; rdf:value 126 ] ,
                      [ rdfs:label "127" ; rdf:value 127 ] ,
-                     [ rdfs:label "128" ; rdf:value 128 ] ,
-                     [ rdfs:label "129" ; rdf:value 129 ] ,
-                     [ rdfs:label "130" ; rdf:value 130 ] ,
-                     [ rdfs:label "131" ; rdf:value 131 ] ,
-                     [ rdfs:label "132" ; rdf:value 132 ] ,
-                     [ rdfs:label "133" ; rdf:value 133 ] ,
-                     [ rdfs:label "134" ; rdf:value 134 ] ,
-                     [ rdfs:label "135" ; rdf:value 135 ] ,
-                     [ rdfs:label "136" ; rdf:value 136 ] ,
-                     [ rdfs:label "137" ; rdf:value 137 ] ,
-                     [ rdfs:label "138" ; rdf:value 138 ] ,
-                     [ rdfs:label "139" ; rdf:value 139 ] ,
-                     [ rdfs:label "140" ; rdf:value 140 ] ,
-                     [ rdfs:label "141" ; rdf:value 141 ] ,
-                     [ rdfs:label "142" ; rdf:value 142 ] ,
-                     [ rdfs:label "143" ; rdf:value 143 ] ,
-                     [ rdfs:label "144" ; rdf:value 144 ] ,
-                     [ rdfs:label "145" ; rdf:value 145 ] ,
-                     [ rdfs:label "146" ; rdf:value 146 ] ,
-                     [ rdfs:label "147" ; rdf:value 147 ] ,
-                     [ rdfs:label "148" ; rdf:value 148 ] ,
-                     [ rdfs:label "149" ; rdf:value 149 ] ,
-                     [ rdfs:label "150" ; rdf:value 150 ] ,
-                     [ rdfs:label "151" ; rdf:value 151 ] ,
-                     [ rdfs:label "152" ; rdf:value 152 ] ,
-                     [ rdfs:label "153" ; rdf:value 153 ] ,
-                     [ rdfs:label "154" ; rdf:value 154 ] ,
-                     [ rdfs:label "155" ; rdf:value 155 ] ,
-                     [ rdfs:label "156" ; rdf:value 156 ] ,
-                     [ rdfs:label "157" ; rdf:value 157 ] ,
-                     [ rdfs:label "158" ; rdf:value 158 ] ,
-                     [ rdfs:label "159" ; rdf:value 159 ] ,
-                     [ rdfs:label "160" ; rdf:value 160 ] ;
+                     [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "outro" ; lv2:name "Outro" ;
+      lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 26 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
+      rdfs:comment "Previous variation of the current part, from the next bar." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
+      rdfs:comment "Next variation of the current part, from the next bar." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "fill" ; lv2:name "Fill" ;
+      rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
+      rdfs:comment "Previous part (verse, chorus…), with a transition fill." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
+      rdfs:comment "Next part (verse, chorus…), with a transition fill." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "fin" ; lv2:name "End" ;
+      rdfs:comment "Plays the outro (chosen in Outro), then stops everything." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Intro" ; rdf:value 1 ] ,
+                     [ rdfs:label "Verse" ; rdf:value 2 ] ,
+                     [ rdfs:label "Pre-Chorus" ; rdf:value 3 ] ,
+                     [ rdfs:label "Chorus" ; rdf:value 4 ] ,
+                     [ rdfs:label "Bridge" ; rdf:value 5 ] ,
+                     [ rdfs:label "Groove" ; rdf:value 6 ] ,
+                     [ rdfs:label "Outro" ; rdf:value 7 ] ,
+                     [ rdfs:label "Fill" ; rdf:value 8 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "A" ; rdf:value 1 ] ,
+                     [ rdfs:label "B" ; rdf:value 2 ] ,
+                     [ rdfs:label "C" ; rdf:value 3 ] ,
+                     [ rdfs:label "D" ; rdf:value 4 ] ,
+                     [ rdfs:label "E" ; rdf:value 5 ] ,
+                     [ rdfs:label "F" ; rdf:value 6 ] ,
+                     [ rdfs:label "G" ; rdf:value 7 ] ,
+                     [ rdfs:label "H" ; rdf:value 8 ] ,
+                     [ rdfs:label "I" ; rdf:value 9 ] ,
+                     [ rdfs:label "J" ; rdf:value 10 ] ,
+                     [ rdfs:label "K" ; rdf:value 11 ] ,
+                     [ rdfs:label "L" ; rdf:value 12 ] ,
+                     [ rdfs:label "M" ; rdf:value 13 ] ,
+                     [ rdfs:label "N" ; rdf:value 14 ] ,
+                     [ rdfs:label "O" ; rdf:value 15 ] ,
+                     [ rdfs:label "P" ; rdf:value 16 ] ,
+                     [ rdfs:label "Q" ; rdf:value 17 ] ,
+                     [ rdfs:label "R" ; rdf:value 18 ] ,
+                     [ rdfs:label "S" ; rdf:value 19 ] ,
+                     [ rdfs:label "T" ; rdf:value 20 ] ,
+                     [ rdfs:label "U" ; rdf:value 21 ] ,
+                     [ rdfs:label "V" ; rdf:value 22 ] ,
+                     [ rdfs:label "W" ; rdf:value 23 ] ,
+                     [ rdfs:label "X" ; rdf:value 24 ] ,
+                     [ rdfs:label "Y" ; rdf:value 25 ] ,
+                     [ rdfs:label "Z" ; rdf:value 26 ] ,
+                     [ rdfs:label "27" ; rdf:value 27 ] ,
+                     [ rdfs:label "28" ; rdf:value 28 ] ,
+                     [ rdfs:label "29" ; rdf:value 29 ] ,
+                     [ rdfs:label "30" ; rdf:value 30 ] ,
+                     [ rdfs:label "31" ; rdf:value 31 ] ,
+                     [ rdfs:label "32" ; rdf:value 32 ] ,
+                     [ rdfs:label "33" ; rdf:value 33 ] ,
+                     [ rdfs:label "34" ; rdf:value 34 ] ,
+                     [ rdfs:label "35" ; rdf:value 35 ] ,
+                     [ rdfs:label "36" ; rdf:value 36 ] ,
+                     [ rdfs:label "37" ; rdf:value 37 ] ,
+                     [ rdfs:label "38" ; rdf:value 38 ] ,
+                     [ rdfs:label "39" ; rdf:value 39 ] ,
+                     [ rdfs:label "40" ; rdf:value 40 ] ,
+                     [ rdfs:label "41" ; rdf:value 41 ] ,
+                     [ rdfs:label "42" ; rdf:value 42 ] ,
+                     [ rdfs:label "43" ; rdf:value 43 ] ,
+                     [ rdfs:label "44" ; rdf:value 44 ] ,
+                     [ rdfs:label "45" ; rdf:value 45 ] ,
+                     [ rdfs:label "46" ; rdf:value 46 ] ,
+                     [ rdfs:label "47" ; rdf:value 47 ] ,
+                     [ rdfs:label "48" ; rdf:value 48 ] ,
+                     [ rdfs:label "49" ; rdf:value 49 ] ,
+                     [ rdfs:label "50" ; rdf:value 50 ] ,
+                     [ rdfs:label "51" ; rdf:value 51 ] ,
+                     [ rdfs:label "52" ; rdf:value 52 ] ,
+                     [ rdfs:label "53" ; rdf:value 53 ] ,
+                     [ rdfs:label "54" ; rdf:value 54 ] ,
+                     [ rdfs:label "55" ; rdf:value 55 ] ,
+                     [ rdfs:label "56" ; rdf:value 56 ] ,
+                     [ rdfs:label "57" ; rdf:value 57 ] ,
+                     [ rdfs:label "58" ; rdf:value 58 ] ,
+                     [ rdfs:label "59" ; rdf:value 59 ] ,
+                     [ rdfs:label "60" ; rdf:value 60 ] ,
+                     [ rdfs:label "61" ; rdf:value 61 ] ,
+                     [ rdfs:label "62" ; rdf:value 62 ] ,
+                     [ rdfs:label "63" ; rdf:value 63 ] ,
+                     [ rdfs:label "64" ; rdf:value 64 ] ,
+                     [ rdfs:label "65" ; rdf:value 65 ] ,
+                     [ rdfs:label "66" ; rdf:value 66 ] ,
+                     [ rdfs:label "67" ; rdf:value 67 ] ,
+                     [ rdfs:label "68" ; rdf:value 68 ] ,
+                     [ rdfs:label "69" ; rdf:value 69 ] ,
+                     [ rdfs:label "70" ; rdf:value 70 ] ,
+                     [ rdfs:label "71" ; rdf:value 71 ] ,
+                     [ rdfs:label "72" ; rdf:value 72 ] ,
+                     [ rdfs:label "73" ; rdf:value 73 ] ,
+                     [ rdfs:label "74" ; rdf:value 74 ] ,
+                     [ rdfs:label "75" ; rdf:value 75 ] ,
+                     [ rdfs:label "76" ; rdf:value 76 ] ,
+                     [ rdfs:label "77" ; rdf:value 77 ] ,
+                     [ rdfs:label "78" ; rdf:value 78 ] ,
+                     [ rdfs:label "79" ; rdf:value 79 ] ,
+                     [ rdfs:label "80" ; rdf:value 80 ] ,
+                     [ rdfs:label "81" ; rdf:value 81 ] ,
+                     [ rdfs:label "82" ; rdf:value 82 ] ,
+                     [ rdfs:label "83" ; rdf:value 83 ] ,
+                     [ rdfs:label "84" ; rdf:value 84 ] ,
+                     [ rdfs:label "85" ; rdf:value 85 ] ,
+                     [ rdfs:label "86" ; rdf:value 86 ] ,
+                     [ rdfs:label "87" ; rdf:value 87 ] ,
+                     [ rdfs:label "88" ; rdf:value 88 ] ,
+                     [ rdfs:label "89" ; rdf:value 89 ] ,
+                     [ rdfs:label "90" ; rdf:value 90 ] ,
+                     [ rdfs:label "91" ; rdf:value 91 ] ,
+                     [ rdfs:label "92" ; rdf:value 92 ] ,
+                     [ rdfs:label "93" ; rdf:value 93 ] ,
+                     [ rdfs:label "94" ; rdf:value 94 ] ,
+                     [ rdfs:label "95" ; rdf:value 95 ] ,
+                     [ rdfs:label "96" ; rdf:value 96 ] ,
+                     [ rdfs:label "97" ; rdf:value 97 ] ,
+                     [ rdfs:label "98" ; rdf:value 98 ] ,
+                     [ rdfs:label "99" ; rdf:value 99 ] ,
+                     [ rdfs:label "100" ; rdf:value 100 ] ,
+                     [ rdfs:label "101" ; rdf:value 101 ] ,
+                     [ rdfs:label "102" ; rdf:value 102 ] ,
+                     [ rdfs:label "103" ; rdf:value 103 ] ,
+                     [ rdfs:label "104" ; rdf:value 104 ] ,
+                     [ rdfs:label "105" ; rdf:value 105 ] ,
+                     [ rdfs:label "106" ; rdf:value 106 ] ,
+                     [ rdfs:label "107" ; rdf:value 107 ] ,
+                     [ rdfs:label "108" ; rdf:value 108 ] ,
+                     [ rdfs:label "109" ; rdf:value 109 ] ,
+                     [ rdfs:label "110" ; rdf:value 110 ] ,
+                     [ rdfs:label "111" ; rdf:value 111 ] ,
+                     [ rdfs:label "112" ; rdf:value 112 ] ,
+                     [ rdfs:label "113" ; rdf:value 113 ] ,
+                     [ rdfs:label "114" ; rdf:value 114 ] ,
+                     [ rdfs:label "115" ; rdf:value 115 ] ,
+                     [ rdfs:label "116" ; rdf:value 116 ] ,
+                     [ rdfs:label "117" ; rdf:value 117 ] ,
+                     [ rdfs:label "118" ; rdf:value 118 ] ,
+                     [ rdfs:label "119" ; rdf:value 119 ] ,
+                     [ rdfs:label "120" ; rdf:value 120 ] ,
+                     [ rdfs:label "121" ; rdf:value 121 ] ,
+                     [ rdfs:label "122" ; rdf:value 122 ] ,
+                     [ rdfs:label "123" ; rdf:value 123 ] ,
+                     [ rdfs:label "124" ; rdf:value 124 ] ,
+                     [ rdfs:label "125" ; rdf:value 125 ] ,
+                     [ rdfs:label "126" ; rdf:value 126 ] ,
+                     [ rdfs:label "127" ; rdf:value 127 ] ,
+                     [ rdfs:label "128" ; rdf:value 128 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart drums and loops together from bar 1." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 18 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
       rdfs:comment "Raise the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 20 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
       rdfs:comment "Lower the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "tap" ; lv2:name "Tap" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 21 ; lv2:symbol "tap" ; lv2:name "Tap" ;
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 22 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
       rdfs:comment "Hydrogen metronome click on or off." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 23 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -1104,22 +1156,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 17 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 24 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 25 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 19 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 26 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 20 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 27 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -1325,11 +1377,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 21 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 28 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 22 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 29 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
@@ -1337,9 +1389,9 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
     [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
-      lv2:designation lv2:control ; lv2:index 23 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+      lv2:designation lv2:control ; lv2:index 30 ; lv2:symbol "control" ; lv2:name "Control" ] ,
     [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
-      lv2:designation lv2:control ; lv2:index 24 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+      lv2:designation lv2:control ; lv2:index 31 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
 
 <http://pedal-bridge.local/plugins/drum-stereo> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-stereo#ui> .
 

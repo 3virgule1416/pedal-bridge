@@ -58,6 +58,9 @@ enum pb_drum_btn {
     PB_DBTN_BPM_UP,     /* BPM + : +1 par pas ; tenu, le plugin répète (de plus en plus vite) */
     PB_DBTN_BPM_DOWN,   /* BPM - */
     PB_DBTN_FILL,       /* fill de la partie en cours, à la mesure suivante */
+    PB_DBTN_PART_PREV,  /* partie précédente (fill de transition) */
+    PB_DBTN_PART_NEXT,  /* partie suivante (fill de transition) */
+    PB_DBTN_OUTRO,      /* fin de la chanson, puis arrêt */
     PB_DBTN_COUNT
 };
 
@@ -119,7 +122,11 @@ typedef struct pb_ctl {
     uint32_t drum_tempo;        /* réglage Tempo, en centièmes de BPM */
     uint32_t drum_metro;        /* interrupteur Metronome : 0 éteint, 1 allumé */
     uint32_t drum_kit_num;      /* liste Kit : 1..N (ordre alphabétique des .kit) ; 0 = pas choisi */
-    uint8_t  pad5[36];
+    uint32_t drum_part;         /* liste Part : 1 Verse, 2 Pre-Chorus, 3 Chorus, 4 Bridge ; 0 = pas choisi */
+    uint32_t drum_var;          /* liste Variation : 1.. (A, B, C…) */
+    uint32_t drum_intro;        /* liste Intro : 1 Off, 2 Metronome, 3.. = A, B… ; 0 = pas choisi */
+    uint32_t drum_outro;        /* liste Outro : 1.. = A, B… */
+    uint8_t  pad5[20];
 
     /* Ligne 6 : compteurs des boutons de DLS Drum. */
     uint32_t drum_btn[PB_CTL_BUTTONS];
@@ -128,7 +135,9 @@ typedef struct pb_ctl {
     uint32_t h2_ok;             /* l'OSC d'Hydrogen écoute */
     uint32_t groove_cur;        /* groove joué, à partir de 1 (0 = inconnu) */
     uint32_t groove_count;      /* patterns du morceau (0 = inconnu) */
-    uint8_t  pad7[52];
+    uint32_t part_cur;          /* partie jouée : 0 -, 1 Intro, 2 Verse, 3 Pre-Chorus, 4 Chorus, 5 Bridge, 6 Groove, 7 Outro, 8 Fill */
+    uint32_t var_cur;           /* variation jouée, à partir de 1 (0 = -) */
+    uint8_t  pad7[44];
 
     /* Ligne 8 et suivantes : morceau Hydrogen choisi dans DLS Drum (sélecteur
      * de fichier). Verrou de séquence : le plugin met drum_song_seq impair,

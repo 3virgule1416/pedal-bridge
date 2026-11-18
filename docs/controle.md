@@ -498,6 +498,36 @@ en file, d'un groupe à l'autre.
   Vérifié : fill parti à « mesure 2 temps 4 +99 % », retour à « mesure 3 temps
   4 +99 % ».
 
+### Parties, variations, intro et outro (fait, 2026-11-18)
+
+Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
+
+| Contrôle | Valeurs | Effet |
+|---|---|---|
+| Intro | Off, Metronome, A, B… | au Play : rien, 1 mesure de clic (pattern « Silence » + métronome), ou l'intro choisie, **une fois** |
+| Part | Verse, Pre-Chorus, Chorus, Bridge | partie qui tourne en boucle (absente : la plus proche ; chanson sans parties : « Groove ») |
+| Variation | A, B, C… | variation de la partie affichée ; chaque partie retient la sienne |
+| Outro | A, B… | fin jouée par End, une fois, puis tout s'arrête |
+| Var ◀ ▶ | boutons | variation précédente / suivante, à la mesure suivante |
+| Fill | bouton | fill de la partie, puis la phrase reprend (même pattern, ou le suivant si le fill le finissait) |
+| Part ◀ ▶ | boutons | partie précédente / suivante : transition de la chanson, sinon un fill de la partie quittée, puis la nouvelle partie |
+| End | bouton | outro choisie puis arrêt (pas d'outro : arrêt à la barre) |
+| Playing, Var | sorties | partie jouée (Intro, Verse…, Outro, Fill) et variation |
+
+- **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
+  coupée à 4, limite d'Hydrogen) forment **une** variation, jouée d'affilée.
+  `.parts.txt` : `part:Verse	4+5,6+7` (variations séparées par `,`, patterns
+  enchaînés par `+`). Cycle de SooperLooper = longueur de la phrase.
+- Le pont choisit chaque pattern ~10 ms avant son départ, d'après la position
+  du transport JACK, et le note dans son journal (« pattern 12 (mesure 3 temps
+  4.99, une fois) »).
+- Les listes Part et Variation de PiPedal suivent les boutons (websocket).
+- Vérifié (Contemporary S06) : Fill à la barre puis retour ; Part ▶ avec fill
+  de transition ; Var ▶ ; End : outro de 3 patterns puis arrêt.
+- Limite : un fill au milieu d'un pattern de 4 mesures le fait repartir à sa
+  mesure 1 (Hydrogen redémarre un pattern choisi au début) ; la phrase est
+  alors décalée jusqu'à la fin de ce pattern.
+
 ### Fonctions de batterie (définitions)
 
 Chaque chanson (style) devient une petite chanson à la BeatBuddy, construite à

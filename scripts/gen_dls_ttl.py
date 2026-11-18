@@ -182,16 +182,30 @@ def drum_plugin(uri, name, label, stereo):
     i = 4 if stereo else 2
     D, T, P = "drum_g", "transport_g", "pont_g"
     # Ordre = enum de lv2/drum.c, rangé par section.
+    song_index = i + 1                            # Song (sélecteur) juste après Kit
     p.append(ctl_in(i, "kit", "Kit", "",
                     enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), D)); i += 1
-    song_index = i
-    p.append(ctl_in(i, "groove", "Groove", "",
-                    enum(1, 160, [(k, f"Groove {k}") for k in range(1, 161)]), D)); i += 1
-    p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
-    p.append(button(i, "suivant", "Next", "Next groove, from the next bar.", D)); i += 1
+    LETTERS = [chr(65 + k) for k in range(26)]
+    VARS = LETTERS + [str(k) for k in range(27, 129)]                    # A..Z puis 27..128
+    p.append(ctl_in(i, "intro", "Intro", "",
+                    enum(0, 27, [(0, "Off"), (1, "Metronome")] + [(k + 2, LETTERS[k]) for k in range(26)]), D)); i += 1
+    p.append(ctl_in(i, "part", "Part", "",
+                    enum(0, 3, [(0, "Verse"), (1, "Pre-Chorus"), (2, "Chorus"), (3, "Bridge")]), D)); i += 1
+    p.append(ctl_in(i, "variation", "Variation", "",
+                    enum(1, 128, [(k + 1, VARS[k]) for k in range(128)]), D)); i += 1
+    p.append(ctl_in(i, "outro", "Outro", "",
+                    enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), D)); i += 1
+    p.append(button(i, "precedent", "Var ◀", "Previous variation of the current part, from the next bar.", D)); i += 1
+    p.append(button(i, "suivant", "Var ▶", "Next variation of the current part, from the next bar.", D)); i += 1
     p.append(button(i, "fill", "Fill", "Plays a fill of the current part during the next bar, then back to the groove.", D)); i += 1
-    p.append(ctl_out(i, "groove_joue", "Playing", "Groove being played (- when unknown).",
-                     enum(0, 160, [(0, "-")] + [(k, str(k)) for k in range(1, 161)]), D)); i += 1
+    p.append(button(i, "partie_prec", "Part ◀", "Previous part (verse, chorus…), with a transition fill.", D)); i += 1
+    p.append(button(i, "partie_suiv", "Part ▶", "Next part (verse, chorus…), with a transition fill.", D)); i += 1
+    p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything.", D)); i += 1
+    p.append(ctl_out(i, "partie_jouee", "Playing", "",
+                     enum(0, 8, [(0, "-"), (1, "Intro"), (2, "Verse"), (3, "Pre-Chorus"), (4, "Chorus"),
+                                 (5, "Bridge"), (6, "Groove"), (7, "Outro"), (8, "Fill")]), D)); i += 1
+    p.append(ctl_out(i, "groove_joue", "Var", "",
+                     enum(0, 128, [(0, "-")] + [(k + 1, VARS[k]) for k in range(128)]), D)); i += 1
 
     p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", T)); i += 1
     p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",

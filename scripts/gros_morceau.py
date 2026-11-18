@@ -92,10 +92,27 @@ def role_of(pattern):
     return "Groove"
 
 
+def phrases(nums, pats):
+    """Regroupe les moitiés d'une phrase coupée à 4 mesures (« Verse (1) »,
+    « Verse (2) »…, consécutives) : -> [[4, 5], [6, 7], [8]]."""
+    out, prev = [], None
+    for j in nums:
+        name = (re.search(r"<name>([^<]*)</name>", pats[j - 1]) or [None, ""])[1]
+        m = re.match(r"^(.*) \((\d+)\)$", name)
+        base, k = (m.group(1), int(m.group(2))) if m else (None, 0)
+        if base and prev and prev[0] == base and k == prev[1] + 1 and out and out[-1][-1] == j - 1:
+            out[-1].append(j)
+        else:
+            out.append([j])
+        prev = (base, k) if base else None
+    return out
+
+
 def structure(pats):
-    """-> {clé: [numéros de groove dans la chanson, à partir de 1]}.
-    Clés : part:<Partie> (grooves), fill:<Partie> (aussi fill:Intro et
-    fill:Outro), fill:* (fills communs), intro, outro, transition, hits."""
+    """-> {clé: [variations]}, une variation = [numéros de pattern enchaînés].
+    Clés : part:<Partie>, fill:<Partie> (aussi fill:Intro), fill:* (fills
+    communs), intro, outro (phrases de fin + fills de fin), transition, hits.
+    Numéros dans la chanson, à partir de 1."""
     st = {}
     for j, p in enumerate(pats, 1):
         r = role_of(p)
@@ -118,7 +135,15 @@ def structure(pats):
         st.setdefault(key, []).append(j)
     if not any(k.startswith("part:") for k in st):           # rien de jouable : tout devient groove
         st = {"part:Groove": list(range(1, len(pats) + 1))}
-    return st
+    out = {}
+    for key, nums in st.items():
+        if key.startswith("part:") or key in ("intro", "outro"):
+            out[key] = phrases(nums, pats)                    # phrases enchaînées
+        elif key != "fill:Outro":
+            out[key] = [[n] for n in nums]                    # un pattern par variation
+    if "fill:Outro" in st:                                    # fins « fill » : aussi des fins
+        out.setdefault("outro", []).extend([[n] for n in st["fill:Outro"]])
+    return out
 
 
 def main():
@@ -151,6 +176,9 @@ def main():
             all_pats.append(p)
         index[rel] = {"first": len(all_pats) - len(pats), "count": len(pats), "sizes": sizes,
                       "parts": structure(pats)}
+    silence = len(all_pats)
+    all_pats.append("<pattern>\n<name>Silence</name>\n<info></info>\n<category>DLS</category>\n"
+                    "<size>192</size>\n<denominator>4</denominator>\n<noteList>\n</noteList>\n</pattern>")
     a, b = template.find("<patternList>"), template.find("</patternList>")
     s, e = template.find("<patternSequence>"), template.find("</patternSequence>")
     first = re.search(r"<name>([^<]*)</name>", all_pats[0]).group(1)
@@ -166,11 +194,12 @@ def main():
     with open(out_path + ".index.txt", "w", encoding="utf-8", newline="\n") as f:
         for rel, e in index.items():
             f.write(f"{e['first']}\t{e['count']}\t{rel}\n")
+        f.write(f"{silence}\t1\t@silence\n")
     # Structure des parties, pour le pont : « chemin<TAB>clé<TAB>1,2,3 ».
     with open(out_path + ".parts.txt", "w", encoding="utf-8", newline="\n") as f:
         for rel, e in index.items():
-            for key, nums in e["parts"].items():
-                f.write(f"{rel}\t{key}\t{','.join(map(str, nums))}\n")
+            for key, variations in e["parts"].items():
+                f.write(f"{rel}\t{key}\t{','.join('+'.join(map(str, v)) for v in variations)}\n")
     os.replace(out_path + ".tmp", out_path)               # le morceau en dernier : l'index est prêt
     print(f"{out_path} : {len(index)} chansons, {len(all_pats)} patterns, "
           f"{os.path.getsize(out_path) / 1e6:.1f} Mo, {time.time() - t0:.1f} s")

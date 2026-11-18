@@ -44,7 +44,8 @@
  * une nouvelle boîte dès que la section change d'un port au suivant). */
 enum {
     /* Drums */
-    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, C_FILL, O_GROOVE,
+    C_KIT = 0, C_INTRO, C_PART, C_GROOVE /* Variation */, C_OUTRO, C_PREV, C_NEXT, C_FILL,
+    C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN, O_PART, O_GROOVE /* variation jouée */,
     /* Transport */
     C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
@@ -55,7 +56,8 @@ enum {
 };
 
 /* Port de chaque bouton, dans l'ordre de enum pb_drum_btn. */
-static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN, C_FILL };
+static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN, C_FILL,
+                                             C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN };
 
 enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
 
@@ -281,7 +283,7 @@ static void run(LV2_Handle h, uint32_t n)
 
     pb_ctl *ctl = p->ctl;
     if (!ctl) {
-        set_out(p, O_GROOVE, 0); set_out(p, O_BEAT, 0); set_out(p, O_PULSE, 0);
+        set_out(p, O_GROOVE, 0); set_out(p, O_PART, 0); set_out(p, O_BEAT, 0); set_out(p, O_PULSE, 0);
         set_out(p, O_ONE, 0); set_out(p, O_ROLLING, 0); set_out(p, O_TEMPO, 0);
         set_out(p, O_LINK, back ? LINK_OK : LINK_NONE);
         return;
@@ -296,6 +298,10 @@ static void run(LV2_Handle h, uint32_t n)
             if (p->f[F_SONG].publish) { publish_path(&ctl->drum_song_seq, ctl->drum_song, p->f[F_SONG].path); p->f[F_SONG].publish = 0; }
         }
         PB_STORE_RLX(&ctl->drum_groove, (uint32_t)groove);
+        PB_STORE_RLX(&ctl->drum_var, (uint32_t)groove);
+        PB_STORE_RLX(&ctl->drum_part, (uint32_t)lrintf(port(p, C_PART, 0.0f)) + 1u);
+        PB_STORE_RLX(&ctl->drum_intro, (uint32_t)lrintf(port(p, C_INTRO, 0.0f)) + 1u);
+        PB_STORE_RLX(&ctl->drum_outro, (uint32_t)lrintf(port(p, C_OUTRO, 1.0f)));
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
         PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
         {
@@ -327,6 +333,8 @@ static void run(LV2_Handle h, uint32_t n)
     if (cur > PB_CTL_GROOVES) cur = 0;
 
     set_out(p, O_GROOVE, (float)cur);
+    uint32_t part = alive ? PB_LOAD_RLX(&ctl->part_cur) : 0u;
+    set_out(p, O_PART, (float)(part <= 8 ? part : 0));
     set_out(p, O_BEAT, rolling ? (float)beat : 0.0f);
     set_out(p, O_PULSE, pulse ? 1.0f : 0.0f);
     set_out(p, O_ONE, pulse && beat == 1 ? 1.0f : 0.0f);
