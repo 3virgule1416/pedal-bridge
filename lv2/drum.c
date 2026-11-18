@@ -10,12 +10,13 @@
  * tempo), interrupteur du métronome. Le client pedal_bridge pilote Hydrogen et le transport, et renvoie
  * le groove joué et la mesure.
  *
- * Kit et morceau (sélecteurs de fichier de PiPedal, propriétés patch « kit »
- * et « song ») : les .kit du dossier /var/pipedal/audio_uploads/DLS Kits et
- * les .h2song de .../DLS Drums. Le plugin crée ces dossiers ouverts en
- * écriture à tous (2777) pour qu'on puisse y copier des fichiers sans sudo.
- * Les chemins choisis sont gardés dans le preset (état LV2) et passés au
- * client par le fichier de contrôle (verrou de séquence).
+ * Kit : liste fixe (les .kit de scripts/kits, en ordre alphabétique, écrits
+ * dans la description à la compilation). Morceau : sélecteur de fichier de
+ * PiPedal (propriété patch « song »), les .h2song du dossier
+ * /var/pipedal/audio_uploads/DLS Drums, que le plugin crée ouvert en écriture
+ * à tous (2777) pour qu'on puisse y copier des morceaux sans sudo. Le chemin
+ * est gardé dans le preset (état LV2) et passé au client par le fichier de
+ * contrôle (verrou de séquence).
  *
  * Temps réel : tout est ouvert à l'instanciation ; run() ne fait que des
  * atomiques, du calcul et des copies.
@@ -38,13 +39,12 @@
 #include <sys/stat.h>
 
 #define SONG_DIR "/var/pipedal/audio_uploads/DLS Drums"
-#define KIT_DIR  "/var/pipedal/audio_uploads/DLS Kits"
 
 /* Ports de contrôle après les ports audio, rangés par section (PiPedal ouvre
  * une nouvelle boîte dès que la section change d'un port au suivant). */
 enum {
     /* Drums */
-    C_GROOVE = 0, C_PREV, C_NEXT, O_GROOVE,
+    C_KIT = 0, C_GROOVE, C_PREV, C_NEXT, O_GROOVE,
     /* Transport */
     C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
@@ -69,7 +69,7 @@ enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
 typedef struct { uint32_t held, next; } Hold;      /* en trames */
 
 /* Propriété « fichier » (sélecteur de PiPedal). */
-enum { F_SONG = 0, F_KIT, F_NUM };
+enum { F_SONG = 0, F_NUM };
 typedef struct {
     LV2_URID urid;
     char     path[PB_CTL_PATH];
@@ -125,10 +125,8 @@ static LV2_Handle instantiate_common(double rate, int stereo, const LV2_Feature 
         p->u_property = m->map(m->handle, LV2_PATCH__property);
         p->u_value = m->map(m->handle, LV2_PATCH__value);
         p->f[F_SONG].urid = m->map(m->handle, PB_URI_DRUM_SONG);
-        p->f[F_KIT].urid = m->map(m->handle, PB_URI_DRUM_KIT);
         lv2_atom_forge_init(&p->forge, m);
         make_dir(SONG_DIR);
-        make_dir(KIT_DIR);
     }
     p->stereo = stereo;
     p->rate = (uint32_t)(rate + 0.5);
@@ -295,13 +293,15 @@ static void run(LV2_Handle h, uint32_t n)
     }
     if (PB_LOAD_ACQ(&ctl->drum_owner) == p->me) {
         if (p->map) {
-            /* Le kit d'abord : le client ouvre le morceau avec le bon kit. */
-            if (p->f[F_KIT].publish) { publish_path(&ctl->drum_kit_seq, ctl->drum_kit, p->f[F_KIT].path); p->f[F_KIT].publish = 0; }
             if (p->f[F_SONG].publish) { publish_path(&ctl->drum_song_seq, ctl->drum_song, p->f[F_SONG].path); p->f[F_SONG].publish = 0; }
         }
         PB_STORE_RLX(&ctl->drum_groove, (uint32_t)groove);
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
         PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
+        {
+            const long kit = lrintf(port(p, C_KIT, 0.0f));
+            PB_STORE_RLX(&ctl->drum_kit_num, kit >= 0 && kit < 64 ? (uint32_t)kit + 1u : 0u);
+        }
         for (int b = 0; b < PB_DBTN_COUNT; b++)
             if (steps[b])
                 PB_STORE_REL(&ctl->drum_btn[b], PB_LOAD_RLX(&ctl->drum_btn[b]) + steps[b]);

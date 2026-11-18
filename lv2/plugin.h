@@ -12,7 +12,6 @@
 #define PB_URI_DRUM_MONO     PB_URI_BASE "drum-mono"
 #define PB_URI_DRUM_STEREO   PB_URI_BASE "drum-stereo"
 #define PB_URI_DRUM_SONG     PB_URI_BASE "drum#song"      /* propriété patch : morceau */
-#define PB_URI_DRUM_KIT      PB_URI_BASE "drum#kit"       /* propriété patch : kit */
 
 /* Messages d'erreur : seulement hors temps réel (instantiate). */
 #define pb_log_error(...) fprintf(stderr, __VA_ARGS__)

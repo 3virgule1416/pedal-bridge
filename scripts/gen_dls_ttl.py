@@ -161,21 +161,27 @@ DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, 
 
 The drums are mixed into your signal. Place it at the end of the chain so the drums go through none of your effects. Without this plugin in the preset, the drums are silent, but the tempo and the bar grid keep working for the loops.
 
-Kit picks the drum kit (a .kit file of the "DLS Kits" folder) and Song the style (a .h2song file of the "DLS Drums" folder): every song plays on the chosen kit. A new choice is loaded when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
+Kit picks the drum kit and Song the style (a .h2song file of the "DLS Drums" folder): every song plays on the chosen kit. A new choice is loaded when the transport is stopped. Groove selects the Hydrogen pattern (1 to 16); Previous and Next step through them, for your pedals. The new groove starts at the next bar, and the length of a SooperLooper cycle follows the length of the groove. Play/Stop stops or restarts everything (drums and loops) from bar 1. BPM + and BPM - change the tempo by 1 (hold them to go faster). Tap sets the tempo from your last taps. Metronome turns the Hydrogen click on or off.
 
 Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/session.sh start).""" + '"""'
 
 
 SONG = G + "song"
-KIT = G + "kit"
+# Liste Kit : les .kit de scripts/kits, en ordre alphabétique (le pont lit le
+# même dossier dans le même ordre : numéro de la liste -> fichier .kit).
+KITS = sorted(f[:-4] for f in os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kits"))
+              if f.endswith(".kit"))
+KIT_DEFAULT = KITS.index("GM Rock Kit") if "GM Rock Kit" in KITS else 0
 
 
 def drum_plugin(uri, name, label, stereo):
     p = audio_ports(stereo)
     i = 4 if stereo else 2
-    first = i
     D, T, P = "drum_g", "transport_g", "pont_g"
     # Ordre = enum de lv2/drum.c, rangé par section.
+    p.append(ctl_in(i, "kit", "Kit", "Drum kit for every song. Loaded when the transport is stopped.",
+                    enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), D)); i += 1
+    song_index = i
     p.append(ctl_in(i, "groove", "Groove", "Hydrogen pattern to play (1 = first pattern of the song), from the next bar.",
                     enum(1, 16, [(k, f"Groove {k}") for k in range(1, 17)]), D)); i += 1
     p.append(button(i, "precedent", "Previous", "Previous groove, from the next bar.", D)); i += 1
@@ -211,8 +217,8 @@ def drum_plugin(uri, name, label, stereo):
       lv2:designation lv2:control ; lv2:index {i} ; lv2:symbol "notify" ; lv2:name "Notify" ]"""); i += 1
     head_ = plugin_head(uri, name, label, DRUM_DESC).replace("    lv2:port\n", f"""    lv2:optionalFeature urid:map ;
     lv2:extensionData state:interface ;
-    patch:readable <{KIT}>, <{SONG}> ;
-    patch:writable <{KIT}>, <{SONG}> ;
+    patch:readable <{SONG}> ;
+    patch:writable <{SONG}> ;
     lv2:port
 """)
     ui = f"""<{uri}> pipedal_ui:ui <{uri}#ui> .
@@ -221,20 +227,9 @@ def drum_plugin(uri, name, label, stereo):
     a pipedal_ui:ui ;
     pipedal_ui:fileProperties [
         a pipedal_ui:fileProperty ;
-        rdfs:label "Kit" ;
-        pipedal_ui:directory "DLS Kits" ;
-        lv2:index {first} ;
-        lv2:portGroup <{G}drum_g> ;
-        pipedal_ui:patchProperty <{KIT}> ;
-        pipedal_ui:fileTypes [
-            a pipedal_ui:fileType ; rdfs:label "Drum kit" ;
-            pipedal_ui:fileExtension ".kit" ; pipedal_ui:mimeType "text/plain"
-        ]
-    ] , [
-        a pipedal_ui:fileProperty ;
         rdfs:label "Song" ;
         pipedal_ui:directory "DLS Drums" ;
-        lv2:index {first} ;
+        lv2:index {song_index} ;
         lv2:portGroup <{G}drum_g> ;
         pipedal_ui:patchProperty <{SONG}> ;
         pipedal_ui:fileTypes [
@@ -247,13 +242,7 @@ def drum_plugin(uri, name, label, stereo):
     return head_ + " ,\n".join(p) + " .\n\n" + ui
 
 
-SONG_PARAM = f"""<{KIT}>
-    a lv2:Parameter ;
-    rdfs:label "Kit" ;
-    mod:fileTypes "kit" ;
-    rdfs:range atom:Path .
-
-<{SONG}>
+SONG_PARAM = f"""<{SONG}>
     a lv2:Parameter ;
     rdfs:label "Song" ;
     mod:fileTypes "h2song" ;

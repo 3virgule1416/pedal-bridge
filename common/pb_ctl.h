@@ -117,7 +117,8 @@ typedef struct pb_ctl {
     uint32_t drum_groove;       /* menu Groove, 1..16 */
     uint32_t drum_tempo;        /* réglage Tempo, en centièmes de BPM */
     uint32_t drum_metro;        /* interrupteur Metronome : 0 éteint, 1 allumé */
-    uint8_t  pad5[40];
+    uint32_t drum_kit_num;      /* liste Kit : 1..N (ordre alphabétique des .kit) ; 0 = pas choisi */
+    uint8_t  pad5[36];
 
     /* Ligne 6 : compteurs des boutons de DLS Drum. */
     uint32_t drum_btn[PB_CTL_BUTTONS];

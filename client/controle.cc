@@ -846,12 +846,12 @@ void tap_finish()
 std::string g_drum_song;           // morceau Hydrogen ouvert par le pont (chemin)
 std::string open_drum_song(const std::string &path, int groove = 1);
 
-/* Kit et morceau choisis dans DLS Drum (sélecteurs de fichier) : lus sous
- * verrou de séquence ; le morceau est « rendu » sur le kit (version mise en
- * cache, faite par scripts/rendu_kit.py), puis ouvert seulement à l'arrêt
- * (Hydrogen recharge tout et arrête la lecture). */
+/* Kit (liste fixe : numéro -> fichier .kit) et morceau (sélecteur de fichier,
+ * lu sous verrou de séquence) choisis dans DLS Drum. Le morceau est « rendu »
+ * sur le kit (version mise en cache, faite par scripts/rendu_kit.py), puis
+ * ouvert seulement à l'arrêt (Hydrogen recharge tout et arrête la lecture). */
 uint32_t g_dr_song_seq = 1;                     // impair : jamais lu
-uint32_t g_dr_kit_seq = 1;
+uint32_t g_dr_kit_num = 0xffffffffu;            // jamais lu
 std::string g_dr_song_sel, g_dr_kit_sel;        // choix actuels dans DLS Drum
 bool g_dr_song_pending = false;                 // à ouvrir au prochain arrêt
 int g_dr_song_groove = 1;                       // groove de départ du morceau en attente
@@ -873,6 +873,29 @@ bool read_seq_path(uint32_t *seq, const char *src, uint32_t &last, std::string &
 }
 
 std::string home_dir() { const char *h = std::getenv("HOME"); return h ? h : "/tmp"; }
+
+std::string scripts_dir()
+{
+    const char *sd = std::getenv("PB_SCRIPTS");
+    return sd ? sd : home_dir() + "/pedal-bridge-build/src/scripts";
+}
+
+/* Kit n (1..N) de la liste : n-ième .kit de scripts/kits en ordre alphabétique
+ * (même ordre que la liste écrite par gen_dls_ttl.py). "" si inconnu. */
+std::string kit_file(uint32_t n)
+{
+    const std::string dir = scripts_dir() + "/kits";
+    std::vector<std::string> kits;
+    if (DIR *d = opendir(dir.c_str())) {
+        while (dirent *e = readdir(d)) {
+            const std::string f = e->d_name;
+            if (f.size() > 4 && f.compare(f.size() - 4, 4, ".kit") == 0) kits.push_back(f);
+        }
+        closedir(d);
+    }
+    std::sort(kits.begin(), kits.end());
+    return n >= 1 && n <= kits.size() ? dir + "/" + kits[n - 1] : std::string();
+}
 
 std::string shell_quote(const std::string &s)
 {
@@ -900,8 +923,7 @@ std::string render_song(const std::string &song, const std::string &kit)
     const std::string out = dir + "/" + base(song);
     if (mtime(out) >= 0 && mtime(out) >= mtime(song) && mtime(out) >= mtime(kit)) return out;
     mkdirs(dir);
-    const char *sd = std::getenv("PB_SCRIPTS");
-    const std::string scripts = sd ? sd : home_dir() + "/pedal-bridge-build/src/scripts";
+    const std::string scripts = scripts_dir();
     const std::string cmd = "python3 " + shell_quote(scripts + "/rendu_kit.py") + " " + shell_quote(song) + " " +
                             shell_quote(kit) + " " + shell_quote(out) + " 2>&1";
     std::string msg;
@@ -925,7 +947,10 @@ void drum_song_poll(pb_ctl *k)
 {
     std::string path;
     bool changed = false;
-    if (read_seq_path(&k->drum_kit_seq, k->drum_kit, g_dr_kit_seq, path) && path != g_dr_kit_sel) {
+    const uint32_t kn = PB_LOAD_RLX(&k->drum_kit_num);
+    if (kn != g_dr_kit_num) g_dr_kit_num = kn, path = kn ? kit_file(kn) : std::string();
+    else path = g_dr_kit_sel;
+    if (path != g_dr_kit_sel) {
         g_dr_kit_sel = path;
         changed = true;
         /* Même style sur un autre kit : on garde le groove qui joue. */
@@ -966,7 +991,8 @@ void drum_poll(pb_ctl *k)
         g_dr_groove = 0;                   // groove du preset : choisi au prochain passage (sans démarrer)
         g_taps.clear();
         g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
-        g_dr_song_seq = g_dr_kit_seq = 1;  // kit et morceau du preset : relus (ouverts s'ils changent)
+        g_dr_song_seq = 1;                 // kit et morceau du preset : relus (ouverts s'ils changent)
+        g_dr_kit_num = 0xffffffffu;
         g_dr_song_preset = true;
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
         return;
