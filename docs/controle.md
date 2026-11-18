@@ -603,6 +603,20 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
   (vérifié depuis le mode Song). `session.sh start` l'envoie à chaque démarrage.
 - Fill = pattern dédié, joué une mesure, puis retour au groove. Le client envoie
   le changement juste avant la barre.
+- **Bibliothèque de rythmes DLS** (`scripts/gen_rythmes.py`) : rythmes écrits
+  pour ce projet (grilles de 16 ou 12 pas), un `.h2song` par style, toujours
+  la même structure (1 Intro, 2 Verse, 3 Verse fill, 4 Chorus, 5 Chorus fill,
+  6 Transition, 7 Ending), pensée pour un futur bouton Fill / passage de
+  partie à la BeatBuddy. Styles : Rock, Funk, Shuffle, Punk, Metal.
+  - **Kits** : les grilles utilisent des rôles (K, S, H, C…) ; un fichier
+    `scripts/kits/*.kit` donne l'instrument de chaque rôle dans un kit, avec
+    des remplaçants. Modèle de morceau par kit : fait par Hydrogen
+    (`NEW_SONG`, `LOAD_DRUMKIT`, `SAVE_SONG`), dans `~/dls-modeles` sur le Pi.
+  - Kits installés dans `~/.hydrogen/data/drumkits` (sans sudo) depuis la
+    bibliothèque officielle d'Hydrogen (SourceForge) : AVLDrumkits-BlackPearl-2023
+    et AVLDrumkits-RedZeppelin-2023 (CC BY-SA, Glen MacArthur ; 5 nuances de
+    frappe), DeathMetal (CC-BY, Archman). Fichiers produits : « DLS Rock »
+    (GMRockKit), « DLS Rock - Black Pearl », etc.
 - **À faire : changer de style sans coupure.** Changer de morceau
   (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
   un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain

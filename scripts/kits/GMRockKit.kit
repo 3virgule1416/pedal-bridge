@@ -2,7 +2,7 @@
 # Une ligne par rôle : RÔLE = Instrument | Remplaçant | ...
 # Le premier instrument qui existe dans le kit est pris. Rôles utilisés par
 # gen_rythmes.py :
-#   K grosse caisse   S caisse claire   R rimshot        ST cross-stick
+#   K grosse caisse   S caisse claire   R rimshot        ST cross-stick   SC baguettes (décompte)
 #   H hi-hat fermé    P hi-hat au pied  O hi-hat ouvert  HS hi-hat mi-ouvert
 #   Y ride            B cloche du ride  C crash          Z splash
 #   T1 tom aigu       T2 tom médium     FT tom basse     CB cowbell   CL clap
@@ -10,6 +10,7 @@ K  = Kick
 S  = Snare
 R  = Snare Rimshot | Snare
 ST = Stick | Snare Rimshot | Snare
+SC = Stick | Snare Rimshot
 H  = Hat Closed
 P  = Hat Pedal | Hat Closed
 O  = Hat Open | Hat Semi-Open | Hat Closed

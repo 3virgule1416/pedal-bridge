@@ -2,7 +2,7 @@
 """Bibliothèque de rythmes de Davis Loop Station : écrit des morceaux
 Hydrogen (.h2song), un par style, à partir de grilles écrites à la main.
 
-    python3 gen_rythmes.py MODÈLE.h2song DOSSIER_SORTIE [--kit FICHIER.kit] [STYLE ...]
+    python3 gen_rythmes.py MODÈLE.h2song DOSSIER_SORTIE [--kit FICHIER.kit] [--suffixe " - Kit"] [STYLE ...]
 
 MODÈLE : un morceau Hydrogen qui utilise le kit voulu (sa liste
 d'instruments est reprise telle quelle), par exemple
@@ -54,7 +54,7 @@ STYLES = {
     # ------------------------------------------------------------- Rock ---
     "Rock": {"bpm": 110, "parts": {
         "Intro": {
-            "ST": "X...X...X...X...",
+            "SC": "X...X...X...X...",
             "K":  "............X...",
             "S":  "............X.xx",
         },
@@ -172,7 +172,7 @@ STYLES = {
     # ------------------------------------------------------------- Punk ---
     "Punk": {"bpm": 180, "parts": {
         "Intro": {
-            "ST": "X...X...X...X...",
+            "SC": "X...X...X...X...",
         },
         "Verse": {
             "H": "X.X.X.X.X.X.X.X.",
@@ -345,6 +345,11 @@ def main():
         i = args.index("--kit")
         kit_path = args[i + 1]
         del args[i:i + 2]
+    suffix = ""
+    if "--suffixe" in args:
+        i = args.index("--suffixe")
+        suffix = args[i + 1]
+        del args[i:i + 2]
     kit = read_kit(kit_path)
     template = open(args[0], encoding="utf-8").read()
     dst = args[1]
@@ -353,7 +358,7 @@ def main():
     for style in wanted:
         if style not in STYLES:
             raise SystemExit(f"style inconnu : {style} (connus : {', '.join(STYLES)})")
-        path = os.path.join(dst, f"DLS {style}.h2song")
+        path = os.path.join(dst, f"DLS {style}{suffix}.h2song")
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(build(template, style, STYLES[style], kit))
         print(f"  ok  {path} ({len(PARTS)} grooves, {STYLES[style]['bpm']} BPM conseillés)")
