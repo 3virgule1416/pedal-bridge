@@ -649,6 +649,7 @@ struct SongDef {
     std::map<std::string, std::vector<int>> fills;                // partie, "*", "Intro" -> abs
     std::vector<std::vector<int>> intro, outro;
     std::vector<int> transition;
+    bool pool = false;                                            // pack de grooves : parties « virtuelles »
 } g_song;
 
 struct Seq {
@@ -1279,6 +1280,60 @@ void build_song_def()
         if (k == "outro") for (const auto &ph : kv.second) g_song.outro.push_back(absv(ph));
         if (k == "transition") for (const auto &ph : kv.second) for (int a : absv(ph)) g_song.transition.push_back(a);
     }
+    /* Pack de grooves (JJ…) : pas de Verse ni de Chorus à la source. Les 4
+     * parties existent quand même et puisent toutes dans les mêmes grooves ;
+     * au départ Verse = A, Pre-Chorus = B, Chorus = C, Bridge = D. */
+    if (g_song.parts.size() == 1 && g_song.parts[0] == "Groove") {
+        const auto pool = g_song.vars["Groove"];
+        g_song.parts.clear();
+        g_song.vars.clear();
+        for (const char *pn : PART_UI) { g_song.parts.push_back(pn); g_song.vars[pn] = pool; }
+        g_song.pool = true;
+    }
+}
+
+/* Mémoire : variation choisie pour chaque partie de chaque chanson, gardée
+ * sur le Pi (~/dls-batterie/choix.txt : « chanson<TAB>partie<TAB>A »), quel
+ * que soit le preset. Écrite à chaque changement (hors temps réel). */
+std::map<std::string, std::map<std::string, int>> g_memo;
+bool g_memo_read = false;
+
+std::string memo_path() { return home_dir() + "/dls-batterie/choix.txt"; }
+
+void memo_load()
+{
+    if (g_memo_read) return;
+    g_memo_read = true;
+    std::ifstream f(memo_path());
+    std::string l;
+    while (std::getline(f, l)) {
+        const size_t a = l.find('\t'), b = l.find('\t', a + 1);
+        if (a == std::string::npos || b == std::string::npos || b + 1 >= l.size()) continue;
+        const char c = l[b + 1];
+        const int v = c >= 'A' && c <= 'Z' && b + 2 == l.size() ? c - 'A' : std::atoi(l.c_str() + b + 1) - 1;
+        if (v >= 0) g_memo[l.substr(0, a)][l.substr(a + 1, b - a - 1)] = v;
+    }
+}
+
+void memo_save(int part)
+{
+    if (part < 0 || part >= (int)g_song.parts.size() || g_song_rel.empty()) return;
+    int &m = g_memo[g_song_rel][g_song.parts[part]];
+    if (m == g_seq.var[part]) return;
+    m = g_seq.var[part];
+    const std::string path = memo_path(), tmp = path + ".tmp";
+    {
+        std::ofstream f(tmp);
+        for (const auto &song : g_memo)
+            for (const auto &pv : song.second) {
+                const int v = pv.second;
+                f << song.first << '\t' << pv.first << '\t';
+                if (v < 26) f << (char)('A' + v); else f << v + 1;
+                f << '\n';
+            }
+        if (!f) return;
+    }
+    std::rename(tmp.c_str(), path.c_str());
 }
 
 /* Partie de la liste du plugin (1 Verse … 4 Bridge) -> index dans la chanson
@@ -1365,13 +1420,14 @@ int fill_for_part(int pi = -1)
     const std::string part = g_seq.in_once && g_seq.once_kind == 1 ? "Intro" :
                              (pi >= (int)g_song.parts.size() ? "" : g_song.parts[pi]);
     const std::vector<int> *f = nullptr;
+    std::string used;                                  // liste de fills prise (son tour est partagé)
     for (const std::string &key : {part, std::string("*")}) {
         const auto it = g_song.fills.find(key);
-        if (it != g_song.fills.end() && !it->second.empty()) { f = &it->second; break; }
+        if (it != g_song.fills.end() && !it->second.empty()) { f = &it->second; used = key; break; }
     }
-    if (!f) for (const auto &kv : g_song.fills) if (!kv.second.empty()) { f = &kv.second; break; }
+    if (!f) for (const auto &kv : g_song.fills) if (!kv.second.empty()) { f = &kv.second; used = kv.first; break; }
     if (!f) return -1;
-    size_t &turn = g_fill_turn[g_song_rel + "/" + part];
+    size_t &turn = g_fill_turn[g_song_rel + "/" + used];
     return (*f)[turn++ % f->size()];
 }
 
@@ -1384,7 +1440,20 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
     g_seq.active = !g_song.parts.empty();
     if (!g_seq.active) return;
     g_seq.part = part_from_ui(part_ui);
-    g_seq.var[g_seq.part] = var_ui >= 1 ? (int)var_ui - 1 : 0;
+    /* Variation de chaque partie : mémoire, sinon celle du preset (partie
+     * affichée), sinon A (pack de grooves : A, B, C, D). */
+    memo_load();
+    const auto mem = g_memo.find(g_song_rel);
+    for (int i = 0; i < (int)g_song.parts.size(); i++) {
+        const int n = (int)g_song.vars[g_song.parts[i]].size();
+        int v = g_song.pool ? i : 0;
+        if (i == g_seq.part && var_ui >= 1) v = (int)var_ui - 1;
+        if (mem != g_memo.end()) {
+            const auto q = mem->second.find(g_song.parts[i]);
+            if (q != mem->second.end()) v = q->second;
+        }
+        g_seq.var[i] = std::min(std::max(v, 0), std::max(n - 1, 0));
+    }
     g_seq.loop = phrase_of(g_seq.part);
     seq_select(g_seq.loop.empty() ? -1 : g_seq.loop[0]);
     g_pattern = g_seq.cur_abs;
@@ -1429,6 +1498,7 @@ std::string seq_change(int part, int var, bool transition)
     const int old_part = g_seq.part;
     g_seq.part = part;
     g_seq.var[part] = var;
+    memo_save(part);
     const std::vector<int> ph = phrase_of(part);
     double at, bpb;
     if (!next_bar(at, bpb)) {                          // à l'arrêt : tout de suite

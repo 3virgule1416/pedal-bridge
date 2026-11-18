@@ -522,6 +522,16 @@ Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
   du transport JACK, et le note dans son journal (« pattern 12 (mesure 3 temps
   4.99, une fois) »).
 - Les listes Part et Variation de PiPedal suivent les boutons (websocket).
+- **Pack de grooves** (JJ… : intros, grooves, fills, sans Verse ni Chorus) :
+  les 4 parties existent quand même et puisent dans les mêmes grooves ; au
+  départ Verse = A, Pre-Chorus = B, Chorus = C, Bridge = D. Pour changer :
+  Part = Chorus puis Variation = G (ou Part ▶ puis Var ▶ au pied).
+- **Mémoire** : la variation de chaque partie de chaque chanson est retenue
+  dans `~/dls-batterie/choix.txt` (`chanson<TAB>partie<TAB>lettre`), écrite à
+  chaque changement, quel que soit le preset. Au chargement : mémoire, sinon
+  la Variation du preset (partie affichée), sinon A (pack : A à D).
+- Les fills tournent par liste de fills (pas par partie) : deux parties qui
+  partagent les fills communs n'enchaînent pas le même.
 - Vérifié (Contemporary S06) : Fill à la barre puis retour ; Part ▶ avec fill
   de transition ; Var ▶ ; End : outro de 3 patterns puis arrêt.
 - Limite : un fill au milieu d'un pattern de 4 mesures le fait repartir à sa
