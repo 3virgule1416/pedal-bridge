@@ -19,16 +19,16 @@ import time
 
 # Ancien chemin (sans .h2song) -> nouveau (Style/Groupe/Nom).
 MAP = {
-    "Ballad/GM Ballads S13 088 BPM": "Ballad/Ballade/Ballads S13",
-    "Ballad/RP Bardet Slow": "Ballad/Ballade/Slow (RP Bardet)",
-    "Ballad/RP Bardet Waltz": "Ballad/Valse/Waltz (RP Bardet)",
+    "Ballad/GM Ballads S13 088 BPM": "Ballad/Ballad/Ballads S13",
+    "Ballad/RP Bardet Slow": "Ballad/Ballad/Slow (RP Bardet)",
+    "Ballad/RP Bardet Waltz": "Ballad/Waltz/Waltz (RP Bardet)",
     "Blues/DLS Shuffle": "Blues/Shuffle/DLS",
     "Blues/RP Bardet Shuffle": "Blues/Shuffle/RP Bardet",
     "Blues/RP Bardet Boogie": "Blues/Shuffle/Boogie (RP Bardet)",
     "Blues/RP Bardet Blues": "Blues/Blues/RP Bardet",
     "Blues/GM Blues Classics 110 Cold Shock": "Blues/Blues/Cold Shock",
     "Country/GM Country Outlaws 107 Onry And Mean": "Country/Country/Onry And Mean",
-    "Divers/RP Bardet Ending": "Divers/Fins/Ending (RP Bardet)",
+    "Divers/RP Bardet Ending": "Misc/Endings/Ending (RP Bardet)",
     "Electro/GM DnB": "Electro/DnB/DnB",
     "Funk/DLS Funk": "Funk/Funk/DLS",
     "Funk/GM Funk 1": "Funk/Funk/Funk 1",
@@ -36,57 +36,57 @@ MAP = {
     "Hip Hop/GM Chilled Beat 1": "Hip Hop/Chill/Chilled Beat 1",
     "Hip Hop/GM Chilled Beat 2": "Hip Hop/Chill/Chilled Beat 2",
     "Hip Hop/GM Hip Hop 1": "Hip Hop/Hip Hop/Hip Hop 1",
-    "Jazz/RP Bardet Jazz": "Jazz/Jazz et Swing/Jazz",
-    "Jazz/RP Bardet Swing": "Jazz/Jazz et Swing/Swing",
-    "Latin/RP Bardet Bossa": "Latin/Bossa et Samba/Bossa",
-    "Latin/RP Bardet Samba": "Latin/Bossa et Samba/Samba",
-    "Latin/RP Bardet Chacha": "Latin/Cha-cha et Afro/Chacha",
-    "Latin/RP Bardet AfroCub": "Latin/Cha-cha et Afro/AfroCub",
-    "Latin/RP Bardet March and Tango": "Latin/Tango et Paso/March and Tango",
-    "Latin/RP Bardet Paso and Charleston": "Latin/Tango et Paso/Paso and Charleston",
+    "Jazz/RP Bardet Jazz": "Jazz/Jazz and Swing/Jazz",
+    "Jazz/RP Bardet Swing": "Jazz/Jazz and Swing/Swing",
+    "Latin/RP Bardet Bossa": "Latin/Bossa and Samba/Bossa",
+    "Latin/RP Bardet Samba": "Latin/Bossa and Samba/Samba",
+    "Latin/RP Bardet Chacha": "Latin/Cha-cha and Afro/Chacha",
+    "Latin/RP Bardet AfroCub": "Latin/Cha-cha and Afro/AfroCub",
+    "Latin/RP Bardet March and Tango": "Latin/Tango and Paso/March and Tango",
+    "Latin/RP Bardet Paso and Charleston": "Latin/Tango and Paso/Paso and Charleston",
     "Metal/DLS Metal": "Metal/Straight/DLS",
-    "Metal/GM 3-4 Metal": "Metal/Mesures impaires/3-4",
-    "Metal/GM 7-4 Metal Double Kick": "Metal/Mesures impaires/7-4 Double Kick",
-    "Metal/GM 7-4 Metal Single Kick": "Metal/Mesures impaires/7-4 Single Kick",
+    "Metal/GM 3-4 Metal": "Metal/Odd Meters/3-4",
+    "Metal/GM 7-4 Metal Double Kick": "Metal/Odd Meters/7-4 Double Kick",
+    "Metal/GM 7-4 Metal Single Kick": "Metal/Odd Meters/7-4 Single Kick",
     "Metal/GM Doom S01 105 BPM": "Metal/Doom/Doom S01",
     "Pop/RP Bardet Pop": "Pop/Pop/RP Bardet",
     "Pop/GM Half-Time Pop": "Pop/Pop/Half-Time Pop",
     "Pop/GM Motown Beat": "Pop/Pop/Motown",
-    "Pop/RP Bardet Disco": "Pop/Danse/Disco",
-    "Pop/RP Bardet Twist": "Pop/Danse/Twist",
-    "Pop/RP Bardet RnB": "Pop/Danse/RnB",
+    "Pop/RP Bardet Disco": "Pop/Dance/Disco",
+    "Pop/RP Bardet Twist": "Pop/Dance/Twist",
+    "Pop/RP Bardet RnB": "Pop/Dance/RnB",
     "Punk/DLS Punk": "Punk/Punk/DLS",
     "Punk/Pop Punk 160": "Punk/Pop Punk/Pop Punk 1",
     "Punk/Pop Punk 170": "Punk/Pop Punk/Pop Punk 2",
     "Punk/Modern Pop Punk": "Punk/Pop Punk/Modern",
-    "Reggae/RP Bardet Reggae": "Reggae/Reggae et Ska/Reggae",
-    "Reggae/RP Bardet Ska": "Reggae/Reggae et Ska/Ska",
-    "Rock/DLS Rock": "Rock/Rock droit/DLS",
-    "Rock/RP Bardet Rock": "Rock/Rock droit/RP Bardet",
-    "Rock/GM Rock Essentials 1 8th Rock": "Rock/Rock droit/8th",
-    "Rock/GM Rock Essentials 1 Driving Rock": "Rock/Rock droit/Driving",
-    "Rock/GM Classic Rock S03 146 Jail Breakin": "Rock/Rock droit/Classic S03",
-    "Rock/GM Hi-Octane S15 130 BPM": "Rock/Rock droit/Hi-Octane S15",
-    "Rock/GM Garage Rock S11 139 Get Free": "Rock/Rock droit/Garage S11",
-    "Rock/GM Southern Rock S12 100 Road Fever": "Rock/Rock droit/Southern S12",
-    "Rock/GM Contemporary Rock S06 120": "Rock/Rock droit/Contemporary S06",
-    "Rock/GM Rock Essentials 1 Fills": "Rock/Rock droit/Fills (Rock Essentials)",
+    "Reggae/RP Bardet Reggae": "Reggae/Reggae and Ska/Reggae",
+    "Reggae/RP Bardet Ska": "Reggae/Reggae and Ska/Ska",
+    "Rock/DLS Rock": "Rock/Straight/DLS",
+    "Rock/RP Bardet Rock": "Rock/Straight/RP Bardet",
+    "Rock/GM Rock Essentials 1 8th Rock": "Rock/Straight/8th",
+    "Rock/GM Rock Essentials 1 Driving Rock": "Rock/Straight/Driving",
+    "Rock/GM Classic Rock S03 146 Jail Breakin": "Rock/Straight/Classic S03",
+    "Rock/GM Hi-Octane S15 130 BPM": "Rock/Straight/Hi-Octane S15",
+    "Rock/GM Garage Rock S11 139 Get Free": "Rock/Straight/Garage S11",
+    "Rock/GM Southern Rock S12 100 Road Fever": "Rock/Straight/Southern S12",
+    "Rock/GM Contemporary Rock S06 120": "Rock/Straight/Contemporary S06",
+    "Rock/GM Rock Essentials 1 Fills": "Rock/Straight/Fills (Rock Essentials)",
     "Rock/GM Rock Essentials 1 Half-Time Rock": "Rock/Half-time/Half-Time",
     "Rock/GM Rock Essentials 1 Rock Ballad": "Rock/Half-time/Ballad",
     "Rock/GM Rock Essentials 1 Floor Tom Rock": "Rock/Half-time/Floor Tom",
-    "Rock/GM Rock Essentials 2 HT Shuffle 1": "Rock/Shuffle et 12-8/HT Shuffle",
-    "Rock/GM Rock Essentials 2 060 12-8 02": "Rock/Shuffle et 12-8/12-8",
-    "Rock/GM Rock Essentials 2 075 6-8 02 Stick": "Rock/Shuffle et 12-8/6-8 Stick",
-    "Rock/Alt Rock 133": "Rock/Alt Rock/Verse et Chorus",
-    "Rock/Alt Rock 137": "Rock/Alt Rock/Chorus et Bridge",
-    "Rock/Alt Rock 139": "Rock/Alt Rock/Verse et Pre-Chorus",
+    "Rock/GM Rock Essentials 2 HT Shuffle 1": "Rock/Shuffle and 12-8/HT Shuffle",
+    "Rock/GM Rock Essentials 2 060 12-8 02": "Rock/Shuffle and 12-8/12-8",
+    "Rock/GM Rock Essentials 2 075 6-8 02 Stick": "Rock/Shuffle and 12-8/6-8 Stick",
+    "Rock/Alt Rock 133": "Rock/Alt Rock/Verse and Chorus",
+    "Rock/Alt Rock 137": "Rock/Alt Rock/Chorus and Bridge",
+    "Rock/Alt Rock 139": "Rock/Alt Rock/Verse and Pre-Chorus",
     "Rock/Alt Rock 145": "Rock/Alt Rock/Chorus",
-    "Rock/Alt Rock 146": "Rock/Alt Rock/Intro et Outro",
-    "Rock/Alt Rock 150": "Rock/Alt Rock/Chorus et Post Chorus",
-    "Rock/Alt Rock 153": "Rock/Alt Rock/Groove et Fill",
-    "Rock/Alt Rock 160": "Rock/Alt Rock/Verse et Pre-Chorus 2",
+    "Rock/Alt Rock 146": "Rock/Alt Rock/Intro and Outro",
+    "Rock/Alt Rock 150": "Rock/Alt Rock/Chorus and Post Chorus",
+    "Rock/Alt Rock 153": "Rock/Alt Rock/Groove and Fill",
+    "Rock/Alt Rock 160": "Rock/Alt Rock/Verse and Pre-Chorus 2",
     "Rock/Alt Rock 166": "Rock/Alt Rock/Verse",
-    "Rock/Alt Rock 193": "Rock/Alt Rock/Chorus et Bridge 2",
+    "Rock/Alt Rock 193": "Rock/Alt Rock/Chorus and Bridge 2",
     "Surf/GM 42TF Surf": "Surf/Surf/42TF Surf",
     "Surf/GM Surf 2": "Surf/Surf/Surf 2",
 }
@@ -109,14 +109,14 @@ ROOT_OLD = {
 def speed(lo, hi):
     """Allure d'une plage de tempo JJ (mots plutôt que BPM)."""
     if hi <= 100:
-        return "lent"
+        return "slow"
     if hi <= 130:
-        return "moyen"
+        return "medium"
     if hi <= 170:
-        return "rapide"
+        return "fast"
     if hi <= 200:
-        return "très rapide"
-    return "extrême"
+        return "very fast"
+    return "extreme"
 
 
 def jj_target(name):
@@ -126,7 +126,7 @@ def jj_target(name):
         return None
     pack, lo, hi, fam = m.group(1), int(m.group(2)), int(m.group(3)), m.group(4)
     group = "Doom" if hi <= 100 else {"Straight": "Straight", "Groove": "Straight",
-                                       "Backbeat": "Backbeat", "Mesures impaires": "Mesures impaires"}[fam]
+                                       "Backbeat": "Backbeat", "Mesures impaires": "Odd Meters"}[fam]
     label = f"{pack} {speed(lo, hi)}"
     if fam == "Groove":
         label += " (grooves)"

@@ -472,10 +472,10 @@ Trois niveaux partout : **Style / Groupe (type de beat) / Beat**, par
 dossier : le pont retrouve la chanson d'un ancien preset). Les noms ne répètent
 pas le style et n'ont pas de tempo (le tempo est toujours celui choisi ; celui
 d'origine reste dans les `.parts.json`). Les ensembles JJ sont coupés par
-famille (Straight, Backbeat, grooves 4/4, mesures impaires), chacune avec les
-fills et intros de sa plage, nommée par son allure (lent, moyen, rapide, très
-rapide, extrême). Exemples : `Metal/Straight/Lamb Chops très rapide`,
-`Rock/Rock droit/Classic S03`, `Latin/Bossa et Samba/Bossa`. Gros morceau :
+famille (Straight, Backbeat, grooves 4/4, Odd Meters), chacune avec les
+fills et intros de sa plage, nommée par son allure (slow, medium, fast, very
+fast, extreme ; noms en anglais). Exemples : `Metal/Straight/Lamb Chops very fast`,
+`Rock/Straight/Classic S03`, `Latin/Bossa and Samba/Bossa`. Gros morceau :
 3 134 patterns, ouvert en 3,5 s.
 
 Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style ; Style ◀ ▶ : appui très long (voir le tableau)

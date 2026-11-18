@@ -1061,7 +1061,7 @@ bool apply_big_choice(pb_ctl *k)
     auto it = g_index.find(song_rel(g_dr_song_sel));
     if (it == g_index.end()) {
         /* Chanson rangée ailleurs depuis (scripts/ranger.py) : .alias.txt du
-         * dossier, « ancien<TAB>nouveau » ; on suit au plus 3 renvois. */
+         * dossier, « ancien<TAB>nouveau » ; on suit au plus 5 renvois. */
         std::map<std::string, std::string> alias;
         std::ifstream af(songs + "/.alias.txt");
         std::string line;
@@ -1070,7 +1070,7 @@ bool apply_big_choice(pb_ctl *k)
             if (t != std::string::npos) alias[line.substr(0, t)] = line.substr(t + 1);
         }
         std::string rel = song_rel(g_dr_song_sel);
-        for (int hop = 0; hop < 3 && it == g_index.end(); hop++) {
+        for (int hop = 0; hop < 5 && it == g_index.end(); hop++) {
             const auto a = alias.find(rel);
             if (a == alias.end()) break;
             rel = a->second;
