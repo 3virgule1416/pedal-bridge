@@ -11,7 +11,7 @@ Les fichiers « DLS <Style>.h2song » existants sont remplacés ; rien d'autre
 n'est touché.
 
 --kit : fichier de correspondance rôle -> instrument du kit (voir
-scripts/kits/*.kit) ; par défaut, kits/GMRockKit.kit. Pour un autre kit, on
+scripts/kits/*.kit) ; par défaut, kits/GM Rock Kit.kit. Pour un autre kit, on
 écrit son .kit (les noms de ses instruments) et on lui donne un modèle qui
 l'utilise : les mêmes grilles jouent alors sur les bons instruments.
 
@@ -332,6 +332,9 @@ def build(template, style, spec, kit):
     out = re.sub(r"<bpm>[^<]*</bpm>", f"<bpm>{spec['bpm']}</bpm>", out, count=1)
     out = re.sub(r"<name>[^<]*</name>", f"<name>DLS {style}</name>", out, count=1)
     out = re.sub(r"<mode>[^<]*</mode>", "<mode>pattern</mode>", out, count=1)
+    # Repère pour rendu_kit.py : un style DLS se réécrit depuis ses grilles
+    # (rôles exacts) au lieu d'être converti note par note.
+    out = re.sub(r"<notes>[^<]*</notes>", f"<notes>dls-style: {style}</notes>", out, count=1)
     return out
 
 
@@ -340,7 +343,7 @@ def main():
         print(__doc__)
         return 2
     args = sys.argv[1:]
-    kit_path = os.path.join(HERE, "kits", "GMRockKit.kit")
+    kit_path = os.path.join(HERE, "kits", "GM Rock Kit.kit")
     if "--kit" in args:
         i = args.index("--kit")
         kit_path = args[i + 1]

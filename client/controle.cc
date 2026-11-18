@@ -846,41 +846,108 @@ void tap_finish()
 std::string g_drum_song;           // morceau Hydrogen ouvert par le pont (chemin)
 std::string open_drum_song(const std::string &path, int groove = 1);
 
-/* Morceau choisi dans DLS Drum (sélecteur de fichier) : lu sous verrou de
- * séquence ; ouvert seulement à l'arrêt (Hydrogen recharge tout). */
+/* Kit et morceau choisis dans DLS Drum (sélecteurs de fichier) : lus sous
+ * verrou de séquence ; le morceau est « rendu » sur le kit (version mise en
+ * cache, faite par scripts/rendu_kit.py), puis ouvert seulement à l'arrêt
+ * (Hydrogen recharge tout et arrête la lecture). */
 uint32_t g_dr_song_seq = 1;                     // impair : jamais lu
-std::string g_dr_song_pending;                  // à ouvrir au prochain arrêt
+uint32_t g_dr_kit_seq = 1;
+std::string g_dr_song_sel, g_dr_kit_sel;        // choix actuels dans DLS Drum
+bool g_dr_song_pending = false;                 // à ouvrir au prochain arrêt
 int g_dr_song_groove = 1;                       // groove de départ du morceau en attente
-bool g_dr_song_preset = false;                  // prochaine lecture = morceau du preset
+bool g_dr_song_preset = false;                  // prochaine lecture = choix du preset
+
+/* Lit un chemin publié sous verrou de séquence ; true s'il y a du nouveau. */
+bool read_seq_path(uint32_t *seq, const char *src, uint32_t &last, std::string &out)
+{
+    const uint32_t s1 = PB_LOAD_ACQ(seq);
+    if (s1 == last || (s1 & 1u)) return false;
+    char buf[PB_CTL_PATH];
+    std::memcpy(buf, src, sizeof buf);
+    std::atomic_thread_fence(std::memory_order_acquire);
+    if (PB_LOAD_ACQ(seq) != s1) return false;     // réécrit pendant la copie : au prochain passage
+    last = s1;
+    buf[sizeof buf - 1] = 0;
+    out = buf;
+    return true;
+}
+
+std::string home_dir() { const char *h = std::getenv("HOME"); return h ? h : "/tmp"; }
+
+std::string shell_quote(const std::string &s)
+{
+    std::string r = "'";
+    for (char c : s) r += c == '\'' ? std::string("'\\''") : std::string(1, c);
+    return r + "'";
+}
+
+long mtime(const std::string &path)
+{
+    struct stat st;
+    return stat(path.c_str(), &st) == 0 ? (long)st.st_mtime : -1;
+}
+
+/* Morceau + kit -> fichier à ouvrir. Sans kit : le morceau tel quel. La
+ * version pour le kit est refaite si elle manque ou si le morceau ou le .kit
+ * est plus récent. En cas d'échec : le morceau tel quel (message). */
+std::string render_song(const std::string &song, const std::string &kit)
+{
+    if (kit.empty() || file_size(kit) <= 0) return song;
+    auto base = [](const std::string &f) { const size_t p = f.rfind('/'); return p == std::string::npos ? f : f.substr(p + 1); };
+    std::string kname = base(kit);
+    if (kname.size() > 4 && kname.compare(kname.size() - 4, 4, ".kit") == 0) kname.resize(kname.size() - 4);
+    const std::string dir = home_dir() + "/dls-batterie/rendus/" + kname;
+    const std::string out = dir + "/" + base(song);
+    if (mtime(out) >= 0 && mtime(out) >= mtime(song) && mtime(out) >= mtime(kit)) return out;
+    mkdirs(dir);
+    const char *sd = std::getenv("PB_SCRIPTS");
+    const std::string scripts = sd ? sd : home_dir() + "/pedal-bridge-build/src/scripts";
+    const std::string cmd = "python3 " + shell_quote(scripts + "/rendu_kit.py") + " " + shell_quote(song) + " " +
+                            shell_quote(kit) + " " + shell_quote(out) + " 2>&1";
+    std::string msg;
+    FILE *f = popen(cmd.c_str(), "r");
+    int rc = -1;
+    if (f) {
+        char line[512];
+        while (std::fgets(line, sizeof line, f)) msg += line;
+        rc = pclose(f);
+    }
+    while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) msg.pop_back();
+    if (rc != 0 || file_size(out) <= 0) {
+        say("DLS Drum : version pour le kit %s impossible (%s) ; morceau tel quel", kname.c_str(), msg.c_str());
+        return song;
+    }
+    say("DLS Drum : %s", msg.c_str());
+    return out;
+}
 
 void drum_song_poll(pb_ctl *k)
 {
-    const uint32_t s1 = PB_LOAD_ACQ(&k->drum_song_seq);
-    if (s1 != g_dr_song_seq && !(s1 & 1u)) {
-        char buf[PB_CTL_PATH];
-        std::memcpy(buf, k->drum_song, sizeof buf);
-        std::atomic_thread_fence(std::memory_order_acquire);
-        if (PB_LOAD_ACQ(&k->drum_song_seq) == s1) {   // pas réécrit pendant la copie
-            g_dr_song_seq = s1;
-            buf[sizeof buf - 1] = 0;
-            const std::string path(buf);
-            /* Morceau du preset : avec le groove du menu (sauvegardé avec lui).
-             * Morceau choisi à la main : nouveau style, on repart au Groove 1. */
-            g_dr_song_groove = g_dr_song_preset ? (int)PB_LOAD_RLX(&k->drum_groove) : 1;
-            g_dr_song_preset = false;
-            if (!path.empty() && path != g_drum_song) {
-                g_dr_song_pending = path;
-                if (transport_rolling()) say("DLS Drum : morceau %s ouvert au prochain Stop", path.c_str());
-            } else {
-                g_dr_song_pending.clear();
-            }
-        }
+    std::string path;
+    bool changed = false;
+    if (read_seq_path(&k->drum_kit_seq, k->drum_kit, g_dr_kit_seq, path) && path != g_dr_kit_sel) {
+        g_dr_kit_sel = path;
+        changed = true;
+        /* Même style sur un autre kit : on garde le groove qui joue. */
+        g_dr_song_groove = g_pattern >= 0 ? g_pattern + 1 : (int)PB_LOAD_RLX(&k->drum_groove);
     }
-    if (!g_dr_song_pending.empty() && !transport_rolling()) {
-        const std::string path = g_dr_song_pending;
-        g_dr_song_pending.clear();
-        const int groove = g_dr_song_groove;
-        say("DLS Drum : %s", open_drum_song(path, groove).c_str());
+    if (read_seq_path(&k->drum_song_seq, k->drum_song, g_dr_song_seq, path)) {
+        /* Choix du preset : avec le groove du menu (sauvegardé avec lui).
+         * Morceau choisi à la main : nouveau style, on repart au Groove 1. */
+        if (g_dr_song_preset) g_dr_song_groove = (int)PB_LOAD_RLX(&k->drum_groove);
+        else if (path != g_dr_song_sel) g_dr_song_groove = 1;
+        g_dr_song_preset = false;
+        if (path != g_dr_song_sel) { g_dr_song_sel = path; changed = true; }
+    }
+    if (changed && !g_dr_song_sel.empty()) {
+        g_dr_song_pending = true;
+        if (transport_rolling()) say("DLS Drum : kit / morceau chargés au prochain Stop");
+    }
+    if (g_dr_song_pending && !transport_rolling()) {
+        g_dr_song_pending = false;
+        const std::string eff = render_song(g_dr_song_sel, g_dr_kit_sel);
+        if (eff == g_drum_song) return;              // déjà ouvert
+        say("DLS Drum : %s", open_drum_song(eff, g_dr_song_groove).c_str());
         /* Le menu montre encore l'ancien groove jusqu'à ce que PiPedal applique
          * la mise à jour (websocket) : le considérer comme vu, sinon il serait
          * réappliqué ici même ; son écho (le nouveau groove) est attendu. */
@@ -899,7 +966,7 @@ void drum_poll(pb_ctl *k)
         g_dr_groove = 0;                   // groove du preset : choisi au prochain passage (sans démarrer)
         g_taps.clear();
         g_dr_metro = 2;                    // interrupteur = état voulu : appliqué au prochain passage
-        g_dr_song_seq = 1;                 // morceau du preset : relu (ouvert s'il change)
+        g_dr_song_seq = g_dr_kit_seq = 1;  // kit et morceau du preset : relus (ouverts s'ils changent)
         g_dr_song_preset = true;
         say("%s", owner ? "DLS Drum actif" : "DLS Drum retiré");
         return;

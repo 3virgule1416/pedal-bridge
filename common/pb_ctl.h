@@ -136,9 +136,14 @@ typedef struct pb_ctl {
     uint8_t  pad8[60];
     char     drum_song[PB_CTL_PATH];
 
+    /* Kit de batterie choisi dans DLS Drum (fichier .kit), même verrou. */
+    uint32_t drum_kit_seq;
+    uint8_t  pad9[60];
+    char     drum_kit[PB_CTL_PATH];
+
     /* Réservé. Un fichier créé par une version plus ancienne a des zéros ici :
      * les nouveaux champs ne font qu'ajouter, la version reste 1. */
-    uint8_t  reserved[PB_CTL_BYTES - 9 * 64 - PB_CTL_PATH];
+    uint8_t  reserved[PB_CTL_BYTES - 10 * 64 - 2 * PB_CTL_PATH];
 } pb_ctl;
 
 #ifdef __cplusplus
@@ -151,6 +156,7 @@ static_assert(offsetof(pb_ctl, drum_owner) == 320, "ligne drum");
 static_assert(offsetof(pb_ctl, drum_btn) == 384, "ligne boutons drum");
 static_assert(offsetof(pb_ctl, h2_ok) == 448, "ligne hydrogen");
 static_assert(offsetof(pb_ctl, drum_song_seq) == 512 && offsetof(pb_ctl, drum_song) == 576, "ligne morceau");
+static_assert(offsetof(pb_ctl, drum_kit_seq) == 1088 && offsetof(pb_ctl, drum_kit) == 1152, "ligne kit");
 #else
 _Static_assert(sizeof(pb_ctl) == PB_CTL_BYTES, "pb_ctl");
 _Static_assert(offsetof(pb_ctl, looper_owner) == 64, "ligne looper");
@@ -161,6 +167,7 @@ _Static_assert(offsetof(pb_ctl, drum_owner) == 320, "ligne drum");
 _Static_assert(offsetof(pb_ctl, drum_btn) == 384, "ligne boutons drum");
 _Static_assert(offsetof(pb_ctl, h2_ok) == 448, "ligne hydrogen");
 _Static_assert(offsetof(pb_ctl, drum_song_seq) == 512 && offsetof(pb_ctl, drum_song) == 576, "ligne morceau");
+_Static_assert(offsetof(pb_ctl, drum_kit_seq) == 1088 && offsetof(pb_ctl, drum_kit) == 1152, "ligne kit");
 #endif
 
 /* Hors temps réel. Chemin : $PB_SHM_DIR (ou /dev/shm)/pedal-bridge-control.

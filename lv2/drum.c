@@ -10,11 +10,12 @@
  * tempo), interrupteur du métronome. Le client pedal_bridge pilote Hydrogen et le transport, et renvoie
  * le groove joué et la mesure.
  *
- * Morceau (sélecteur de fichier de PiPedal, propriété patch « song ») : les
- * .h2song du dossier /var/pipedal/audio_uploads/DLS Drums. Le plugin crée ce
- * dossier ouvert en écriture à tous (2777) pour qu'on puisse y copier des
- * morceaux sans sudo. Le chemin choisi est gardé dans le preset (état LV2) et
- * passé au client par le fichier de contrôle (verrou de séquence).
+ * Kit et morceau (sélecteurs de fichier de PiPedal, propriétés patch « kit »
+ * et « song ») : les .kit du dossier /var/pipedal/audio_uploads/DLS Kits et
+ * les .h2song de .../DLS Drums. Le plugin crée ces dossiers ouverts en
+ * écriture à tous (2777) pour qu'on puisse y copier des fichiers sans sudo.
+ * Les chemins choisis sont gardés dans le preset (état LV2) et passés au
+ * client par le fichier de contrôle (verrou de séquence).
  *
  * Temps réel : tout est ouvert à l'instanciation ; run() ne fait que des
  * atomiques, du calcul et des copies.
@@ -37,6 +38,7 @@
 #include <sys/stat.h>
 
 #define SONG_DIR "/var/pipedal/audio_uploads/DLS Drums"
+#define KIT_DIR  "/var/pipedal/audio_uploads/DLS Kits"
 
 /* Ports de contrôle après les ports audio, rangés par section (PiPedal ouvre
  * une nouvelle boîte dès que la section change d'un port au suivant). */
@@ -66,6 +68,15 @@ enum { LINK_NONE = 0, LINK_NO_AUDIO = 1, LINK_OK = 2 };
 
 typedef struct { uint32_t held, next; } Hold;      /* en trames */
 
+/* Propriété « fichier » (sélecteur de PiPedal). */
+enum { F_SONG = 0, F_KIT, F_NUM };
+typedef struct {
+    LV2_URID urid;
+    char     path[PB_CTL_PATH];
+    int      send;                              /* renvoyer le chemin à PiPedal */
+    int      publish;                           /* l'écrire dans le fichier de contrôle */
+} FileProp;
+
 typedef struct {
     int stereo;
     const float *in[2];
@@ -81,23 +92,21 @@ typedef struct {
     float        last_btn[PB_DBTN_COUNT];
     Hold         hold[2];                       /* BPM +, BPM - */
 
-    /* Morceau (sélecteur de fichier). Sans urid:map : pas de morceau. */
+    /* Kit et morceau (sélecteurs de fichier). Sans urid:map : rien. */
     const LV2_Atom_Sequence *control;
     LV2_Atom_Sequence       *notify;
     LV2_URID_Map  *map;
     LV2_Atom_Forge forge;
-    LV2_URID u_path, u_urid, u_object, u_set, u_get, u_property, u_value, u_song;
-    char     song[PB_CTL_PATH];
-    int      send_song;                         /* renvoyer le chemin à PiPedal */
-    int      publish_song;                      /* l'écrire dans le fichier de contrôle */
+    LV2_URID u_path, u_urid, u_object, u_set, u_get, u_property, u_value;
+    FileProp f[F_NUM];
 } Drum;
 
-/* Hors temps réel (instanciation) : dossier des morceaux, ouvert en écriture
- * à tous pour y copier des morceaux sans sudo. Échec sans gravité. */
-static void make_song_dir(void)
+/* Hors temps réel (instanciation) : dossier ouvert en écriture à tous pour
+ * y copier des fichiers sans sudo. Échec sans gravité. */
+static void make_dir(const char *dir)
 {
-    if (mkdir(SONG_DIR, 02777) != 0 && errno != EEXIST) return;
-    chmod(SONG_DIR, 02777);                     /* mkdir est limité par l'umask */
+    if (mkdir(dir, 02777) != 0 && errno != EEXIST) return;
+    chmod(dir, 02777);                          /* mkdir est limité par l'umask */
 }
 
 static LV2_Handle instantiate_common(double rate, int stereo, const LV2_Feature *const *features)
@@ -115,9 +124,11 @@ static LV2_Handle instantiate_common(double rate, int stereo, const LV2_Feature 
         p->u_get = m->map(m->handle, LV2_PATCH__Get);
         p->u_property = m->map(m->handle, LV2_PATCH__property);
         p->u_value = m->map(m->handle, LV2_PATCH__value);
-        p->u_song = m->map(m->handle, PB_URI_DRUM_SONG);
+        p->f[F_SONG].urid = m->map(m->handle, PB_URI_DRUM_SONG);
+        p->f[F_KIT].urid = m->map(m->handle, PB_URI_DRUM_KIT);
         lv2_atom_forge_init(&p->forge, m);
-        make_song_dir();
+        make_dir(SONG_DIR);
+        make_dir(KIT_DIR);
     }
     p->stereo = stereo;
     p->rate = (uint32_t)(rate + 0.5);
@@ -162,56 +173,63 @@ static void activate(LV2_Handle h)
     for (int b = 0; b < PB_DBTN_COUNT; b++)
         p->last_btn[b] = p->c[BTN_PORT[b]] ? *p->c[BTN_PORT[b]] : 0.0f;
     p->hold[0].held = p->hold[1].held = 0;
-    p->send_song = 1;
-    p->publish_song = 1;
+    for (int i = 0; i < F_NUM; i++) p->f[i].send = p->f[i].publish = 1;
 }
 
-/* Message de PiPedal : patch:Set (nouveau morceau) ou patch:Get. Copie sans
+/* Message de PiPedal : patch:Set (nouveau fichier) ou patch:Get. Copie sans
  * allocation. */
 static void handle_object(Drum *p, const LV2_Atom_Object *obj)
 {
-    if (obj->body.otype == p->u_get) { p->send_song = 1; return; }
+    if (obj->body.otype == p->u_get) {
+        for (int i = 0; i < F_NUM; i++) p->f[i].send = 1;
+        return;
+    }
     if (obj->body.otype != p->u_set) return;
     const LV2_Atom *prop = NULL, *val = NULL;
     lv2_atom_object_get(obj, p->u_property, &prop, p->u_value, &val, 0);
-    if (!prop || prop->type != p->u_urid || ((const LV2_Atom_URID *)prop)->body != p->u_song) return;
-    if (!val || val->type != p->u_path) return;
-    size_t n = val->size;
-    if (n >= sizeof p->song) n = sizeof p->song - 1;
-    memcpy(p->song, LV2_ATOM_BODY_CONST(val), n);
-    p->song[n] = 0;
-    p->send_song = 1;
-    p->publish_song = 1;
+    if (!prop || prop->type != p->u_urid || !val || val->type != p->u_path) return;
+    const LV2_URID which = ((const LV2_Atom_URID *)prop)->body;
+    for (int i = 0; i < F_NUM; i++) {
+        FileProp *F = &p->f[i];
+        if (which != F->urid) continue;
+        size_t n = val->size;
+        if (n >= sizeof F->path) n = sizeof F->path - 1;
+        memcpy(F->path, LV2_ATOM_BODY_CONST(val), n);
+        F->path[n] = 0;
+        F->send = F->publish = 1;
+    }
 }
 
-/* Chemin du morceau -> fichier de contrôle (verrou de séquence). */
-static void publish_song(Drum *p, pb_ctl *ctl)
+/* Chemin -> fichier de contrôle (verrou de séquence). */
+static void publish_path(uint32_t *seq, char *dst, const char *src)
 {
-    const uint32_t s = PB_LOAD_RLX(&ctl->drum_song_seq);
-    PB_STORE_REL(&ctl->drum_song_seq, (s | 1u) + 0u);          /* impair : écriture en cours */
+    const uint32_t s = PB_LOAD_RLX(seq);
+    PB_STORE_REL(seq, (s | 1u) + 0u);                          /* impair : écriture en cours */
     __atomic_thread_fence(__ATOMIC_RELEASE);
-    memcpy(ctl->drum_song, p->song, sizeof p->song);
-    PB_STORE_REL(&ctl->drum_song_seq, (s | 1u) + 1u);          /* pair : prêt */
+    memcpy(dst, src, PB_CTL_PATH);
+    PB_STORE_REL(seq, (s | 1u) + 1u);                          /* pair : prêt */
 }
 
-/* Réponse à PiPedal : chemin actuel (patch:Set), pour son affichage. */
-static void send_song(Drum *p)
+/* Réponse à PiPedal : chemins actuels (patch:Set), pour son affichage. */
+static void send_paths(Drum *p)
 {
     if (!p->notify || !p->map) return;
     const uint32_t cap = p->notify->atom.size;
     lv2_atom_forge_set_buffer(&p->forge, (uint8_t *)p->notify, cap);
     LV2_Atom_Forge_Frame seq;
     lv2_atom_forge_sequence_head(&p->forge, &seq, 0);
-    if (p->send_song) {
+    for (int i = 0; i < F_NUM; i++) {
+        FileProp *F = &p->f[i];
+        if (!F->send) continue;
         LV2_Atom_Forge_Frame obj;
         lv2_atom_forge_frame_time(&p->forge, 0);
         lv2_atom_forge_object(&p->forge, &obj, 0, p->u_set);
         lv2_atom_forge_key(&p->forge, p->u_property);
-        lv2_atom_forge_urid(&p->forge, p->u_song);
+        lv2_atom_forge_urid(&p->forge, F->urid);
         lv2_atom_forge_key(&p->forge, p->u_value);
-        lv2_atom_forge_path(&p->forge, p->song, (uint32_t)strlen(p->song));
+        lv2_atom_forge_path(&p->forge, F->path, (uint32_t)strlen(F->path));
         lv2_atom_forge_pop(&p->forge, &obj);
-        p->send_song = 0;
+        F->send = 0;
     }
     lv2_atom_forge_pop(&p->forge, &seq);
 }
@@ -235,7 +253,7 @@ static void run(LV2_Handle h, uint32_t n)
         LV2_ATOM_SEQUENCE_FOREACH(p->control, ev)
             if (ev->body.type == p->u_object)
                 handle_object(p, (const LV2_Atom_Object *)&ev->body);
-    send_song(p);
+    send_paths(p);
 
     /* --- Commandes vers le client --- */
     int pressed[PB_DBTN_COUNT];
@@ -273,10 +291,14 @@ static void run(LV2_Handle h, uint32_t n)
     if (p->need_take) {                          /* la dernière instance activée commande */
         p->need_take = 0;
         PB_STORE_REL(&ctl->drum_owner, p->me);
-        p->publish_song = 1;
+        for (int i = 0; i < F_NUM; i++) p->f[i].publish = 1;
     }
     if (PB_LOAD_ACQ(&ctl->drum_owner) == p->me) {
-        if (p->publish_song && p->map) { publish_song(p, ctl); p->publish_song = 0; }
+        if (p->map) {
+            /* Le kit d'abord : le client ouvre le morceau avec le bon kit. */
+            if (p->f[F_KIT].publish) { publish_path(&ctl->drum_kit_seq, ctl->drum_kit, p->f[F_KIT].path); p->f[F_KIT].publish = 0; }
+            if (p->f[F_SONG].publish) { publish_path(&ctl->drum_song_seq, ctl->drum_song, p->f[F_SONG].path); p->f[F_SONG].publish = 0; }
+        }
         PB_STORE_RLX(&ctl->drum_groove, (uint32_t)groove);
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
         PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
@@ -333,15 +355,19 @@ static void cleanup(LV2_Handle h)
     free(p);
 }
 
-/* --- État (preset) : le chemin du morceau --- */
+/* --- État (preset) : les chemins du kit et du morceau --- */
 static LV2_State_Status save(LV2_Handle h, LV2_State_Store_Function store, LV2_State_Handle sh,
                              uint32_t flags, const LV2_Feature *const *f)
 {
     (void)flags; (void)f;
     Drum *p = (Drum *)h;
     if (!p->map) return LV2_STATE_SUCCESS;
-    return store(sh, p->u_song, p->song, strlen(p->song) + 1, p->u_path,
-                 LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    for (int i = 0; i < F_NUM; i++) {
+        const LV2_State_Status st = store(sh, p->f[i].urid, p->f[i].path, strlen(p->f[i].path) + 1, p->u_path,
+                                          LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+        if (st != LV2_STATE_SUCCESS) return st;
+    }
+    return LV2_STATE_SUCCESS;
 }
 
 static LV2_State_Status restore(LV2_Handle h, LV2_State_Retrieve_Function retrieve, LV2_State_Handle sh,
@@ -350,15 +376,17 @@ static LV2_State_Status restore(LV2_Handle h, LV2_State_Retrieve_Function retrie
     (void)flags; (void)f;
     Drum *p = (Drum *)h;
     if (!p->map) return LV2_STATE_SUCCESS;
-    size_t size;
-    uint32_t type, fl;
-    const char *v = (const char *)retrieve(sh, p->u_song, &size, &type, &fl);
-    if (v && type == p->u_path) {
-        size_t n = size < sizeof p->song ? size : sizeof p->song - 1;
-        memcpy(p->song, v, n);
-        p->song[n] = 0;
-        p->send_song = 1;
-        p->publish_song = 1;
+    for (int i = 0; i < F_NUM; i++) {
+        FileProp *F = &p->f[i];
+        size_t size;
+        uint32_t type, fl;
+        const char *v = (const char *)retrieve(sh, F->urid, &size, &type, &fl);
+        if (v && type == p->u_path) {
+            size_t n = size < sizeof F->path ? size : sizeof F->path - 1;
+            memcpy(F->path, v, n);
+            F->path[n] = 0;
+            F->send = F->publish = 1;
+        }
     }
     return LV2_STATE_SUCCESS;
 }

@@ -360,6 +360,25 @@ int main(int argc, char **argv)
         const uint32_t s1 = K.ctl->drum_song_seq;
         run1(&S);
         T_CHECK(K.ctl->drum_song_seq == s1, "pas de nouveau morceau : fichier de contrôle inchangé");
+
+        /* Kit (même mécanisme, autre propriété). */
+        const char *kitp = "/var/pipedal/audio_uploads/DLS Kits/Black Pearl.kit";
+        lv2_atom_forge_set_buffer(&forge, (uint8_t *)ctl_buf, sizeof ctl_buf);
+        lv2_atom_forge_sequence_head(&forge, &seq, 0);
+        lv2_atom_forge_frame_time(&forge, 0);
+        lv2_atom_forge_object(&forge, &obj, 0, map_uri(NULL, LV2_PATCH__Set));
+        lv2_atom_forge_key(&forge, map_uri(NULL, LV2_PATCH__property));
+        lv2_atom_forge_urid(&forge, map_uri(NULL, "http://pedal-bridge.local/plugins/drum#kit"));
+        lv2_atom_forge_key(&forge, map_uri(NULL, LV2_PATCH__value));
+        lv2_atom_forge_path(&forge, kitp, (uint32_t)strlen(kitp));
+        lv2_atom_forge_pop(&forge, &obj);
+        lv2_atom_forge_pop(&forge, &seq);
+        { const uint32_t cap = sizeof notify_buf - sizeof(LV2_Atom); memcpy(notify_buf, &cap, sizeof cap); }
+        const uint32_t k0 = K.ctl->drum_kit_seq;
+        run1(&S);
+        T_CHECK(!strcmp(K.ctl->drum_kit, kitp) && K.ctl->drum_kit_seq != k0 && (K.ctl->drum_kit_seq & 1u) == 0,
+                "kit choisi -> fichier de contrôle");
+        T_CHECK(!strcmp(K.ctl->drum_song, song), "le morceau reste celui choisi");
         dm->deactivate(S.h);
         dm->cleanup(S.h);
     }
