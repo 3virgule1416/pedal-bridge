@@ -1417,6 +1417,14 @@ std::string open_drum_song(const std::string &path, int groove)
         });
     usleep(100000);                                   // la fin de la rafale
     say("DLS Drum : morceau chargé en %.1f s%s", now_s() - t0, done ? "" : " (sans retour d'Hydrogen)");
+    /* Hydrogen ignore le choix d'un pattern qu'il croit déjà choisi
+     * (setSelectedPatternNumber : même numéro -> rien), mais le chargement a
+     * remis le premier pattern en lecture. Après un changement de kit, le pont
+     * redemande souvent le même numéro : il serait ignoré et les premières
+     * notes viendraient du mauvais pattern. On force donc 1 puis 0. */
+    h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
+    h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 1.0f);
+    h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 0.0f);
     g_pattern = -1;
     const std::string r = groove > 0 ? set_groove(std::to_string(groove)) : std::string("groove non choisi");
     jack_transport_locate(g_cfg.client, 0);
