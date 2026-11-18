@@ -1,0 +1,25 @@
+# Correspondance rôle -> instrument pour le kit GMRockKit (fourni avec Hydrogen).
+# Une ligne par rôle : RÔLE = Instrument | Remplaçant | ...
+# Le premier instrument qui existe dans le kit est pris. Rôles utilisés par
+# gen_rythmes.py :
+#   K grosse caisse   S caisse claire   R rimshot        ST cross-stick
+#   H hi-hat fermé    P hi-hat au pied  O hi-hat ouvert  HS hi-hat mi-ouvert
+#   Y ride            B cloche du ride  C crash          Z splash
+#   T1 tom aigu       T2 tom médium     FT tom basse     CB cowbell   CL clap
+K  = Kick
+S  = Snare
+R  = Snare Rimshot | Snare
+ST = Stick | Snare Rimshot | Snare
+H  = Hat Closed
+P  = Hat Pedal | Hat Closed
+O  = Hat Open | Hat Semi-Open | Hat Closed
+HS = Hat Semi-Open | Hat Open
+Y  = Ride | Ride 2
+B  = Bell | Ride
+C  = Crash | Splash
+Z  = Splash | Crash
+T1 = Tom 1
+T2 = Tom 2 | Tom 1
+FT = Floor Tom | Tom 2
+CB = Cowbell
+CL = Hand Clap | Snare
