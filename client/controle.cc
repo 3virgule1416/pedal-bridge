@@ -1390,6 +1390,49 @@ std::string load_song(const std::string &name)
 
 /* Ouvre un morceau Hydrogen (.h2song, chemin absolu) : mode Pattern,
  * groove 1, cycle et temps par mesure selon ce groove. À l'arrêt seulement. */
+/* Temps processeur cumulé (ticks) des processus « hydrogen ». */
+long hydrogen_cpu_ticks()
+{
+    long total = 0;
+    if (DIR *d = opendir("/proc")) {
+        while (dirent *e = readdir(d)) {
+            if (!std::isdigit((unsigned char)e->d_name[0])) continue;
+            std::ifstream f(std::string("/proc/") + e->d_name + "/stat");
+            std::string st((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            const size_t a = st.find('('), b = st.rfind(')');
+            if (a == std::string::npos || b == std::string::npos || st.substr(a + 1, b - a - 1) != "hydrogen") continue;
+            std::istringstream rest(st.substr(b + 2));
+            std::string tok;
+            long utime = 0, stime = 0;
+            for (int i = 3; i <= 15 && rest >> tok; i++) {          // champs 14 et 15 : utime, stime
+                if (i == 14) utime = std::atol(tok.c_str());
+                if (i == 15) stime = std::atol(tok.c_str());
+            }
+            total += utime + stime;
+        }
+        closedir(d);
+    }
+    return total;
+}
+
+/* Attend qu'Hydrogen soit calme : moins de 25 % d'un cœur sur 0,3 s. */
+bool wait_hydrogen_idle(double deadline)
+{
+    const long hz = sysconf(_SC_CLK_TCK);
+    long prev = hydrogen_cpu_ticks();
+    double tprev = now_s();
+    while (now_s() < deadline) {
+        usleep(300000);
+        const long c = hydrogen_cpu_ticks();
+        const double t = now_s();
+        const double load = (double)(c - prev) / hz / (t - tprev);
+        prev = c;
+        tprev = t;
+        if (load < 0.25) return true;
+    }
+    return false;
+}
+
 std::string open_drum_song(const std::string &path, int groove)
 {
     if (path.empty() || path[0] != '/') return "erreur : batterie CHEMIN (chemin absolu d'un .h2song)";
@@ -1422,27 +1465,18 @@ std::string open_drum_song(const std::string &path, int groove)
      * remis le premier pattern en lecture. Après un changement de kit, le pont
      * redemande souvent le même numéro : il serait ignoré et les premières
      * notes viendraient du mauvais pattern. On force donc 1 puis 0. */
+    /* Hydrogen reste occupé après son retour d'état (mesuré, gros morceau :
+     * 100 % d'un cœur pendant 4,5 s, retour d'état à 3,9 s) et, en finissant,
+     * remet le premier pattern : un choix fait avant serait perdu. On attend
+     * qu'il soit calme (temps processeur), au plus 8 s après l'ouverture. */
+    const double ti = now_s();
+    const bool idle = wait_hydrogen_idle(t0 + 8.0);
     h2_float("/Hydrogen/SONG_MODE_ACTIVATION", 0.0f);
     h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 1.0f);
     h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 0.0f);
     g_pattern = -1;
-    /* Hydrogen peut rester occupé un moment après son retour d'état (gros
-     * morceau) : ses commandes sont traitées dans l'ordre, plus tard. Barrière :
-     * basculer le métronome deux fois (inaudible à l'arrêt, état inchangé) et
-     * attendre le 2e retour ; nos commandes d'avant sont alors appliquées. */
-    if (g_h2_metro >= 0) {
-        const double tb = now_s();
-        const int want = g_h2_metro;
-        int seen = 0;
-        h2_send("/Hydrogen/TOGGLE_METRONOME", nullptr, nullptr);
-        h2_send("/Hydrogen/TOGGLE_METRONOME", nullptr, nullptr);
-        while (seen < 2 && now_s() - tb < 5.0)
-            sl_drain(5.0 - (now_s() - tb), [&](const OscMsg &m) {
-                return m.addr == "/Hydrogen/TOGGLE_METRONOME" && ++seen >= 2;
-            });
-        g_h2_metro = want;
-        say("DLS Drum : Hydrogen prêt %.1f s après son retour d'état%s", now_s() - tb, seen >= 2 ? "" : " (sans réponse)");
-    }
+    say("DLS Drum : Hydrogen calme %.1f s après son retour d'état%s (ouverture : %.1f s en tout)",
+        now_s() - ti, idle ? "" : " (délai dépassé)", now_s() - t0);
     const std::string r = groove > 0 ? set_groove(std::to_string(groove)) : std::string("groove non choisi");
     jack_transport_locate(g_cfg.client, 0);
     return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " pattern(s) ; " + r;
