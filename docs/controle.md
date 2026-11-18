@@ -633,6 +633,16 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
   la lecture continue) ; changer de **kit** = charger le gros morceau de ce kit,
   à l'arrêt ; le gros morceau est refait s'il manque ou s'il est plus vieux
   qu'une chanson, que le `.kit` ou que le script.
+- **Gros morceau allégé et Hydrogen sans fenêtre (2026-11-17)** : les
+  réglages de note égaux aux valeurs par défaut d'Hydrogen sont retirés
+  (27 -> 10,6 Mo, 92 380 notes identiques une fois relues). `session.sh`
+  lance par défaut `h2cli` (Hydrogen sans fenêtre, même OSC et même JACK) et
+  ni slgui ni écran virtuel (`PB_GUI=1` pour les interfaces). Mesuré : gros
+  morceau chargé en 2,6 s (6,2 s avant) ; mémoire utilisée 1,2 Go (2,3 Go
+  avant). Vérifié en jouant : grille, groove, métronome, boucle SooperLooper
+  calée sur le cycle. Après un chargement, Hydrogen reste occupé puis remet le
+  premier pattern : le pont attend qu'il soit calme (temps processeur) avant
+  de choisir le groove.
 - Ancienne note : changer de style sans coupure. Changer de morceau
   (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
   un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain

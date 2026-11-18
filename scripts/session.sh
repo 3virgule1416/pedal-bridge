@@ -25,10 +25,11 @@
 #
 # Depuis le PC, il se relance tout seul sur le Pi (hôte pi-dev).
 # Réglages : PB_JACK_PERIOD (défaut 128), PB_LINKS (défaut 1,2), PB_TEMPO (défaut 120,
-# au premier démarrage de pb_timebase seulement), PB_GUI (défaut 1) :
+# au premier démarrage de pb_timebase seulement), PB_GUI (défaut 0) :
+#   PB_GUI=0  sans interface (défaut) : h2cli (Hydrogen sans fenêtre, même OSC,
+#             même JACK, ~180 Mo au lieu de ~515 ; gros morceau chargé en
+#             2,6 s au lieu de 6) et pas de slgui ni d'écran virtuel.
 #   PB_GUI=1  Hydrogen et SooperLooper avec leur interface (écran virtuel, VNC)
-#   PB_GUI=0  sans interface : h2cli (Hydrogen sans fenêtre, même OSC, même
-#             JACK, ~180 Mo au lieu de ~515) et pas de slgui ni d'écran virtuel.
 # Changer de mode : bash scripts/session.sh stop, puis start avec PB_GUI.
 #
 # Branchements faits par « start » et « connect » :
@@ -50,7 +51,7 @@ B="$HOME/$REMOTE/build"
 RUN=/tmp/pedal-bridge-session          # journaux (effacés au redémarrage du Pi)
 PERIOD="${PB_JACK_PERIOD:-128}"
 LINKS="${PB_LINKS:-1,2}"
-GUI="${PB_GUI:-1}"
+GUI="${PB_GUI:-0}"
 TEMPO="${PB_TEMPO:-120}"
 export DISPLAY=:1
 mkdir -p "$RUN"
@@ -202,7 +203,8 @@ do_start() {
 
   do_connect
   echo
-  echo "Prêt. Dans Hydrogen (par VNC) : J.Trans allumé, J.Master ÉTEINT."
+  if [ "$GUI" != 0 ]; then echo "Prêt. Dans Hydrogen (par VNC) : J.Trans allumé, J.Master ÉTEINT."
+  else echo "Prêt (sans interface ; PB_GUI=1 pour Hydrogen et SooperLooper par VNC)."; fi
   echo "Le tempo vient de pb_timebase : bash scripts/session.sh tempo 115"
   echo "Suivi du pont : bash scripts/session.sh status"
 }
