@@ -25,7 +25,11 @@
 #
 # Depuis le PC, il se relance tout seul sur le Pi (hôte pi-dev).
 # Réglages : PB_JACK_PERIOD (défaut 128), PB_LINKS (défaut 1,2), PB_TEMPO (défaut 120,
-# au premier démarrage de pb_timebase seulement).
+# au premier démarrage de pb_timebase seulement), PB_GUI (défaut 1) :
+#   PB_GUI=1  Hydrogen et SooperLooper avec leur interface (écran virtuel, VNC)
+#   PB_GUI=0  sans interface : h2cli (Hydrogen sans fenêtre, même OSC, même
+#             JACK, ~180 Mo au lieu de ~515) et pas de slgui ni d'écran virtuel.
+# Changer de mode : bash scripts/session.sh stop, puis start avec PB_GUI.
 #
 # Branchements faits par « start » et « connect » :
 #   lien 1 = looper (DLS Looper, ou DLS Send/Return sur le lien 1)
@@ -39,13 +43,14 @@ set -u
 HOST="${PB_HOST:-pi-dev}"
 REMOTE="${PB_REMOTE_DIR:-pedal-bridge-build}"
 if [ "$(uname -m)" != "aarch64" ]; then
-  exec ssh "$HOST" "PB_JACK_PERIOD='${PB_JACK_PERIOD:-}' PB_LINKS='${PB_LINKS:-}' PB_TEMPO='${PB_TEMPO:-}' bash '$REMOTE/src/scripts/session.sh' $*"
+  exec ssh "$HOST" "PB_JACK_PERIOD='${PB_JACK_PERIOD:-}' PB_LINKS='${PB_LINKS:-}' PB_TEMPO='${PB_TEMPO:-}' PB_GUI='${PB_GUI:-}' bash '$REMOTE/src/scripts/session.sh' $*"
 fi
 
 B="$HOME/$REMOTE/build"
 RUN=/tmp/pedal-bridge-session          # journaux (effacés au redémarrage du Pi)
 PERIOD="${PB_JACK_PERIOD:-128}"
 LINKS="${PB_LINKS:-1,2}"
+GUI="${PB_GUI:-1}"
 TEMPO="${PB_TEMPO:-120}"
 export DISPLAY=:1
 mkdir -p "$RUN"
@@ -161,9 +166,11 @@ do_start() {
   fi
 
   echo "== Écran virtuel :1 et VNC (localhost:5900)"
-  running Xvfb    || { launch xvfb Xvfb :1 -screen 0 1280x720x24; sleep 1; }
-  running openbox || launch openbox openbox
-  running x11vnc  || launch x11vnc x11vnc -display :1 -localhost -nopw -forever -shared -quiet
+  if [ "$GUI" != 0 ]; then
+    running Xvfb    || { launch xvfb Xvfb :1 -screen 0 1280x720x24; sleep 1; }
+    running openbox || launch openbox openbox
+    running x11vnc  || launch x11vnc x11vnc -display :1 -localhost -nopw -forever -shared -quiet
+  fi
 
   echo "== SooperLooper (8 boucles stéréo, OSC 9951)"
   if ! running sooperlooper; then
@@ -171,12 +178,18 @@ do_start() {
     wait_port sooperlooper:common_in_1 10 && sleep 0.5
   fi
   sl_settings
-  running slgui || launch slgui slgui
+  [ "$GUI" != 0 ] && { running slgui || launch slgui slgui; }
 
   echo "== Hydrogen"
-  if ! running hydrogen; then
-    launch hydrogen hydrogen -d jack -n
+  if ! running hydrogen && ! running h2cli; then
+    if [ "$GUI" != 0 ]; then
+      launch hydrogen hydrogen -d jack -n
+    else                                   # sans fenêtre ; le pont ouvre ensuite le bon morceau
+      launch h2cli h2cli -d jack -s /usr/share/hydrogen/data/demo_songs/GM_kit_demo1.h2song
+    fi
     wait_port Hydrogen:out_L 20
+  elif [ "$GUI" = 0 ] && running hydrogen; then
+    echo "  ATTENTION : Hydrogen tourne avec son interface (PB_GUI=0 demandé : stop, puis start)"
   fi
   h2_pattern_mode
 
@@ -196,7 +209,7 @@ do_start() {
 
 do_status() {
   echo "== Programmes"
-  for p in jackd pb_timebase Xvfb openbox x11vnc sooperlooper slgui hydrogen pedal_bridge; do
+  for p in jackd pb_timebase Xvfb openbox x11vnc sooperlooper slgui hydrogen h2cli pedal_bridge; do
     pid=$(pgrep -u "$USER" -x "$p" | head -1)
     if [ -n "$pid" ]; then st="en marche (pid $pid)"; else st="arrêté"; fi
     printf "  %-13s %s\n" "$p" "$st"
@@ -226,6 +239,7 @@ do_stop() {
   echo "== Arrêt"
   stop_one pedal_bridge
   stop_one hydrogen
+  stop_one h2cli
   stop_one slgui
   stop_one sooperlooper
 }

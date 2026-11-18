@@ -47,10 +47,24 @@ def render(song, roles, template, kits_dir):
     return out
 
 
+# Réglages de note égaux à la valeur qu'Hydrogen met quand ils manquent
+# (Note::load_from, Hydrogen 1.2 : leadlag 0, pitch 0, key C0, length -1,
+# note_off false, probability 1) : retirés, le son est identique. « pan » est
+# gardé : absent, Hydrogen cherche l'ancien format et écrit un avertissement.
+# Mesuré : gros morceau 27 -> 9 Mo, chargement 4,1 -> 2,5 s.
+DEFAULTS = re.compile(r"\s*<(?:leadlag>0</leadlag|pitch>0</pitch|key>C0</key|length>-1</length"
+                      r"|note_off>false</note_off|probability>1</probability)>")
+
+
+def lighten(pattern):
+    p = DEFAULTS.sub("", pattern)
+    return re.sub(r"\n\s+", "\n", p)
+
+
 def patterns(text):
     a, b = text.find("<patternList>"), text.find("</patternList>")
     body = text[a + len("<patternList>"):b]
-    return ["<pattern>" + p[:p.rfind("</pattern>") + len("</pattern>")] for p in body.split("<pattern>")[1:]]
+    return [lighten("<pattern>" + p[:p.rfind("</pattern>") + len("</pattern>")]) for p in body.split("<pattern>")[1:]]
 
 
 def main():
