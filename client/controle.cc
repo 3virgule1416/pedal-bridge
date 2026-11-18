@@ -654,8 +654,9 @@ struct SongDef {
 
 struct Seq {
     bool active = false;
-    int part = 0;                         // index dans g_song.parts
-    std::map<int, int> var;               // partie -> variation choisie
+    int part = 0;                         // index dans g_song.parts (partie affichée)
+    std::map<int, int> var;               // partie -> variation choisie ; -1 : None (partie sautée)
+    int loop_part = 0, next_part = 0;     // partie qui tourne ; celle qui vient
     std::vector<int> loop;                // phrase qui tourne
     size_t loop_pos = 0;
     std::deque<int> once;                 // à jouer une fois, dans l'ordre
@@ -1183,7 +1184,7 @@ bool apply_big_choice(pb_ctl *k)
                 if (q != ps->second.end() && !q->second.empty()) { g_dr_song_groove = q->second.front().front(); break; }
             }
     }
-    seq_setup(PB_LOAD_RLX(&k->drum_part), g_dr_song_preset_var ? PB_LOAD_RLX(&k->drum_var) : 1u);
+    seq_setup(PB_LOAD_RLX(&k->drum_part), g_dr_song_preset_var ? PB_LOAD_RLX(&k->drum_var) : UINT32_MAX);
     g_dr_song_preset_var = false;
     if (g_seq.active) {
         say("DLS Drum : %s (patterns %d à %d) ; %s %c", song_rel(g_dr_song_sel).c_str(), g_off + 1, g_off + g_cnt,
@@ -1310,17 +1311,18 @@ void memo_load()
         const size_t a = l.find('\t'), b = l.find('\t', a + 1);
         if (a == std::string::npos || b == std::string::npos || b + 1 >= l.size()) continue;
         const char c = l[b + 1];
-        const int v = c >= 'A' && c <= 'Z' && b + 2 == l.size() ? c - 'A' : std::atoi(l.c_str() + b + 1) - 1;
-        if (v >= 0) g_memo[l.substr(0, a)][l.substr(a + 1, b - a - 1)] = v;
+        const int v = c == '-' ? -1 : c >= 'A' && c <= 'Z' && b + 2 == l.size() ? c - 'A' : std::atoi(l.c_str() + b + 1) - 1;
+        if (v >= -1) g_memo[l.substr(0, a)][l.substr(a + 1, b - a - 1)] = v;
     }
 }
 
 void memo_save(int part)
 {
     if (part < 0 || part >= (int)g_song.parts.size() || g_song_rel.empty()) return;
-    int &m = g_memo[g_song_rel][g_song.parts[part]];
-    if (m == g_seq.var[part]) return;
-    m = g_seq.var[part];
+    auto &song = g_memo[g_song_rel];
+    const auto q = song.find(g_song.parts[part]);
+    if (q != song.end() && q->second == g_seq.var[part]) return;
+    song[g_song.parts[part]] = g_seq.var[part];
     const std::string path = memo_path(), tmp = path + ".tmp";
     {
         std::ofstream f(tmp);
@@ -1328,7 +1330,7 @@ void memo_save(int part)
             for (const auto &pv : song.second) {
                 const int v = pv.second;
                 f << song.first << '\t' << pv.first << '\t';
-                if (v < 26) f << (char)('A' + v); else f << v + 1;
+                if (v < 0) f << '-'; else if (v < 26) f << (char)('A' + v); else f << v + 1;
                 f << '\n';
             }
         if (!f) return;
@@ -1362,9 +1364,23 @@ const std::vector<int> &phrase_of(int part)
     const auto &vs = g_song.vars[g_song.parts[part]];
     if (vs.empty()) return none;
     int v = g_seq.var[part];
-    if (v < 0) v = 0;
+    if (v < 0) return none;                           // None : partie sautée
     if (v >= (int)vs.size()) v = (int)vs.size() - 1;
     return vs[v];
+}
+
+std::string var_name(int v) { return v < 0 ? "None" : v < 26 ? std::string(1, (char)('A' + v)) : std::to_string(v + 1); }
+
+/* Partie active suivante (dir +1) ou précédente (-1), en revenant au début
+ * après la dernière ; -1 s'il n'y en a pas d'autre que « from ». */
+int next_on(int from, int dir)
+{
+    const int n = (int)g_song.parts.size();
+    for (int k = 1; k < n; k++) {
+        const int j = ((from + dir * k) % n + n) % n;
+        if (g_seq.var[j] >= 0) return j;
+    }
+    return -1;
 }
 
 double size_beats(int abs) { return abs >= 0 && abs < (int)g_pat_sizes.size() ? g_pat_sizes[abs] / 48.0 : 4.0; }
@@ -1447,13 +1463,19 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
     for (int i = 0; i < (int)g_song.parts.size(); i++) {
         const int n = (int)g_song.vars[g_song.parts[i]].size();
         int v = g_song.pool ? i : 0;
-        if (i == g_seq.part && var_ui >= 1) v = (int)var_ui - 1;
+        if (i == g_seq.part && var_ui != UINT32_MAX) v = (int)var_ui - 1;     // 0 : None
         if (mem != g_memo.end()) {
             const auto q = mem->second.find(g_song.parts[i]);
             if (q != mem->second.end()) v = q->second;
         }
-        g_seq.var[i] = std::min(std::max(v, 0), std::max(n - 1, 0));
+        g_seq.var[i] = std::min(std::max(v, -1), std::max(n - 1, 0));
     }
+    if (g_seq.var[g_seq.part] < 0) {                  // partie affichée sautée : la suivante
+        const int j = next_on(g_seq.part, +1);
+        if (j >= 0) g_seq.part = j;
+        else g_seq.var[g_seq.part] = 0;               // toutes à None : on garde celle-ci
+    }
+    g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
     seq_select(g_seq.loop.empty() ? -1 : g_seq.loop[0]);
     g_pattern = g_seq.cur_abs;
@@ -1466,8 +1488,8 @@ void seq_display(uint32_t &part, uint32_t &var)
     var = 0;
     if (!g_seq.active) return;
     if (g_seq.in_once) part = (uint32_t)g_seq.once_kind;
-    else if (!g_song.parts.empty()) part = (uint32_t)part_code(g_song.parts[g_seq.part]);
-    var = (uint32_t)g_seq.var[g_seq.part] + 1;
+    else if (!g_song.parts.empty()) part = (uint32_t)part_code(g_song.parts[g_seq.loop_part]);
+    var = (uint32_t)(g_seq.var[g_seq.loop_part] + 1);
 }
 
 /* --- Demandes (boutons, listes) --- */
@@ -1492,25 +1514,37 @@ std::string seq_change(int part, int var, bool transition)
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
     if (part < 0 || part >= (int)g_song.parts.size()) return "erreur : partie inconnue";
     const auto &vs = g_song.vars[g_song.parts[part]];
-    if (var < 0) var = 0;
+    if (var < -1) var = -1;
     if (var >= (int)vs.size()) var = (int)vs.size() - 1;
-    const bool same = part == g_seq.part && var == g_seq.var[part];
-    const int old_part = g_seq.part;
+    if (var < 0 && g_seq.var[part] >= 0 && next_on(part, +1) < 0)
+        return "erreur : il faut au moins une partie";
+    const int old_part = g_seq.loop_part;
+    const bool same = part == g_seq.loop_part && var == g_seq.var[part] && g_seq.switch_at < 0;
     g_seq.part = part;
     g_seq.var[part] = var;
     memo_save(part);
+    if (var < 0) {                                     // None : partie sautée, la musique ne change pas
+        if (g_seq.switch_at >= 0 && g_seq.next_part == part) {
+            g_seq.switch_at = -1;
+            g_seq.next_loop.clear();
+            g_seq.once.clear();
+        }
+        return "ok " + g_song.parts[part] + " : None (sautée par Part ◀ ▶)";
+    }
     const std::vector<int> ph = phrase_of(part);
     double at, bpb;
     if (!next_bar(at, bpb)) {                          // à l'arrêt : tout de suite
         g_seq.loop = ph;
+        g_seq.loop_part = part;
         g_seq.loop_pos = 0;
         seq_select(ph.empty() ? -1 : ph[0]);
         g_pattern = g_seq.cur_abs;
         seq_cycle(ph);
-        return "ok " + g_song.parts[part] + " " + std::string(1, (char)('A' + std::min(var, 25)));
+        return "ok " + g_song.parts[part] + " " + var_name(var);
     }
     if (same) return "déjà là";
     g_seq.next_loop = ph;
+    g_seq.next_part = part;
     g_seq.once.clear();
     if (transition) {                                  // transition, sinon un fill de la partie quittée
         int f = -1;
@@ -1518,7 +1552,7 @@ std::string seq_change(int part, int var, bool transition)
             size_t &turn = g_fill_turn[g_song_rel + "/transition"];
             f = g_song.transition[turn++ % g_song.transition.size()];
         } else {
-            f = fill_for_part(old_part);
+            f = fill_for_part(old_part);   // (old_part : la partie qui joue)
         }
         if (f >= 0) {
             g_seq.once.push_back(f);
@@ -1527,7 +1561,7 @@ std::string seq_change(int part, int var, bool transition)
         }
     }
     g_seq.switch_at = at;
-    return "ok vers " + g_song.parts[part] + " " + std::string(1, (char)('A' + std::min(var, 25)));
+    return "ok vers " + g_song.parts[part] + " " + var_name(var);
 }
 
 std::string seq_outro()
@@ -1554,6 +1588,11 @@ void seq_start()
     g_seq.switch_at = -1;
     g_seq.stop_after = false;
     g_seq.resume_pos = 0;
+    if (g_seq.var[g_seq.part] < 0) {                  // partie affichée sautée : la suivante
+        const int j = next_on(g_seq.part, +1);
+        if (j >= 0) g_seq.part = j;
+    }
+    g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
     g_seq.loop_pos = 0;
     const int ic = g_seq.intro_choice;
@@ -1583,7 +1622,10 @@ void seq_stopped()
     g_seq.in_once = g_seq.stop_after = false;
     g_seq.resume_pos = 0;
     g_seq.next_loop.clear();
-    g_seq.loop = phrase_of(g_seq.part);
+    if (!phrase_of(g_seq.part).empty()) {             // partie affichée (sinon : celle qui jouait)
+        g_seq.loop = phrase_of(g_seq.part);
+        g_seq.loop_part = g_seq.part;
+    }
     g_seq.loop_pos = 0;
     seq_select(g_seq.loop.empty() ? -1 : g_seq.loop[0]);
 }
@@ -1626,6 +1668,7 @@ void seq_tick()
         g_seq.in_once = false;
         if (!g_seq.next_loop.empty()) {               // autre partie ou variation
             g_seq.loop = g_seq.next_loop;
+            g_seq.loop_part = g_seq.next_part;
             g_seq.next_loop.clear();
             g_seq.loop_pos = 0;
             seq_cycle(g_seq.loop);
@@ -1725,10 +1768,11 @@ void drum_poll(pb_ctl *k)
             case PB_DBTN_TAP:      r = tap_tempo(); break;
             case PB_DBTN_FILL:     r = seq_fill(); break;
             case PB_DBTN_PART_PREV:
-                r = g_seq.active && g_seq.part > 0 ? seq_change(g_seq.part - 1, g_seq.var[g_seq.part - 1], true) : "pas de partie avant"; break;
-            case PB_DBTN_PART_NEXT:
-                r = g_seq.active && g_seq.part + 1 < (int)g_song.parts.size()
-                    ? seq_change(g_seq.part + 1, g_seq.var[g_seq.part + 1], true) : "pas de partie après"; break;
+            case PB_DBTN_PART_NEXT: {                  // parties actives (pas None), en revenant au début
+                const int j = g_seq.active ? next_on(g_seq.part, b == PB_DBTN_PART_NEXT ? +1 : -1) : -1;
+                r = j >= 0 ? seq_change(j, g_seq.var[j], true) : "pas d'autre partie";
+                break;
+            }
             case PB_DBTN_OUTRO:    r = seq_outro(); break;
             }
             say("DLS Drum : %s", r.c_str());

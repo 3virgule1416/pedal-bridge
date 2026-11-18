@@ -532,6 +532,17 @@ Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
   la Variation du preset (partie affichée), sinon A (pack : A à D).
 - Les fills tournent par liste de fills (pas par partie) : deux parties qui
   partagent les fills communs n'enchaînent pas le même.
+- **Variation = None** : la partie est sautée par Part ◀ ▶ (retenu dans la
+  mémoire : `-`). La musique ne change pas tant qu'on ne change pas de partie ;
+  au Play, une partie affichée à None laisse la place à la suivante. Il reste
+  toujours au moins une partie.
+- **Part ◀ ▶ reviennent au début** (Bridge -> Verse, Verse -> Bridge), comme
+  la BeatBuddy qui revient à la 1re partie après la dernière. Avec Verse et
+  Chorus seulement, Part ▶ alterne Verse / Chorus.
+- Comparaison : BeatBuddy (appui = fill, appui long = transition puis partie
+  suivante, double appui = outro ; la chanson n'a que les parties créées) ;
+  RC-600 (variations A à D sans parties, changement à la fin de la mesure ou
+  de la boucle : réglage VAR.CHANGE).
 - Vérifié (Contemporary S06) : Fill à la barre puis retour ; Part ▶ avec fill
   de transition ; Var ▶ ; End : outro de 3 patterns puis arrêt.
 - Limite : un fill au milieu d'un pattern de 4 mesures le fait repartir à sa

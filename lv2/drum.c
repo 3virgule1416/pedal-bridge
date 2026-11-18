@@ -278,6 +278,7 @@ static void run(LV2_Handle h, uint32_t n)
         }
     }
     int groove = (int)lrintf(port(p, C_GROOVE, 1.0f));
+    int var = groove < 0 ? 0 : groove > 128 ? 128 : groove;      /* 0 : None (partie sautée) */
     if (groove < 1) groove = 1;
     if (groove > (int)PB_CTL_GROOVES) groove = (int)PB_CTL_GROOVES;
 
@@ -298,7 +299,7 @@ static void run(LV2_Handle h, uint32_t n)
             if (p->f[F_SONG].publish) { publish_path(&ctl->drum_song_seq, ctl->drum_song, p->f[F_SONG].path); p->f[F_SONG].publish = 0; }
         }
         PB_STORE_RLX(&ctl->drum_groove, (uint32_t)groove);
-        PB_STORE_RLX(&ctl->drum_var, (uint32_t)groove);
+        PB_STORE_RLX(&ctl->drum_var, (uint32_t)var);
         PB_STORE_RLX(&ctl->drum_part, (uint32_t)lrintf(port(p, C_PART, 0.0f)) + 1u);
         PB_STORE_RLX(&ctl->drum_intro, (uint32_t)lrintf(port(p, C_INTRO, 0.0f)) + 1u);
         PB_STORE_RLX(&ctl->drum_outro, (uint32_t)lrintf(port(p, C_OUTRO, 1.0f)));

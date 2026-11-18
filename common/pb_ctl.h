@@ -123,7 +123,7 @@ typedef struct pb_ctl {
     uint32_t drum_metro;        /* interrupteur Metronome : 0 éteint, 1 allumé */
     uint32_t drum_kit_num;      /* liste Kit : 1..N (ordre alphabétique des .kit) ; 0 = pas choisi */
     uint32_t drum_part;         /* liste Part : 1 Verse, 2 Pre-Chorus, 3 Chorus, 4 Bridge ; 0 = pas choisi */
-    uint32_t drum_var;          /* liste Variation : 1.. (A, B, C…) */
+    uint32_t drum_var;          /* liste Variation : 0 None (partie sautée), 1.. A, B, C… */
     uint32_t drum_intro;        /* liste Intro : 1 Off, 2 Metronome, 3.. = A, B… ; 0 = pas choisi */
     uint32_t drum_outro;        /* liste Outro : 1.. = A, B… */
     uint8_t  pad5[20];

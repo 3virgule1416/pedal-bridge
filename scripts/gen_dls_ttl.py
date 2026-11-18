@@ -192,7 +192,8 @@ def drum_plugin(uri, name, label, stereo):
     p.append(ctl_in(i, "part", "Part", "",
                     enum(0, 3, [(0, "Verse"), (1, "Pre-Chorus"), (2, "Chorus"), (3, "Bridge")]), D)); i += 1
     p.append(ctl_in(i, "variation", "Variation", "",
-                    enum(1, 128, [(k + 1, VARS[k]) for k in range(128)]), D)); i += 1
+                    enum(0, 128, [(0, "None")] + [(k + 1, VARS[k]) for k in range(128)]).replace(
+                        "lv2:default 0", "lv2:default 1"), D)); i += 1      # None : partie sautée
     p.append(ctl_in(i, "outro", "Outro", "",
                     enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), D)); i += 1
     p.append(button(i, "precedent", "Var ◀", "Previous variation of the current part, from the next bar.", D)); i += 1
