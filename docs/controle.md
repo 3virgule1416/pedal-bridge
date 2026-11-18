@@ -617,6 +617,11 @@ SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure
     et AVLDrumkits-RedZeppelin-2023 (CC BY-SA, Glen MacArthur ; 5 nuances de
     frappe), DeathMetal (CC-BY, Archman). Fichiers produits : « DLS Rock »
     (GMRockKit), « DLS Rock - Black Pearl », etc.
+  - **Kits de l'ancien format** (DeathMetal, 2008) : Hydrogen 1.2 n'arrive pas
+    à les convertir (instruments sans son et en sourdine). `scripts/modele_kit.py`
+    fabrique le modèle à partir du `drumkit.xml` ; `--gain 5` pour DeathMetal,
+    enregistré trop bas (mesuré : 0,03 au plus fort contre 0,27 pour Black
+    Pearl ; 0,16 après).
 - **À faire : changer de style sans coupure.** Changer de morceau
   (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
   un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain
