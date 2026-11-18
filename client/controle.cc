@@ -1058,7 +1058,18 @@ bool apply_big_choice(pb_ctl *k)
     if (stale && !build_big(big, g_dr_kit_sel, songs)) return true;
     if (load) say("DLS Drum : %s", open_drum_song(big, 0).c_str());
     if (g_index_for != big || stale) load_index(big);
-    const auto it = g_index.find(song_rel(g_dr_song_sel));
+    auto it = g_index.find(song_rel(g_dr_song_sel));
+    if (it == g_index.end()) {
+        /* Preset d'avant le rangement par style (« Funk.h2song » à la racine) :
+         * chercher « <style>/Funk.h2song » ou « <style>/RP Bardet Funk.h2song ». */
+        const std::string base = song_rel(g_dr_song_sel).substr(song_rel(g_dr_song_sel).rfind('/') + 1);
+        for (auto j = g_index.begin(); j != g_index.end(); ++j) {
+            const std::string &k = j->first;
+            const std::string kb = k.substr(k.rfind('/') + 1);
+            if (kb == base || kb == "RP Bardet " + base) { it = j; break; }
+        }
+        if (it != g_index.end()) say("DLS Drum : %s retrouvé : %s", base.c_str(), it->first.c_str());
+    }
     if (it == g_index.end()) {
         say("DLS Drum : %s absent du gros morceau", song_rel(g_dr_song_sel).c_str());
         return true;
@@ -1204,7 +1215,28 @@ void read_h2_current_song()
     {
         std::ifstream m(drum_song_file());
         std::string path;
-        if (std::getline(m, path) && file_size(path) > 0) { read_pattern_sizes(path); g_drum_song = path; return; }
+        /* Valable seulement si Hydrogen tournait déjà quand le pont l'a ouvert :
+         * un Hydrogen relancé depuis (redémarrage du Pi, de la session) a un
+         * autre morceau, il faut le rouvrir. Date de démarrage d'un processus =
+         * date de son dossier /proc/<pid>. */
+        if (std::getline(m, path) && file_size(path) > 0) {
+            read_pattern_sizes(path);
+            long h2_start = -1;
+            if (DIR *d = opendir("/proc")) {
+                while (dirent *e = readdir(d)) {
+                    if (!std::isdigit((unsigned char)e->d_name[0])) continue;
+                    std::ifstream c(std::string("/proc/") + e->d_name + "/comm");
+                    std::string comm;
+                    std::getline(c, comm);
+                    if (comm == "hydrogen" || comm == "h2cli")
+                        h2_start = std::max(h2_start, mtime(std::string("/proc/") + e->d_name));
+                }
+                closedir(d);
+            }
+            if (h2_start >= 0 && h2_start <= mtime(drum_song_file())) g_drum_song = path;
+            else say("Hydrogen relancé depuis le dernier morceau ouvert : il sera rouvert");
+            return;
+        }
     }
     const char *home = std::getenv("HOME");
     if (!home) return;
