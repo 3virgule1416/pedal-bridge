@@ -1396,14 +1396,27 @@ std::string open_drum_song(const std::string &path, int groove)
     if (file_size(path) <= 0) return "erreur : " + path + " introuvable";
     if (!h2_listening()) return "erreur : l'OSC d'Hydrogen ne répond pas (port " + std::to_string(g_cfg.h2_port) + ")";
     if (transport_rolling()) return "erreur : arrête la lecture d'abord (Play/Stop)";
+    /* Fin du chargement : Hydrogen renvoie tout son état (volumes, mute…) à ses
+     * clients quand le morceau est chargé (mesuré : 3,9 s pour un gros morceau
+     * de 28 Mo). On s'inscrit d'abord (un message d'une adresse nouvelle
+     * déclenche aussi cet envoi) et on vide ce qui arrive, puis on ouvre et on
+     * attend le premier retour ; au pire, un délai selon la taille. */
+    h2_send("/Hydrogen/PB_PROBE", nullptr, nullptr);
+    sl_drain(0.2, [](const OscMsg &) { return false; });
+    const double t0 = now_s();
     h2_string("/Hydrogen/OPEN_SONG", path);
     read_pattern_sizes(path);
     remember_drum_song(path);
     g_drum_song = path;
     g_off = g_cnt = 0;
-    /* Hydrogen ne confirme pas : on lui laisse le temps (1,5 s, plus 0,1 s par
-     * Mo : un gros morceau de 28 Mo se charge en moins de 4 s, mesuré). */
-    usleep((useconds_t)(1500000 + file_size(path) / 10));
+    const double limit = 3.0 + file_size(path) / 1e7;   // 28 Mo : 5,8 s au plus
+    bool done = false;
+    while (!done && now_s() - t0 < limit)
+        sl_drain(limit - (now_s() - t0), [&](const OscMsg &m) {
+            return done = m.addr.compare(0, 10, "/Hydrogen/") == 0;
+        });
+    usleep(100000);                                   // la fin de la rafale
+    say("DLS Drum : morceau chargé en %.1f s%s", now_s() - t0, done ? "" : " (sans retour d'Hydrogen)");
     g_pattern = -1;
     const std::string r = groove > 0 ? set_groove(std::to_string(groove)) : std::string("groove non choisi");
     jack_transport_locate(g_cfg.client, 0);
