@@ -457,6 +457,22 @@ La rangée du haut est fixée. La rangée du bas est la proposition retenue ; on
 confirmera après avoir essayé les fonctions dans PiPedal (boutons de DLS Drum),
 puisque les boutons du Captain ne sont que des réglages.
 
+### Rangement de la liste Song (fait, 2026-11-18)
+
+Trois niveaux partout : **Style / Groupe (type de beat) / Beat**, par
+`scripts/ranger.py` (fichiers déplacés, rien d'effacé ; `.alias.txt` dans le
+dossier : le pont retrouve la chanson d'un ancien preset). Les noms ne répètent
+pas le style et n'ont pas de tempo (le tempo est toujours celui choisi ; celui
+d'origine reste dans les `.parts.json`). Les ensembles JJ sont coupés par
+famille (Straight, Backbeat, grooves 4/4, mesures impaires), chacune avec les
+fills et intros de sa plage, nommée par son allure (lent, moyen, rapide, très
+rapide, extrême). Exemples : `Metal/Straight/Lamb Chops très rapide`,
+`Rock/Rock droit/Classic S03`, `Latin/Bossa et Samba/Bossa`. Gros morceau :
+3 134 patterns, ouvert en 3,5 s.
+
+Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style
+en file, d'un groupe à l'autre.
+
 ### Fonctions de batterie (définitions)
 
 Chaque chanson (style) devient une petite chanson à la BeatBuddy, construite à

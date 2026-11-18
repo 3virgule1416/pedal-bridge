@@ -297,6 +297,21 @@ def main():
                 groups.setdefault(key, []).append({
                     "part": part, "src": path, "size": size, "notes": notes, "num": num, "den": den,
                     "name": pattern_name(path, part, k if len(segs) > 1 else 0), "bpm": bpm_of(path)})
+    # Ensembles JJ : une famille de beat par fichier (Straight, Backbeat,
+    # Groove ; toutes les mesures impaires ensemble), chacune avec tous les
+    # fills et intros de sa plage de tempo.
+    for (style, title) in [k for k in groups if k[1].startswith("JJ ")]:
+        items = groups.pop((style, title))
+        shared = [it for it in items if it["part"] in ("Fill", "Intro")]
+        fams = {}
+        for it in items:
+            if it["part"] in ("Fill", "Intro"):
+                continue
+            meter = re.search(r"\b(\d+-\d+)\b", it["name"])
+            fam = "Mesures impaires" if meter and meter.group(1) != "4-4" else it["name"].split()[0]
+            fams.setdefault(fam, []).append(it)
+        for fam, grooves in fams.items():
+            groups[(style, f"{title} {fam}")] = grooves + shared
     total = 0
     for (style, title), items in sorted(groups.items()):
         items.sort(key=lambda it: (PART_ORDER.index(it["part"]), it["name"]))

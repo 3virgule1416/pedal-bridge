@@ -1060,6 +1060,25 @@ bool apply_big_choice(pb_ctl *k)
     if (g_index_for != big || stale) load_index(big);
     auto it = g_index.find(song_rel(g_dr_song_sel));
     if (it == g_index.end()) {
+        /* Chanson rangée ailleurs depuis (scripts/ranger.py) : .alias.txt du
+         * dossier, « ancien<TAB>nouveau » ; on suit au plus 3 renvois. */
+        std::map<std::string, std::string> alias;
+        std::ifstream af(songs + "/.alias.txt");
+        std::string line;
+        while (std::getline(af, line)) {
+            const size_t t = line.find('\t');
+            if (t != std::string::npos) alias[line.substr(0, t)] = line.substr(t + 1);
+        }
+        std::string rel = song_rel(g_dr_song_sel);
+        for (int hop = 0; hop < 3 && it == g_index.end(); hop++) {
+            const auto a = alias.find(rel);
+            if (a == alias.end()) break;
+            rel = a->second;
+            it = g_index.find(rel);
+        }
+        if (it != g_index.end()) say("DLS Drum : %s rangé sous %s", song_rel(g_dr_song_sel).c_str(), rel.c_str());
+    }
+    if (it == g_index.end()) {
         /* Preset d'avant le rangement par style (« Funk.h2song » à la racine) :
          * chercher « <style>/Funk.h2song » ou « <style>/RP Bardet Funk.h2song ». */
         const std::string base = song_rel(g_dr_song_sel).substr(song_rel(g_dr_song_sel).rfind('/') + 1);
