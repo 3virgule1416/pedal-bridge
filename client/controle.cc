@@ -1426,6 +1426,23 @@ std::string open_drum_song(const std::string &path, int groove)
     h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 1.0f);
     h2_float("/Hydrogen/SELECT_ONLY_NEXT_PATTERN", 0.0f);
     g_pattern = -1;
+    /* Hydrogen peut rester occupé un moment après son retour d'état (gros
+     * morceau) : ses commandes sont traitées dans l'ordre, plus tard. Barrière :
+     * basculer le métronome deux fois (inaudible à l'arrêt, état inchangé) et
+     * attendre le 2e retour ; nos commandes d'avant sont alors appliquées. */
+    if (g_h2_metro >= 0) {
+        const double tb = now_s();
+        const int want = g_h2_metro;
+        int seen = 0;
+        h2_send("/Hydrogen/TOGGLE_METRONOME", nullptr, nullptr);
+        h2_send("/Hydrogen/TOGGLE_METRONOME", nullptr, nullptr);
+        while (seen < 2 && now_s() - tb < 5.0)
+            sl_drain(5.0 - (now_s() - tb), [&](const OscMsg &m) {
+                return m.addr == "/Hydrogen/TOGGLE_METRONOME" && ++seen >= 2;
+            });
+        g_h2_metro = want;
+        say("DLS Drum : Hydrogen prêt %.1f s après son retour d'état%s", now_s() - tb, seen >= 2 ? "" : " (sans réponse)");
+    }
     const std::string r = groove > 0 ? set_groove(std::to_string(groove)) : std::string("groove non choisi");
     jack_transport_locate(g_cfg.client, 0);
     return "ok morceau " + path + " : " + std::to_string(g_pat_sizes.size()) + " pattern(s) ; " + r;
