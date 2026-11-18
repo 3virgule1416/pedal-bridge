@@ -430,6 +430,88 @@ appui long sur une touche du Captain, si sa page le permet.
 À vérifier : l'Axe envoie-t-il un message au **relâchement** du switch (valeur 0)
 en plus de l'appui ? Sans ça, pas d'appui long possible sur le double switch.
 
+### Disposition décidée (2026-11-17) : double switch et page DrumKit
+
+Le double switch reste **le même dans tous les modes** : il porte ce qui sert
+partout. Il ne change donc plus de preset (CC 65/67) : le changement de preset
+passe sur la page du mode PiPedal.
+
+| Double switch | Court | Long |
+|---|---|---|
+| **A** | Play / Stop (batterie et boucles) | **Outro** : la batterie finit la toune, puis tout s'arrête |
+| **B** | **Partie suivante** (couplet → refrain…) | **Changer de mode** (DrumKit → Looper → PiPedal) |
+
+Page **DrumKit** du Captain : la rangée du **bas** (la plus facile d'accès) sert
+**en jouant**, celle du **haut** sert à **explorer et préparer**. *Long* = appui
+long (le pont mesure la durée de l'appui : le Captain doit envoyer l'appui ET le
+relâchement).
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **Haut** (explorer, préparer) | Tap | BPM - | BPM + | Groove ◀ | Groove ▶ |
+| *long* | Métronome on/off | BPM - en continu | BPM + en continu | Style ◀ | Style ▶ |
+| **Bas** (en jouant) | Fill | Variation | Batterie on/off | Partie ◀ | Break |
+| *long* | Crash / accent | Batterie légère | — | Intro | Fill long |
+
+La rangée du haut est fixée. La rangée du bas est la proposition retenue ; on la
+confirmera après avoir essayé les fonctions dans PiPedal (boutons de DLS Drum),
+puisque les boutons du Captain ne sont que des réglages.
+
+### Fonctions de batterie (définitions)
+
+Chaque chanson (style) devient une petite chanson à la BeatBuddy, construite à
+partir des `.parts.json` (automatique pour les packs étiquetés, devinée pour
+ceux qui n'ont que « Groove » et « Fill », modifiable par un petit fichier par
+chanson) :
+
+| Partie | Contenu |
+|---|---|
+| Intro | intro ou décompte |
+| Partie 1 (Verse / couplet) | groove(s) du couplet + leurs fills |
+| Partie 2 (Chorus / refrain) | groove(s) du refrain + leurs fills |
+| Partie 3 (Bridge / pont) | facultative |
+| Transition | fill qui fait passer d'une partie à la suivante |
+| Outro | la fin |
+
+Les moitiés d'une phrase coupée à 4 mesures (« Verse (1) », « Verse (2) ») sont
+enchaînées automatiquement comme un seul groove.
+
+| Fonction | Effet |
+|---|---|
+| **Groove ◀ ▶** | pattern précédent/suivant de la chanson, tous confondus : pour explorer |
+| **Style ◀ ▶** | chanson précédente/suivante du même dossier de style (instantané : gros morceau) |
+| **Partie ◀ ▶** | section précédente/suivante : fill de transition, puis le groove de la partie, au début de la mesure |
+| **Variation** | autre version du groove de la partie en cours (Verse A → B → C → A), sans fill ni changement de partie |
+| **Fill** | un fill de la partie en cours pendant 1 mesure, puis retour automatique au groove ; les fills de la partie tournent à chaque appui ; compte comme une mesure normale pour les boucles |
+| **Fill long** | fill de 2 mesures ou plus (« 2-Bar Fill », fills longs JJ) ; à défaut, deux fills courts ou le fill normal |
+| **Batterie on/off** | coupe la batterie (mute d'Hydrogen), boucles et tempo continuent ; elle revient pile sur le 1 |
+| **Batterie légère** | coupe grosse caisse et caisse claire (mute par instrument d'Hydrogen), garde les cymbales : montées, passages calmes |
+| **Break** | 1 mesure de silence (ou un seul coup sur le 1), puis le groove repart |
+| **Crash / accent** | un coup de crash sur le prochain 1 |
+| **Intro** | relance l'intro de la chanson |
+| **Outro** | joue la fin de la chanson (« Outro », « Ending »…) puis arrête tout (batterie et boucles) ; sans fin prévue : coup final (crash + grosse caisse sur le 1) puis arrêt |
+
+**Moment du changement** : Fill, Partie, Variation, Break et Outro partent **au
+début de la mesure suivante** (le fill est toujours complet ; il faut appuyer
+une mesure d'avance). Façon BeatBuddy (le fill commence tout de suite et finit
+avec la mesure en cours) : non retenue pour l'instant. Réglage prévu pour
+l'étape des boucles, comme le VAR.CHANGE de la RC-600 : changer de partie à la
+**mesure** ou à la **fin du tour de boucle**.
+
+**Comparaison** : la RC-600 (Parameter Guide p. 7) a 4 variations (A–D), un
+fill automatique au changement de variation (réglage FILL on/off, pas de fill
+sur demande dans les pages lues), intro et fin en on/off, et le changement de
+variation à la fin de la mesure ou de la boucle. Le BeatBuddy : un groove par
+partie, fill sur demande, appui tenu = partie suivante, double appui = fin.
+Notre système : fill sur demande ET transition, toutes les variations des
+packs, un bouton par fonction.
+
+**Ordre de réalisation** : (1) structure des parties de chaque chanson ;
+(2) Fill, puis Partie ◀ ▶ et Outro ; (3) Variation, Batterie on/off, Break ;
+(4) Style ◀ ▶ au pied ; (5) Fill long, Batterie légère, Crash, Intro ;
+(6) boucles par partie et répétitions (§9, à la RC-600) ; puis le routeur MIDI
+et les pages du Captain.
+
 ### DEL : un seul responsable à la fois
 
 `pipedal_leds.py` et le client ne doivent pas écrire en même temps dans les DEL :
