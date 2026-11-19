@@ -551,14 +551,61 @@ l'assignation aux pédales ne dépend pas de la section.
 - Les `.parts.json` sont cachés (`.X.parts.json`) : le sélecteur de PiPedal ne
   montre pas les fichiers qui commencent par un point.
 
-**Page Browse du Captain (prévue)** : on y entre depuis la page DrumKit par un
-appui long sur Batterie on/off (seul appui long libre) ; seulement en mode
-Drum ; Retour (ou B) ramène à DrumKit.
+**Pages de configuration du Captain (décidé 2026-11-18)** : en mode Drum, une
+page pour jouer (DrumKit) et deux pour régler, **Browse** et **Parts**. On y
+entre depuis la page DrumKit par un appui long sur Batterie on/off (seul appui
+long libre). Sur ces deux pages : **A = Play/Stop**, **B = retour à DrumKit**.
+
+*Page Browse* (choisir kit et chanson) :
 
 | | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| Haut | Style ◀ | Style ▶ | Type ◀ | Type ▶ | Play/Stop |
-| Bas | Beat ◀ | Beat ▶ | Intro (long : Intro ▶) | End (long : Outro ▶) | Retour DrumKit |
+| Haut | Style ◀ | Style ▶ | Kit ◀ | Kit ▶ | Metronome |
+| Bas | Type ◀ | Type ▶ | Beat ◀ | Beat ▶ | → Parts |
+
+- Style, Type, Beat ◀ ▶ : comme les boutons Browse de DLS Drum.
+- **Kit ◀ ▶** : change la liste Kit (renvoyée à PiPedal). En jouant : Stop,
+  chargement du nouveau gros morceau (~2,5 s), puis **reprise là où on était**
+  (même mesure, même partie et variation) ; à l'arrêt : chargement tout de suite.
+- **Metronome** : on/off ; DEL **verte allumé, rouge éteint**.
+
+*Page Parts* (régler intro, parties, outro : mode « audition ») :
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| Haut | Intro | Verse | Pre-Chorus | Chorus | Bridge |
+| Bas | Back | Next | Outro | AutoFill | → Browse |
+
+- Appuyer sur Intro, une partie ou Outro la **sélectionne** (DEL plus lumineuse)
+  et la **joue en boucle** (ici l'Intro et l'Outro bouclent aussi).
+- **Back / Next** changent la valeur de la sélection : Intro (Off, Metronome,
+  A, B…), partie (None, A, B…), Outro (A, B…) ; retenu par chanson (`choix.txt`).
+- **None / Off** : le son s'arrête, la DEL de la sélection devient **rouge** ;
+  une autre partie à None / Off est **rouge très pâle**. Revenir à une valeur
+  (A, Metronome…) relance la boucle avec ce choix, la DEL reprend sa couleur.
+- **Play/Stop (A)** sur cette page : arrête / relance la boucle de la sélection.
+- **En arrivant sur Parts pendant la lecture** : la partie qui joue est
+  sélectionnée (DEL plus lumineuse), la musique continue, Back / Next agissent
+  sur elle.
+- **AutoFill** : interrupteur, DEL **verte allumé, rouge éteint**.
+
+*Couleurs* (à ajuster sur le vrai matériel) :
+
+| Bouton | Couleur |
+|---|---|
+| Paires ◀ ▶ (Style, Type, Kit, Beat) | une couleur par paire, la même pour ◀ et ▶ (on voit qu'elles vont ensemble) ; proposé : Style jaune, Type orange, Kit blanc, Beat cyan |
+| Intro, Verse, Pre-Chorus, Chorus, Bridge, Outro | une couleur par partie, pâle si non sélectionnée, vive si sélectionnée ; proposé : Intro bleu, Verse vert, Pre-Chorus turquoise, Chorus orange, Bridge violet, Outro magenta |
+| Back / Next (Parts) | la couleur de la sélection |
+| None / Off | rouge vif (sélectionnée), rouge très pâle (sinon) |
+| Metronome, AutoFill | vert allumé, rouge éteint |
+| → Parts, → Browse | blanc pâle |
+
+*Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
+ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
+dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le
+relâchement) ; (2) réglage MIDI de PiPedal pour ne plus écouter l'Axe en direct
+(avec l'accord du musicien) ; (3) pages du Captain programmées avec
+`captain-manager` ; (4) mode audition et Kit ◀ ▶ dans le pont.
 
 - **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
   coupée à 4, limite d'Hydrogen) forment **une** variation, jouée d'affilée.
