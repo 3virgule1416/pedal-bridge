@@ -2,7 +2,7 @@
 
     python scripts/gen_captain.py
 
-Écrit captain/page1.txt (DRUM), page2.txt (BRWS) et page3.txt (PART) à partir
+Écrit captain/page1.txt (DRUM), page2.txt (BROWSE) et page3.txt (PARTS) à partir
 de captain/entete.txt (en-tête de la page 0 du musicien). Rien n'est écrit sur
 le Captain : on copie soi-même les fichiers dans son dossier « supersetup ».
 
@@ -23,8 +23,8 @@ CH = 2
 # Nom affiché par touche ; rangée du haut puis du bas.
 PAGES = {
     1: ("DRUM", 21, ["Tap", "BPM-", "BPM+", "Var<", "Var>", "Fill", "Var", "Drum", "Part<", "Brk"]),
-    2: ("BRWS", 31, ["Styl<", "Styl>", "Kit<", "Kit>", "Metr", "Type<", "Type>", "Beat<", "Beat>", "Part"]),
-    3: ("PART", 41, ["Intr", "Vers", "PreC", "Chor", "Brdg", "Back", "Next", "Outr", "AutF", "Brws"]),
+    2: ("BROWSE", 31, ["Styl<", "Styl>", "Kit<", "Kit>", "Metr", "Type<", "Type>", "Beat<", "Beat>", "Part"]),
+    3: ("PARTS", 41, ["Intr", "Vers", "PreC", "Chor", "Brdg", "Back", "Next", "Outr", "AutF", "Brws"]),
 }
 KEYS = ["key1", "key2", "key3", "key4", "key5", "keyA", "keyB", "keyC", "keyD", "keyE"]
 

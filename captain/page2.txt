@@ -21,7 +21,7 @@ WIRELESS_dB   = [6]
 [PAGE]
 
 # Change the "NAME" below in uppercase letters <= 4 characters
-page_name = [BRWS]
+page_name = [BROWSE]
 
 # This section sets the global items within a page
 

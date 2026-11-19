@@ -620,16 +620,22 @@ ne vit que dans le pont (changer une couleur = changer le pont, pas les pages).
 
 | Page | Nom | Messages |
 |---|---|---|
-| 0 (PiPedal) | celle du musicien | CC1 à CC10, canal 1 (liés dans PiPedal), inchangée |
+| 0 (PiPedal) | `PEDAL` | CC1 à CC10, canal 1 (liés dans PiPedal), inchangée sauf le nom (`captain/page0.txt`) |
 | 1 DrumKit | `DRUM` | CC21 à CC30, canal 2 |
-| 2 Browse | `BRWS` | CC31 à CC40, canal 2 |
-| 3 Parts | `PART` | CC41 à CC50, canal 2 |
+| 2 Browse | `BROWSE` | CC31 à CC40, canal 2 |
+| 3 Parts | `PARTS` | CC41 à CC50, canal 2 |
 | 4 Looper (plus tard) | `LOOP` | CC51 à CC60, canal 2 |
 
 Format des pages (firmware officiel, « super mode ») : par touche `short_dw`
 (appui), `short_up` (relâchement), `long` / `long_up` (appui long, durée
 `long_press_timing`, 1 s ici), `ledcolor0/1` (3 DEL), `keytimes` (états à
-bascule) ; `[preset][value_inc]` change de page ; `page_name` 4 lettres.
+bascule) ; `[preset][value_inc]` change de page ; `page_name` 6 caractères au plus
+(mode d'emploi FW 5.0, `E:/DWL/MIDICaptainSTD_FW5.zip`). L'écran montre aussi le
+nom du dernier bouton appuyé (`short_dw1_name`), la dernière commande envoyée, le
+numéro de page et le tempo de son Tap ; le Pi ne peut pas y écrire de texte
+libre. Commande externe (canal 16) : CC 1 à 10 = appui virtuel (valeur 1 appui,
+2 long, 3 relâchement, 4 relâchement long), CC 20 = page, CC 21 à 30 = état
+d'une touche à bascule ; couleurs par SysEx (RVB 8 bits divisés par 2).
 Copie de la mémoire du Captain : `E:/DWL/Pedalboard/supersetup/` (page 0 du
 musicien, pages 1 à 27 d'usine).
 

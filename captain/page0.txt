@@ -1,0 +1,177 @@
+[globalsetup]
+
+# 0-100
+ledbright = [80]
+
+# 0-100
+screenbright = [80]
+
+# 1 / 1.5 / 2 / 2.5 --long press time in second
+long_press_timing = [1]
+
+# wireless setup only valid on MIDI Captain Blue/Gold version
+WIRELESS_2.4G = [on]
+
+# ID range 1-99 --Set to be the same with the MIDI MATE
+WIRELESS_ID   = [8]
+
+# 0:12dBm 1:10dBm 2:9dBm 3:8dBm 4:6dBm 5:3dBm 6:0dBm 7:-2dBm 8:-5dBm 9:-10dBm 10:-15dBm 11:-20dBm 12:-25dBm 13:-30dBm 14:-25dBm
+WIRELESS_dB   = [6]
+
+[PAGE]
+
+# Change the "NAME" below in uppercase letters <= 4 characters
+page_name = [PEDAL]
+
+# This section sets the global items within a page
+
+exp1_CH = [1]
+exp1_CC = [1]
+
+exp1_min = [0]
+exp1_max = [127]
+
+exp2_CH = [1]
+exp2_CC = [7]
+
+exp2_min = [0]
+exp2_max = [127]
+
+PC_Opennum = [0]
+
+# on / off
+midithrough = [on]
+
+tapcountMIN = [20]
+
+tapcountMAX = [256]
+
+encoderCH = [1]
+
+encoderCCnum = [43]
+
+encoderkeyCCtoggle = [40]
+
+# on / off
+externalmidicontrol = [on]
+
+externalmidicontrolch = [16]
+
+encoder_CC = [20]
+encoderkey_CCT = [89]
+
+# 123 / abc3 / abc4 / abc5 / abc8 --Only this 5 options
+# Setting 123 is to display the PC as a numerical value
+# abc3 means PC display as 1A,1B,1C,2A... abc5 means 1A,1B,1C,1D,1E,2A...
+display_number_ABC = [abc5]
+
+# 3 / 4 / 5 / 8 define how many patches in one group or bank
+# This is used when display_number_ABC is selected as '123'
+group_number = [5]
+
+#取值范围：0-9 bank
+CC_value_gropnumber = 
+
+#当效果器支持大于127时，组合值输入位置
+PC_Bank_Select = [5]
+PC_group_0 = [1][CC][32][0]
+PC_group_1 = [1][CC][32][1]
+PC_group_2 = [1][CC][32][2]
+PC_group_3 = [1][CC][32][3]
+PC_group_4 = [1][CC][32][4]
+PC_group_5 = 
+PC_group_6 = 
+PC_group_7 = 
+PC_group_8 = 
+PC_group_9 = 
+
+
+# 0 / 1 
+# set to 0 so that when abcX display selected above, bank is start from 0A,0B,0C...
+# set to 1 so that when abcX display selected above, bank is start from 1A,1B,1C...
+display_bank_offset = [1]
+
+ 
+[key1]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC1]
+short_dw1 = [1][CC][1][127]
+
+[key2]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC2]
+short_dw1 = [1][CC][2][127]
+
+[key3]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC3]
+short_dw1 = [1][CC][3][127]
+
+[key4]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC4]
+short_dw1 = [1][CC][4][127]
+
+[key5]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC5]
+short_dw1 = [1][CC][5][127]
+
+[keyA]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC6]
+short_dw1 = [1][CC][6][127]
+
+[keyB]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC7]
+short_dw1 = [1][CC][7][127]
+ 
+[keyC]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC8]
+short_dw1 = [1][CC][8][127]
+
+[keyD]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC9]
+short_dw1 = [1][CC][9][127]
+
+[keyE]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x000000][0x000000][0x000000]
+ledcolor1 = [0x000000][0x000000][0x000000]
+short_dw1_name = [CC10]
+short_dw1 = [1][CC][10][127]
+
+
+
+
