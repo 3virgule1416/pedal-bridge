@@ -60,7 +60,8 @@ enum pb_drum_btn {
     PB_DBTN_FILL,       /* fill de la partie en cours, à la mesure suivante */
     PB_DBTN_PART_PREV,  /* partie précédente (fill de transition) */
     PB_DBTN_PART_NEXT,  /* partie suivante (fill de transition) */
-    PB_DBTN_OUTRO,      /* fin de la chanson, puis arrêt */
+    PB_DBTN_OUTRO,      /* fin de la chanson, puis arrêt (à l'arrêt : l'outro seule) */
+    PB_DBTN_INTRO,      /* intro une fois, puis la partie (à l'arrêt : l'intro seule) */
     PB_DBTN_COUNT
 };
 

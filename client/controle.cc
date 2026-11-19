@@ -664,6 +664,8 @@ struct Seq {
     int once_kind = 0;                    // 1 intro, 7 outro, 8 fill/transition
     bool in_once = false;
     bool stop_after = false, metro_after = false;
+    bool outro_only = false;              // Play demandé par End à l'arrêt : l'outro seule
+    bool intro_only = false;              // Play demandé par Intro à l'arrêt : l'intro seule
     size_t resume_pos = 0;                // après un fill : où reprendre la phrase
     double item_start = 0, item_len = 0;  // élément en cours (temps du transport)
     int cur_abs = -1;
@@ -713,14 +715,16 @@ std::string stop_all()
                         : "erreur :" + errs;
 }
 
-std::string play_from_start()
+/* drums_only : batterie seule (End à l'arrêt, pour écouter l'outro) : les
+ * boucles restent en pause. */
+std::string play_from_start(bool drums_only = false)
 {
     std::string r = stop_all();
     if (r.rfind("ok", 0) != 0) return r;
     jack_transport_locate(g_cfg.client, 0);
     usleep(30000);
     int n = 0;
-    for (size_t i = 0; i < g_loops.size(); i++)
+    for (size_t i = 0; i < g_loops.size() && !drums_only; i++)
         if (g_loops[i].len > 0) {
             sl_send("/sl/" + std::to_string(i) + "/hit", {"trigger"});
             n++;
@@ -739,6 +743,7 @@ std::string play_from_start()
      * le vrai départ de la boucle (vérifié) ; on l'envoie au départ puis on le
      * répète pendant 40 ms (mute_on ne fait rien si elle l'est déjà). */
     for (int delay : {0, 5000, 10000, 25000}) {
+        if (drums_only) break;
         if (delay) usleep(delay);
         for (size_t i = 0; i < g_loops.size(); i++)
             if (g_loops[i].len > 0 && g_loops[i].keep_muted) sl_send("/sl/" + std::to_string(i) + "/hit", {"mute_on"});
@@ -1569,7 +1574,13 @@ std::string seq_outro()
 {
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
     double at, bpb;
-    if (!next_bar(at, bpb)) return "à l'arrêt";
+    if (!next_bar(at, bpb)) {                          // à l'arrêt : écouter l'outro choisie, batterie seule
+        if (g_song.outro.empty()) return "pas d'outro dans cette chanson";
+        g_seq.outro_only = true;
+        const std::string r = play_from_start(true);
+        g_seq.outro_only = false;
+        return r.rfind("ok", 0) == 0 ? "ok outro " + var_name(g_seq.outro_choice - 1) + " seule (batterie)" : r;
+    }
     g_seq.once.clear();
     if (!g_song.outro.empty()) {
         const int o = std::min(std::max(g_seq.outro_choice - 1, 0), (int)g_song.outro.size() - 1);
@@ -1579,6 +1590,31 @@ std::string seq_outro()
     g_seq.stop_after = true;
     g_seq.switch_at = at;
     return g_song.outro.empty() ? "ok fin (pas d'outro : arrêt à la barre)" : "ok outro";
+}
+
+/* Bouton Intro. En jouant : l'intro choisie à la mesure suivante, puis la
+ * partie reprend (comme après un fill). À l'arrêt : l'intro seule (ou la
+ * mesure de décompte), batterie seule, pour la choisir. */
+std::string seq_intro()
+{
+    if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
+    const int ic = g_seq.intro_choice;
+    if (ic <= 1) return "Intro : Off";
+    if (ic >= 3 && g_song.intro.empty()) return "pas d'intro dans cette chanson";
+    double at, bpb;
+    if (!next_bar(at, bpb)) {
+        g_seq.intro_only = true;
+        const std::string r = play_from_start(true);
+        g_seq.intro_only = false;
+        return r.rfind("ok", 0) == 0 ? std::string(ic == 2 ? "ok décompte" : "ok intro seule (batterie)") : r;
+    }
+    if (ic == 2) return "décompte : seulement au Play";
+    if (g_seq.switch_at >= 0) return "déjà une bascule prévue";
+    g_seq.once.clear();
+    for (int a : g_song.intro[std::min(ic - 3, (int)g_song.intro.size() - 1)]) g_seq.once.push_back(a);
+    g_seq.once_kind = 1;
+    g_seq.switch_at = at;
+    return "ok intro";
 }
 
 /* Au Play (transport à la mesure 1) : intro ou décompte, puis la partie. */
@@ -1597,7 +1633,12 @@ void seq_start()
     g_seq.loop = phrase_of(g_seq.part);
     g_seq.loop_pos = 0;
     const int ic = g_seq.intro_choice;
-    if (ic == 2 && g_silence_abs >= 0) {               // décompte : 1 mesure de clic
+    if (g_seq.outro_only && !g_song.outro.empty()) {   // End à l'arrêt : l'outro seule, puis arrêt
+        const int o = std::min(std::max(g_seq.outro_choice - 1, 0), (int)g_song.outro.size() - 1);
+        for (int a : g_song.outro[o]) g_seq.once.push_back(a);
+        g_seq.once_kind = 7;
+        g_seq.stop_after = true;
+    } else if (ic == 2 && g_silence_abs >= 0) {        // décompte : 1 mesure de clic
         g_seq.once.push_back(g_silence_abs);
         g_seq.once_kind = 1;
         if (g_h2_metro != 1) { set_metronome(true); g_seq.metro_after = true; }
@@ -1605,6 +1646,7 @@ void seq_start()
         for (int a : g_song.intro[std::min(ic - 3, (int)g_song.intro.size() - 1)]) g_seq.once.push_back(a);
         g_seq.once_kind = 1;
     }
+    if (g_seq.intro_only) g_seq.stop_after = true;  // Intro à l'arrêt : l'intro seule, puis arrêt
     int first;
     if (!g_seq.once.empty()) { first = g_seq.once.front(); g_seq.once.pop_front(); g_seq.in_once = true; }
     else { first = g_seq.loop.empty() ? -1 : g_seq.loop[0]; g_seq.in_once = false; }
@@ -1776,6 +1818,7 @@ void drum_poll(pb_ctl *k)
                 break;
             }
             case PB_DBTN_OUTRO:    r = seq_outro(); break;
+            case PB_DBTN_INTRO:    r = seq_intro(); break;
             }
             say("DLS Drum : %s", r.c_str());
             g_refresh_now = true;

@@ -33,7 +33,7 @@ static const char *STATES[PB_LS_COUNT] = {
 };
 static const char *BTN[PB_BTN_COUNT] = { "record", "overdub", "undo", "redo", "mute", "effacer", "play" };
 static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap", "bpm+", "bpm-", "fill",
-                                           "part-", "part+", "outro" };
+                                           "part-", "part+", "outro", "intro" };
 
 static int usage(void)
 {

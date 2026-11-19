@@ -34,7 +34,7 @@ enum {
     /* Parts */
     C_PART, C_GROOVE /* Variation */, C_AUTOFILL, O_PART, O_GROOVE /* variation jouée */,
     /* Pedals */
-    C_PLAYSTOP, C_PART_PREV, C_PART_NEXT, C_PREV, C_NEXT, C_FILL, C_OUTRO_BTN, C_TAP, C_BPM_UP, C_BPM_DOWN,
+    C_PLAYSTOP, C_INTRO_BTN, C_PART_PREV, C_PART_NEXT, C_PREV, C_NEXT, C_FILL, C_OUTRO_BTN, C_TAP, C_BPM_UP, C_BPM_DOWN,
     /* Tempo */
     C_TEMPO, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
@@ -42,7 +42,7 @@ enum {
     A_CONTROL = C_NUM, A_NOTIFY            /* ports atom du sélecteur de fichier */
 };
 static const int BTN_PORT[PB_DBTN_COUNT] = { C_PLAYSTOP, C_PREV, C_NEXT, C_TAP, C_BPM_UP, C_BPM_DOWN, C_FILL,
-                                             C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN };
+                                             C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN, C_INTRO_BTN };
 
 typedef struct {
     const LV2_Descriptor *d;
