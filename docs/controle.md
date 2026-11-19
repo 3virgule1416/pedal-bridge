@@ -541,8 +541,13 @@ l'assignation aux pédales ne dépend pas de la section.
   coupure (gros morceau). Le pont renvoie le chemin au sélecteur Song de
   PiPedal (websocket `setPatchProperty`) : il montre le Beat ; les sorties
   **Style** et **Type** montrent le reste. Liste des noms : `scripts/browse.txt`
-  (« Style/Type », ordre du pont) ; un nouveau dossier demande de la refaire
-  et de régénérer le TTL (sinon l'affichage montre « - »).
+  (« Style/Type », ordre du pont), installée avec le plugin
+  (`/usr/local/lib/lv2/pedal-bridge.lv2/browse.txt`) : le pont lit celle-là,
+  donc jamais un mauvais nom (un dossier pas encore installé : « - »). Au
+  premier choix de chanson après son démarrage, le pont compare les dossiers
+  à cette liste ; s'ils ont changé, il refait `browse.txt` et `drum.ttl` dans
+  le paquet compilé (`gen_dls_ttl.py --types … --out …`) et écrit dans son
+  journal la commande sudo pour les installer (puis redémarrer pipedald).
 - Les `.parts.json` sont cachés (`.X.parts.json`) : le sélecteur de PiPedal ne
   montre pas les fichiers qui commencent par un point.
 

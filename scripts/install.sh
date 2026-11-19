@@ -19,7 +19,7 @@ DEST=/usr/local/lib/lv2/pedal-bridge.lv2
 cat <<EOF
 # --- À lancer sur le Pi (ssh pi-dev) ---
 sudo install -d -m 755 $DEST
-sudo install -m 644 $BUNDLE/*.ttl $DEST/
+sudo install -m 644 $BUNDLE/*.ttl $BUNDLE/browse.txt $DEST/
 sudo install -m 755 $BUNDLE/pedal_bridge.so $DEST/
 # PiPedal relit les plugins au redémarrage (le son coupe quelques secondes) :
 sudo systemctl restart pipedald

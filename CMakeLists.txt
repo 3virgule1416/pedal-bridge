@@ -27,6 +27,10 @@ target_link_options(pedal_bridge PRIVATE -Wl,-z,defs)
 foreach(ttl manifest.ttl send.ttl return.ttl looper.ttl drum.ttl)
   configure_file(lv2/ttl/${ttl} ${PB_BUNDLE_DIR}/${ttl} COPYONLY)
 endforeach()
+# Liste Style/Type des sorties Style et Type de DLS Drum (lue par le pont).
+foreach(ttl browse.txt)
+  configure_file(scripts/${ttl} ${PB_BUNDLE_DIR}/${ttl} COPYONLY)
+endforeach()
 
 # --- Bundle de test (vérifications dans PiPedal, à retirer ensuite) ----------
 set(PB_TEST_BUNDLE_DIR ${CMAKE_BINARY_DIR}/lv2/pedal-bridge-test.lv2)

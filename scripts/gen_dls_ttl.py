@@ -1,10 +1,13 @@
 # Génère lv2/ttl/looper.ttl et lv2/ttl/drum.ttl (DLS Looper et DLS Drum,
 # mono et stéréo).
 #   python scripts/gen_dls_ttl.py
+#   python3 gen_dls_ttl.py --types LISTE --out DOSSIER   (drum.ttl seulement,
+#       avec une autre liste Style/Type : le pont le fait quand les dossiers changent)
 # L'ordre des ports doit suivre l'enum de lv2/looper.c et de lv2/drum.c.
 # Sections (pg:group) et couleurs des voyants (pipedal_ui:ledColor) comme les
 # plugins TooB : PiPedal affiche chaque section dans sa propre boîte.
 import os
+import sys
 HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lv2", "ttl")
 
 GROUPS = [("boucle_g", "Loop"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
@@ -154,7 +157,8 @@ def plugin(uri, name, label, stereo):
 
 ttl = head(GROUPS) + plugin("http://pedal-bridge.local/plugins/looper-mono", "Looper (Mono)", "DLS Looper", False) \
            + plugin("http://pedal-bridge.local/plugins/looper-stereo", "Looper (Stéréo)", "DLS Looper St.", True)
-open(os.path.join(HERE, "looper.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
+if "--out" not in sys.argv:
+    open(os.path.join(HERE, "looper.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
 
 # ------------------------------------------------------------- DLS Drum ---
 G = "http://pedal-bridge.local/plugins/drum#"
@@ -175,8 +179,10 @@ SONG = G + "song"
 KITS = sorted(f[:-4] for f in os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kits"))
               if f.endswith(".kit"))
 KIT_DEFAULT = KITS.index("GM Rock Kit") if "GM Rock Kit" in KITS else 0
-TYPES = [l.strip() for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "browse.txt"),
-                                 encoding="utf-8") if "/" in l]
+ARGS = dict(zip(sys.argv[1::2], sys.argv[2::2]))
+TYPES_FILE = ARGS.get("--types", os.path.join(os.path.dirname(os.path.abspath(__file__)), "browse.txt"))
+OUT_DIR = ARGS.get("--out")
+TYPES = [l.strip() for l in open(TYPES_FILE, encoding="utf-8") if "/" in l]
 STYLES = []
 for t in TYPES:
     if t.split("/", 1)[0] not in STYLES:
@@ -296,5 +302,5 @@ SONG_PARAM = f"""<{SONG}>
 """
 ttl = head(DRUM_GROUPS) + SONG_PARAM + drum_plugin("http://pedal-bridge.local/plugins/drum-mono", "Drum (Mono)", "DLS Drum", False) \
                         + drum_plugin("http://pedal-bridge.local/plugins/drum-stereo", "Drum (Stéréo)", "DLS Drum St.", True)
-open(os.path.join(HERE, "drum.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
+open(os.path.join(OUT_DIR or HERE, "drum.ttl"), "w", encoding="utf-8", newline="\n").write(ttl)
 print("ok")

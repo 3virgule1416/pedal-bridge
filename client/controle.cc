@@ -686,6 +686,7 @@ void seq_start();
 void seq_stopped();
 void seq_display(uint32_t &part, uint32_t &var);
 void browse_display(uint32_t &style, uint32_t &type);
+void browse_check(const std::string &songs);
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -1195,6 +1196,7 @@ bool apply_big_choice(pb_ctl *k)
     g_off = it->second.first;
     g_cnt = it->second.second;
     g_song_rel = it->first;
+    browse_check(songs);
     /* Nouvelle chanson (groove 1 demandé) : premier groove de la première
      * partie jouable (couplet…), pas l'intro, comme au BeatBuddy. */
     if (g_dr_song_groove <= 1) {
@@ -1824,17 +1826,87 @@ std::string path_part(const std::string &rel, int level)  // "Style", "Style/Typ
     return q == std::string::npos ? rel.substr(0, p) : rel.substr(0, q);
 }
 
-/* Numéros affichés par les sorties Style et Type de DLS Drum : rang dans
- * scripts/browse.txt (« Style/Type », la même liste que le plugin). */
+/* Liste Style/Type des sorties Style et Type : celle du plugin INSTALLÉ
+ * (browse.txt de son paquet), pour ne jamais montrer un mauvais nom ; un
+ * dossier qu'elle n'a pas encore s'affiche « - ». */
+const char *PB_INSTALLED = "/usr/local/lib/lv2/pedal-bridge.lv2";
+
+std::vector<std::string> read_types(const std::string &file)
+{
+    std::vector<std::string> v;
+    std::ifstream f(file);
+    std::string l;
+    while (std::getline(f, l)) if (l.find('/') != std::string::npos) v.push_back(l);
+    return v;
+}
+
+/* Dossiers Style/Type du dossier des chansons, triés comme le pont (octets). */
+std::vector<std::string> folder_types(const std::string &songs)
+{
+    std::vector<std::string> v;
+    DIR *d = opendir(songs.c_str());
+    if (!d) return v;
+    while (dirent *e = readdir(d)) {
+        if (e->d_name[0] == '.') continue;
+        const std::string st = e->d_name, sp = songs + "/" + st;
+        struct stat sb;
+        if (stat(sp.c_str(), &sb) != 0 || !S_ISDIR(sb.st_mode)) continue;
+        DIR *d2 = opendir(sp.c_str());
+        if (!d2) continue;
+        while (dirent *e2 = readdir(d2)) {
+            if (e2->d_name[0] == '.') continue;
+            const std::string tp = sp + "/" + e2->d_name;
+            if (stat(tp.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) v.push_back(st + "/" + e2->d_name);
+        }
+        closedir(d2);
+    }
+    closedir(d);
+    std::sort(v.begin(), v.end());
+    return v;
+}
+
+/* Au premier choix de chanson après le démarrage : si les dossiers Style/Type
+ * ne sont plus ceux du plugin installé, refaire drum.ttl et browse.txt dans le
+ * paquet compilé et dire comment l'installer (sudo : à la main). */
+void browse_check(const std::string &songs)
+{
+    static bool done = false;
+    if (done || songs.empty()) return;
+    done = true;
+    const std::vector<std::string> now = folder_types(songs);
+    if (now.empty()) return;
+    const std::vector<std::string> inst = read_types(std::string(PB_INSTALLED) + "/browse.txt");
+    if (now == inst) return;
+    std::string plus, minus;
+    for (const auto &t : now) if (std::find(inst.begin(), inst.end(), t) == inst.end()) plus += " " + t + ",";
+    for (const auto &t : inst) if (std::find(now.begin(), now.end(), t) == now.end()) minus += " " + t + ",";
+    const std::string bundle = home_dir() + "/pedal-bridge-build/build/lv2/pedal-bridge.lv2";
+    if (read_types(bundle + "/browse.txt") != now) {
+        {
+            std::ofstream f(bundle + "/browse.txt.tmp");
+            for (const auto &t : now) f << t << '\n';
+        }
+        std::rename((bundle + "/browse.txt.tmp").c_str(), (bundle + "/browse.txt").c_str());
+        const std::string cmd = "python3 " + shell_quote(scripts_dir() + "/gen_dls_ttl.py") + " --types " +
+                                shell_quote(bundle + "/browse.txt") + " --out " + shell_quote(bundle) + " 2>&1";
+        const int rc = std::system(cmd.c_str());
+        if (rc != 0) { say("DLS Drum : Style/Type changés, mais drum.ttl n'a pas pu être refait (%d)", rc); return; }
+    }
+    say("DLS Drum : dossiers Style/Type changés (nouveaux :%s retirés :%s) ; drum.ttl refait dans %s. "
+        "Pour les voir dans PiPedal : sudo install -m 644 '%s/drum.ttl' '%s/browse.txt' %s/ "
+        "puis sudo systemctl restart pipedald (coupe le son)",
+        plus.empty() ? " aucun" : plus.c_str(), minus.empty() ? " aucun" : minus.c_str(), bundle.c_str(),
+        bundle.c_str(), bundle.c_str(), PB_INSTALLED);
+}
+
 void browse_display(uint32_t &style, uint32_t &type)
 {
     static std::vector<std::string> types;
     static bool read = false;
     if (!read) {
         read = true;
-        std::ifstream f(scripts_dir() + "/browse.txt");
-        std::string l;
-        while (std::getline(f, l)) if (l.find('/') != std::string::npos) types.push_back(l);
+        types = read_types(std::string(PB_INSTALLED) + "/browse.txt");
+        if (types.empty()) types = read_types(scripts_dir() + "/browse.txt");   // ancienne installation
     }
     style = type = 0;
     if (g_song_rel.empty()) return;
