@@ -1453,18 +1453,25 @@ bool next_bar(double &at, double &bpb)
     return true;
 }
 
-int fill_for_part(int pi = -1)
+/* Fills de la partie pi (sinon les fills communs, sinon n'importe lesquels) ;
+ * used : la clé de la liste prise. nullptr s'il n'y en a pas. */
+const std::vector<int> *fill_list(int pi, std::string &used)
 {
     if (pi < 0) pi = g_seq.part;
     const std::string part = g_seq.in_once && g_seq.once_kind == 1 ? "Intro" :
                              (pi >= (int)g_song.parts.size() ? "" : g_song.parts[pi]);
-    const std::vector<int> *f = nullptr;
-    std::string used;                                  // liste de fills prise (son tour est partagé)
     for (const std::string &key : {part, std::string("*")}) {
         const auto it = g_song.fills.find(key);
-        if (it != g_song.fills.end() && !it->second.empty()) { f = &it->second; used = key; break; }
+        if (it != g_song.fills.end() && !it->second.empty()) { used = key; return &it->second; }
     }
-    if (!f) for (const auto &kv : g_song.fills) if (!kv.second.empty()) { f = &kv.second; used = kv.first; break; }
+    for (const auto &kv : g_song.fills) if (!kv.second.empty()) { used = kv.first; return &kv.second; }
+    return nullptr;
+}
+
+int fill_for_part(int pi = -1)
+{
+    std::string used;                                  // liste de fills prise (son tour est partagé)
+    const std::vector<int> *f = fill_list(pi, used);
     if (!f) return -1;
     size_t &turn = g_fill_turn[g_song_rel + "/" + used];
     return (*f)[turn++ % f->size()];
@@ -1606,7 +1613,10 @@ bool ending_fill_hit(double &at, double bpb)
 {
     if (g_final_abs < 0) return false;
     g_seq.once.clear();
-    const int f = fill_for_part(g_seq.loop_part);
+    /* Liste Outro : A = 1er fill de la partie, B = 2e… (toujours la même fin). */
+    std::string used;
+    const std::vector<int> *fl = fill_list(g_seq.loop_part, used);
+    const int f = fl ? (*fl)[(size_t)std::max(g_outro_choice - 1, 0) % fl->size()] : -1;
     if (f >= 0) {
         g_seq.once.push_back(f);
         if (size_beats(f) < bpb) at += bpb - size_beats(f);   // un fill court finit avec la mesure
@@ -1626,7 +1636,7 @@ std::string seq_outro()
         const std::string r = play_from_start(true);
         g_seq.outro_only = false;
         if (r.rfind("ok", 0) != 0) return r;
-        return g_song.outro.empty() ? "ok fin : fill + coup final (batterie)"
+        return g_song.outro.empty() ? "ok fin " + var_name(g_outro_choice - 1) + " : fill + coup final (batterie)"
                                     : "ok outro " + var_name(g_outro_choice - 1) + " seule (batterie)";
     }
     g_seq.once.clear();
@@ -1639,7 +1649,8 @@ std::string seq_outro()
     if (g_song.outro.empty()) hit = ending_fill_hit(at, bpb);
     g_seq.stop_after = true;
     g_seq.switch_at = at;
-    return !g_song.outro.empty() ? "ok outro" : hit ? "ok fin : fill + coup final" : "ok fin (arrêt à la barre)";
+    return !g_song.outro.empty() ? "ok outro" : hit ? "ok fin " + var_name(g_outro_choice - 1) + " : fill + coup final"
+                                                 : "ok fin (arrêt à la barre)";
 }
 
 /* Bouton Intro. En jouant : l'intro choisie à la mesure suivante, puis la
@@ -1805,7 +1816,16 @@ std::string seq_intro_next()
 std::string seq_outro_next()
 {
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
-    if (g_song.outro.empty()) return "pas d'outro : " + seq_outro();
+    if (g_song.outro.empty()) {                        // pas d'outro : les fins fill + coup final
+        std::string used;
+        const std::vector<int> *fl = fill_list(g_seq.loop_part, used);
+        const int n = fl ? std::min((int)fl->size(), 26) : 0;   // liste Outro : A à Z
+        if (n > 0) {
+            g_outro_choice = g_outro_choice < 1 || g_outro_choice >= n ? 1 : g_outro_choice + 1;
+            g_ui_outro = g_outro_choice;
+        }
+        return seq_outro();
+    }
     g_outro_choice = g_outro_choice < 1 || g_outro_choice >= (int)g_song.outro.size() ? 1 : g_outro_choice + 1;
     g_ui_outro = g_outro_choice;
     return "Outro " + var_name(g_outro_choice - 1) + " : " + seq_outro();
