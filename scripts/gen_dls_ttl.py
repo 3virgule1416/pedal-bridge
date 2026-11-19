@@ -191,8 +191,10 @@ def drum_plugin(uri, name, label, stereo):
                     enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), S)); i += 1
     p.append(ctl_in(i, "intro", "Intro", "",
                     enum(0, 27, [(0, "Off"), (1, "Metronome")] + [(k + 2, LETTERS[k]) for k in range(26)]), S)); i += 1
+    p.append(button(i, "intro_btn", "Intro", "Plays the intro (chosen in Intro) at the next bar, then back to the part. Stopped: plays the intro alone.", S)); i += 1
     p.append(ctl_in(i, "outro", "Outro", "",
                     enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), S)); i += 1
+    p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything. Stopped: plays the outro alone.", S)); i += 1
     # --- Parts ---
     p.append(ctl_in(i, "part", "Part", "",
                     enum(0, 3, [(0, "Verse"), (1, "Pre-Chorus"), (2, "Chorus"), (3, "Bridge")]), D)); i += 1
@@ -208,20 +210,18 @@ def drum_plugin(uri, name, label, stereo):
                      enum(0, 128, [(0, "-")] + [(k + 1, VARS[k]) for k in range(128)]), D)); i += 1
     # --- Pedals ---
     p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", K)); i += 1
-    p.append(button(i, "intro_btn", "Intro", "Plays the intro (chosen in Intro) at the next bar, then back to the part. Stopped: plays the intro alone.", K)); i += 1
     p.append(button(i, "partie_prec", "Part ◀", "Previous part (verse, chorus…), skipping parts set to None.", K)); i += 1
     p.append(button(i, "partie_suiv", "Part ▶", "Next part (verse, chorus…), skipping parts set to None; back to the first after the last.", K)); i += 1
     p.append(button(i, "precedent", "Var ◀", "Previous variation of the current part, from the next bar.", K)); i += 1
     p.append(button(i, "suivant", "Var ▶", "Next variation of the current part, from the next bar.", K)); i += 1
     p.append(button(i, "fill", "Fill", "Plays a fill of the current part during the next bar, then back to the groove.", K)); i += 1
-    p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything. Stopped: plays the outro alone.", K)); i += 1
-    p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", K)); i += 1
-    for sym, nm, what in (("bpm_plus", "BPM +", "Raise"), ("bpm_moins", "BPM -", "Lower")):
-        p.append(ctl_in(i, sym, nm, f"{what} the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds.",
-                        "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault", K)); i += 1
     # --- Tempo ---
     p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
                     "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
+    for sym, nm, what in (("bpm_moins", "BPM -", "Lower"), ("bpm_plus", "BPM +", "Raise")):
+        p.append(ctl_in(i, sym, nm, f"{what} the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds.",
+                        "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault", T)); i += 1
+    p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", T)); i += 1
     p.append(ctl_in(i, "metronome", "Metronome", "Hydrogen metronome click on or off.",
                     "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled", T)); i += 1
     p.append(ctl_out(i, "temps", "Beat", "Current beat in the bar (- when stopped).",

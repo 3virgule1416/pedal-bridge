@@ -521,10 +521,13 @@ Sections de DLS Drum dans PiPedal (2026-11-18) : réglages d'un côté, boutons
 
 | Section | Contenu |
 |---|---|
-| Song | Kit, Song, Intro, Outro |
+| Song | Kit, Song, Intro (liste) + Intro (bouton), Outro (liste) + End (bouton) |
 | Parts | Part, Variation, Auto Fill, Playing, Var |
-| Pedals | Play/Stop, Intro, Part ◀ ▶, Var ◀ ▶, Fill, End, Tap, BPM + − |
-| Tempo | Tempo, Metronome, Beat, voyants ♩ 1 ▶, BPM |
+| Pedals | Play/Stop, Part ◀ ▶, Var ◀ ▶, Fill |
+| Tempo | Tempo, BPM −, BPM +, Tap, Metronome, Beat, voyants ♩ 1 ▶, BPM |
+
+Intro et End sont à côté de leur liste pour écouter et choisir (à l'arrêt) ;
+l'assignation aux pédales ne dépend pas de la section.
 | Bridge | Volume, Link |
 
 - **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
