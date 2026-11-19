@@ -552,7 +552,7 @@ const char *URI_DRUM = "http://pedal-bridge.local/plugins/drum-";
 const char *URI_LOOPER = "http://pedal-bridge.local/plugins/looper-";
 int g_ui_groove = 0;              // à afficher (0 = rien)
 int g_ui_tempo = 0;
-int g_ui_part = 0, g_ui_var = 0;  // listes Part (1..4) et Variation (1..) à afficher
+int g_ui_part = 0, g_ui_var = -1; // listes Part (1..4) et Variation (0 None, 1.. A…) à afficher ; -1 : rien
 int g_ui_tempo_late = 0;          // BPM +/- : affiché une fois le bouton relâché
 double g_bpm_step_t = 0;          // dernier pas de BPM +/-
 const char *g_ui_tempo_skip = nullptr;   // bouton qu'on tourne : ne pas lui renvoyer sa valeur
@@ -587,11 +587,12 @@ void ui_flush()
     /* Pendant qu'on tient BPM +/-, ne pas toucher aux boutons Tempo : leur
      * retour arriverait en retard et ramènerait un ancien tempo. */
     if (g_ui_tempo_late && now_s() - g_bpm_step_t > 0.4) { g_ui_tempo = g_ui_tempo_late; g_ui_tempo_late = 0; }
-    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && !g_ui_var) return;
+    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && g_ui_var < 0) return;
     std::vector<PipedalSet> v;
     if (g_ui_part) { v.push_back({URI_DRUM, "part", (float)(g_ui_part - 1)}); expect_echo("part", g_ui_part); }
-    if (g_ui_var) { v.push_back({URI_DRUM, "variation", (float)g_ui_var}); expect_echo("variation", g_ui_var); }
-    g_ui_part = g_ui_var = 0;
+    if (g_ui_var >= 0) { v.push_back({URI_DRUM, "variation", (float)g_ui_var}); expect_echo("variation", g_ui_var); }
+    g_ui_part = 0;
+    g_ui_var = -1;
     if (g_ui_groove) { v.push_back({URI_DRUM, "groove", (float)g_ui_groove}); expect_echo("groove", g_ui_groove); }
     if (g_ui_tempo) {
         if (g_ui_tempo_skip != URI_DRUM) { v.push_back({URI_DRUM, "tempo", (float)g_ui_tempo}); expect_echo("drum-tempo", g_ui_tempo * 100); }
