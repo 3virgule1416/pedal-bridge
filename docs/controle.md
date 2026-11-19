@@ -431,7 +431,7 @@ Vérifié : l'Axe envoie bien un message au **relâchement** du switch (valeur 0
 en plus de l'appui, comme le Captain (voir `docs/rc600.md`) : l'appui long est
 possible sur le double switch.
 
-### Disposition décidée (2026-11-17) : double switch et page DrumKit
+### Disposition décidée (révisée 2026-11-19) : double switch et page DRUM
 
 Le double switch reste **le même dans tous les modes** : il porte ce qui sert
 partout. Il ne change donc plus de preset (CC 65/67) : le changement de preset
@@ -439,32 +439,33 @@ passe sur la page du mode PiPedal.
 
 | Double switch | Court | Long |
 |---|---|---|
-| **A** | Play / Stop (batterie et boucles) | **Outro** : la batterie finit la toune, puis tout s'arrête |
-| **B** | **Partie suivante** (couplet → refrain…) | **Changer de mode** (DrumKit → Looper → PiPedal) |
+| **A** | Play / Stop (batterie et boucles) | **End** : la batterie finit la chanson (outro, sinon fill + coup final), puis tout s'arrête |
+| **B** | **Part ▶** (couplet → refrain…) | **Changer de mode** (Drum → Looper → PiPedal) |
 
-Page **DrumKit** du Captain : la rangée du **bas** (la plus facile d'accès) sert
-**en jouant**, celle du **haut** sert à **explorer et préparer**. *Long* = appui
-long (le pont mesure la durée de l'appui : le Captain doit envoyer l'appui ET le
-relâchement).
+A : **à l'arrêt, Play part dès l'appui** (pour partir pile) ; **en jouant**, le
+pont attend le relâchement : court = Stop (~0,2 s après l'appui, au
+relâchement), long = End.
+
+Page **DRUM** du Captain (jouer) : la rangée du **bas** (la plus facile
+d'accès) sert **en jouant**, celle du **haut** entre deux morceaux. *Long* =
+appui long, mesuré par le pont (le Captain envoie l'appui et le relâchement).
 
 | | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| **Haut** (explorer, préparer) | Tap | BPM - | BPM + | Groove ◀ | Groove ▶ |
-| *long* | Métronome on/off | BPM - en continu | BPM + en continu | Beat ◀ | Beat ▶ |
-| *très long* (> 1,5 s) | — | — | — | Style ◀ | Style ▶ |
-| **Bas** (en jouant) | Fill | Variation | Batterie on/off | Partie ◀ | Break |
-| *long* | Crash / accent | Batterie légère | — | Intro | Fill long |
+| **Haut** (entre les morceaux) | Tap | BPM − | BPM + | → Browse | → Parts |
+| *long* | Metronome on/off | BPM − en continu | BPM + en continu | — | — |
+| **Bas** (en jouant) | Fill | Var ◀ | Var ▶ | Part ◀ | Batterie on/off |
+| *long* | Crash | Batterie légère | Fill long | Intro | Break |
 
-Navigation au pied dans la liste Song (Style / Groupe / Beat) : **Groove ◀ ▶**
-(court) parcourt les patterns du beat ; **Beat ◀ ▶** (long) parcourt les beats
-du style **en file**, d'un groupe à l'autre ; **Style ◀ ▶** (très long, plus de
-1,5 s) change de style. Le tempo ne change jamais avec ces choix. Sans écran,
-on ne voit pas où on est : l'écran OLED (§11) affichera « Style / Groupe /
-Beat / Groove ».
-
-La rangée du haut est fixée. La rangée du bas est la proposition retenue ; on la
-confirmera après avoir essayé les fonctions dans PiPedal (boutons de DLS Drum),
-puisque les boutons du Captain ne sont que des réglages.
+- **BPM ±** : appui rapide = ±1 ; tenu, répète (après 0,4 s, plus vite après
+  2 s), comme les boutons de DLS Drum.
+- **Batterie on/off** (bascule) : DEL verte quand la batterie joue, rouge
+  coupée ; elle revient pile sur le 1. **Batterie légère** (bascule, appui long
+  sur Var ◀) : garde seulement les cymbales ; DEL de Var ◀ allumée d'une autre
+  couleur tant qu'elle est active.
+- Style, Type, Beat et Kit sont sur la page **Browse** ; intro, parties et
+  outro se règlent sur la page **Parts** (voir plus bas).
+- Pas encore faits : Crash, Batterie légère, Fill long, Batterie on/off, Break.
 
 ### Rangement de la liste Song (fait, 2026-11-18)
 

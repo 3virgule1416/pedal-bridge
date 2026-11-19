@@ -22,7 +22,7 @@ CH = 2
 
 # Nom affiché par touche ; rangée du haut puis du bas.
 PAGES = {
-    1: ("DRUM", 21, ["Tap", "BPM-", "BPM+", "Var<", "Var>", "Fill", "Var", "Drum", "Part<", "Brk"]),
+    1: ("DRUM", 21, ["Tap", "BPM-", "BPM+", "Brwse", "Parts", "Fill", "Var<", "Var>", "Part<", "Drum"]),
     2: ("BROWSE", 31, ["Styl<", "Styl>", "Kit<", "Kit>", "Metr", "Type<", "Type>", "Beat<", "Beat>", "Part"]),
     3: ("PARTS", 41, ["Intr", "Vers", "PreC", "Chor", "Brdg", "Back", "Next", "Outr", "AutF", "Brws"]),
 }
