@@ -46,6 +46,7 @@ def page(name, first_cc, keys):
 
 
 for n, (name, cc, keys) in PAGES.items():
-    with open(os.path.join(OUT, f"page{n}.txt"), "w", encoding="utf-8", newline="\n") as f:
+    # Fins de ligne Windows (CRLF), comme les pages d'origine du Captain.
+    with open(os.path.join(OUT, f"page{n}.txt"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write(page(name, cc, keys))
     print(f"page{n}.txt : {name}, CC{cc} à CC{cc + 9}, canal {CH}")
