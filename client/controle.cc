@@ -3,6 +3,7 @@
 #include "pb_ctl.h"
 #include "pb_shm.h"
 #include "pipedal_ws.h"
+#include "midi.h"
 
 #include <arpa/inet.h>
 #include <jack/transport.h>
@@ -2537,19 +2538,60 @@ std::string handle(const std::string &line)
     if (cmd == "groove") return set_groove(arg);
     if (cmd == "batterie") return open_drum_song(arg);
     if (cmd == "tempo") return set_tempo(arg);
+    if (cmd == "captain") {                                  // « captain page N » : CC 20 canal 16
+        int n = -1;
+        if (std::sscanf(arg.c_str(), "page %d", &n) != 1 || n < 0 || n > 127) return "erreur : captain page N";
+        midi_captain_cc(16, 20, n);
+        return "ok captain page " + std::to_string(n) + " (" + midi_status() + ")";
+    }
     return "erreur : commande inconnue (play, stop, save NOM, load NOM, list, status, groove N, tempo BPM)";
+}
+
+/* --- Pédales MIDI (routeur, étape 1 : écoute seulement) ---------------------
+ * Le pont écoute le Captain et le double switch de l'Axe en parallèle de
+ * PiPedal et note chaque appui et relâchement avec sa durée. Aucune action
+ * encore : PiPedal reçoit tout comme avant. */
+const double LONG_S = 0.5, VERY_LONG_S = 1.5;      // appui long, très long
+std::map<int, double> g_pressed;                   // (source, canal, CC) -> heure de l'appui
+
+void midi_event(const MidiEv &e)
+{
+    const char *src = e.src == MidiSrc::Captain ? "Captain" : "Axe";
+    const int key = ((int)e.src << 16) | (e.ch << 8) | e.cc;
+    if (e.value > 0) {
+        g_pressed[key] = now_s();
+        say("MIDI %s : canal %d CC %d = %d (appui)", src, e.ch, e.cc, e.value);
+        return;
+    }
+    const auto it = g_pressed.find(key);
+    if (it == g_pressed.end()) { say("MIDI %s : canal %d CC %d = 0", src, e.ch, e.cc); return; }
+    const double d = now_s() - it->second;
+    g_pressed.erase(it);
+    say("MIDI %s : canal %d CC %d relâché après %.2f s (%s)", src, e.ch, e.cc, d,
+        d >= VERY_LONG_S ? "très long" : d >= LONG_S ? "long" : "court");
 }
 
 void thread_main()
 {
     double next_poll = 0;
     read_h2_current_song();
+    {
+        std::string err;
+        if (midi_open(err)) say("MIDI : %s", midi_status().c_str());
+        else say("MIDI : %s", err.c_str());
+    }
+    std::string midi_seen = midi_status();
     while (g_run.load()) {
         fd_set rs;
         FD_ZERO(&rs);
         FD_SET(g_cmd, &rs);
+        const int mfd = midi_fd();
+        if (mfd >= 0) FD_SET(mfd, &rs);
         timeval tv{0, 5000};               // 5 ms : boutons de DLS Looper
-        if (select(g_cmd + 1, &rs, nullptr, nullptr, &tv) > 0) {
+        const int sel = select(std::max(g_cmd, mfd) + 1, &rs, nullptr, nullptr, &tv);
+        midi_poll(midi_event);
+        if (midi_status() != midi_seen) { midi_seen = midi_status(); say("MIDI : %s", midi_seen.c_str()); }
+        if (sel > 0 && FD_ISSET(g_cmd, &rs)) {
             char buf[512];
             sockaddr_in from{};
             socklen_t fl = sizeof from;
@@ -2572,6 +2614,7 @@ void thread_main()
             next_poll = now_s() + 0.2;
         }
     }
+    midi_close();
 }
 
 } // namespace

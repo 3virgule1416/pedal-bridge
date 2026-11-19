@@ -639,6 +639,16 @@ d'une touche à bascule ; couleurs par SysEx (RVB 8 bits divisés par 2).
 Copie de la mémoire du Captain : `E:/DWL/Pedalboard/supersetup/` (page 0 du
 musicien, pages 1 à 27 d'usine).
 
+*Étape 1 faite (2026-11-19)* : `client/midi.cc` (ALSA séquenceur, client
+« pedal_bridge ») s'abonne au Captain (« Feather RP2040 ») et à l'Axe (« AXE IO
+One ») **en parallèle de PiPedal**, reprend un appareil rebranché (essai toutes
+les 2 s) et peut envoyer au Captain CC et SysEx. Le pont note chaque appui et
+relâchement avec sa durée (court < 0,5 s ≤ long < 1,5 s ≤ très long), sans
+action. Commande `captain page N` (CC 20 canal 16). Vérifié sur le matériel :
+Axe A = CC 65, B = CC 67 (canal 1, 127 / 0) ; page PEDAL : CC 1 à 10 canal 1
+(appui seulement) ; page DRUM : CC 21 à 30 canal 2, appui et relâchement ;
+changement de page depuis le Pi : `captain page 1` affiche DRUM, `page 0` PEDAL.
+
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le
