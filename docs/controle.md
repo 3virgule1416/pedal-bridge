@@ -427,8 +427,9 @@ Contrepartie : en appui court, le changement de preset part au **relâchement** 
 non à l'appui (quelques centaines de ms plus tard). À juger à l'usage. Sinon :
 appui long sur une touche du Captain, si sa page le permet.
 
-À vérifier : l'Axe envoie-t-il un message au **relâchement** du switch (valeur 0)
-en plus de l'appui ? Sans ça, pas d'appui long possible sur le double switch.
+Vérifié : l'Axe envoie bien un message au **relâchement** du switch (valeur 0)
+en plus de l'appui, comme le Captain (voir `docs/rc600.md`) : l'appui long est
+possible sur le double switch.
 
 ### Disposition décidée (2026-11-17) : double switch et page DrumKit
 
@@ -603,7 +604,7 @@ long libre). Sur ces deux pages : **A = Play/Stop**, **B = retour à DrumKit**.
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le
-relâchement) ; (2) réglage MIDI de PiPedal pour ne plus écouter l'Axe en direct
+relâchement : déjà vérifié) ; (2) réglage MIDI de PiPedal pour ne plus écouter l'Axe en direct
 (avec l'accord du musicien) ; (3) pages du Captain programmées avec
 `captain-manager` ; (4) mode audition et Kit ◀ ▶ dans le pont.
 
@@ -988,8 +989,7 @@ l'oreille avant la suivante.
 
 1. **Mesures (d)** : latence, dérive, xruns, CPU sur 10 minutes ; origine des
    xruns vus par SooperLooper.
-2. **Modes et routeur MIDI** (§7) : vérifier que l'Axe envoie le relâchement du
-   switch ; lire les pages du Captain (quels CC par page) ; routeur
+2. **Modes et routeur MIDI** (§7) : (relâchement de l'Axe : vérifié) ; lire les pages du Captain (quels CC par page) ; routeur
    court/long dans le client ; changement de page par CC 20.
 3. **Vérifier PiPedal** avec un plugin minimal : rendu des boutons momentanés
    (`lv2:trigger` ou équivalent), des voyants de sortie, liaison d'un CC à un
@@ -1031,7 +1031,6 @@ l'oreille avant la suivante.
 
 ## 13. Questions ouvertes
 
-- L'Axe I/O One envoie-t-il le relâchement du double switch (valeur 0) ?
 - Pages du Captain : combien, et quels CC envoie chaque touche dans chaque page ?
   (Le firmware officiel se configure par fichiers sur son lecteur USB.)
 - `pipedal_leds.py` : l'intégrer au client, ou le garder en Python et lui
@@ -1039,7 +1038,6 @@ l'oreille avant la suivante.
 - PiPedal 2.0.111 : liaison MIDI sur un bouton momentané à maintien
   (`mod:preferMomentaryOffByDefault`, BPM +/-) : le Captain doit envoyer 127 à
   l'appui et 0 au relâchement — à vérifier.
-- Hydrogen 1.2.0-beta : faut-il le mettre à jour (version stable 1.2.x
-  compilée depuis les sources) ? Commandes vérifiées jusqu'ici : voir §5 et §10.
+- (Réglé : Hydrogen 1.2.7 compilé dans `~/hydrogen-1.2.7`, voir §8.)
 - SooperLooper : « t. stretch » utilisable au changement de tempo ?
 - Changement de preset au relâchement (appui court) : acceptable à l'usage ?
