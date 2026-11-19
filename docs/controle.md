@@ -614,6 +614,9 @@ page PiPedal continue de marcher (presets, effets, snapshots).
 partir de l'en-tête de la page 0 du musicien, `captain/entete.txt`) : rangée du
 haut key1 à key5, du bas keyA à keyE ; chaque touche envoie 127 à l'appui et 0
 au relâchement (aussi après un appui long : le pont mesure la durée).
+Aucune couleur dans les pages (DEL éteintes, comme la page 0) : **le pont peint
+les DEL** (SysEx) à chaque changement de page et d'état ; la table des couleurs
+ne vit que dans le pont (changer une couleur = changer le pont, pas les pages).
 
 | Page | Nom | Messages |
 |---|---|---|
