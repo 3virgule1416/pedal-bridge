@@ -29,9 +29,14 @@
 
 /* Ports de contrôle (voir lv2/drum.c), après les ports audio. */
 enum {
-    C_KIT = 0, C_INTRO, C_PART, C_GROOVE /* Variation */, C_OUTRO, C_PREV, C_NEXT, C_FILL,
-    C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN, O_PART, O_GROOVE /* variation jouée */,
-    C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    /* Song */
+    C_KIT = 0, C_INTRO, C_OUTRO,
+    /* Parts */
+    C_PART, C_GROOVE /* Variation */, C_AUTOFILL, O_PART, O_GROOVE /* variation jouée */,
+    /* Pedals */
+    C_PLAYSTOP, C_PART_PREV, C_PART_NEXT, C_PREV, C_NEXT, C_FILL, C_OUTRO_BTN, C_TAP, C_BPM_UP, C_BPM_DOWN,
+    /* Tempo */
+    C_TEMPO, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     C_GAIN, O_LINK,
     C_NUM,
     A_CONTROL = C_NUM, A_NOTIFY            /* ports atom du sélecteur de fichier */

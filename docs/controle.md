@@ -512,7 +512,19 @@ Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
 | Fill | bouton | fill de la partie, puis la phrase reprend (même pattern, ou le suivant si le fill le finissait) |
 | Part ◀ ▶ | boutons | partie précédente / suivante : transition de la chanson, sinon un fill de la partie quittée, puis la nouvelle partie |
 | End | bouton | outro choisie puis arrêt (pas d'outro : arrêt à la barre) |
+| Auto Fill | interrupteur (allumé) | allumé : fill de transition entre deux parties ; éteint : la partie suivante part tout de suite (Fill marche toujours) |
 | Playing, Var | sorties | partie jouée (Intro, Verse…, Outro, Fill) et variation |
+
+Sections de DLS Drum dans PiPedal (2026-11-18) : réglages d'un côté, boutons
+à assigner aux pédales de l'autre.
+
+| Section | Contenu |
+|---|---|
+| Song | Kit, Song, Intro, Outro |
+| Parts | Part, Variation, Auto Fill, Playing, Var |
+| Pedals | Play/Stop, Part ◀ ▶, Var ◀ ▶, Fill, End, Tap, BPM + − |
+| Tempo | Tempo, Metronome, Beat, voyants ♩ 1 ▶, BPM |
+| Bridge | Volume, Link |
 
 - **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
   coupée à 4, limite d'Hydrogen) forment **une** variation, jouée d'affilée.

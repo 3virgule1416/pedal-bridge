@@ -158,7 +158,7 @@ open(os.path.join(HERE, "looper.ttl"), "w", encoding="utf-8", newline="\n").writ
 
 # ------------------------------------------------------------- DLS Drum ---
 G = "http://pedal-bridge.local/plugins/drum#"
-DRUM_GROUPS = [("drum_g", "Drums"), ("transport_g", "Transport"), ("pont_g", "Bridge")]
+DRUM_GROUPS = [("song_g", "Song"), ("drum_g", "Parts"), ("pedales_g", "Pedals"), ("transport_g", "Tempo"), ("pont_g", "Bridge")]
 
 DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, played in time with your loops and driven from PiPedal and your MIDI pedals.
 
@@ -180,41 +180,47 @@ KIT_DEFAULT = KITS.index("GM Rock Kit") if "GM Rock Kit" in KITS else 0
 def drum_plugin(uri, name, label, stereo):
     p = audio_ports(stereo)
     i = 4 if stereo else 2
-    D, T, P = "drum_g", "transport_g", "pont_g"
-    # Ordre = enum de lv2/drum.c, rangé par section.
+    S, D, K, T, P = "song_g", "drum_g", "pedales_g", "transport_g", "pont_g"
+    # Ordre = enum de lv2/drum.c, rangé par section : réglages (listes) d'un
+    # côté, boutons à assigner aux pédales de l'autre.
     song_index = i + 1                            # Song (sélecteur) juste après Kit
-    p.append(ctl_in(i, "kit", "Kit", "",
-                    enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), D)); i += 1
     LETTERS = [chr(65 + k) for k in range(26)]
     VARS = LETTERS + [str(k) for k in range(27, 129)]                    # A..Z puis 27..128
+    # --- Song ---
+    p.append(ctl_in(i, "kit", "Kit", "",
+                    enum(0, len(KITS) - 1, list(enumerate(KITS))).replace("lv2:default 0 ;", f"lv2:default {KIT_DEFAULT} ;", 1), S)); i += 1
     p.append(ctl_in(i, "intro", "Intro", "",
-                    enum(0, 27, [(0, "Off"), (1, "Metronome")] + [(k + 2, LETTERS[k]) for k in range(26)]), D)); i += 1
+                    enum(0, 27, [(0, "Off"), (1, "Metronome")] + [(k + 2, LETTERS[k]) for k in range(26)]), S)); i += 1
+    p.append(ctl_in(i, "outro", "Outro", "",
+                    enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), S)); i += 1
+    # --- Parts ---
     p.append(ctl_in(i, "part", "Part", "",
                     enum(0, 3, [(0, "Verse"), (1, "Pre-Chorus"), (2, "Chorus"), (3, "Bridge")]), D)); i += 1
     p.append(ctl_in(i, "variation", "Variation", "",
                     enum(0, 128, [(0, "None")] + [(k + 1, VARS[k]) for k in range(128)]).replace(
                         "lv2:default 0", "lv2:default 1"), D)); i += 1      # None : partie sautée
-    p.append(ctl_in(i, "outro", "Outro", "",
-                    enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), D)); i += 1
-    p.append(button(i, "precedent", "Var ◀", "Previous variation of the current part, from the next bar.", D)); i += 1
-    p.append(button(i, "suivant", "Var ▶", "Next variation of the current part, from the next bar.", D)); i += 1
-    p.append(button(i, "fill", "Fill", "Plays a fill of the current part during the next bar, then back to the groove.", D)); i += 1
-    p.append(button(i, "partie_prec", "Part ◀", "Previous part (verse, chorus…), with a transition fill.", D)); i += 1
-    p.append(button(i, "partie_suiv", "Part ▶", "Next part (verse, chorus…), with a transition fill.", D)); i += 1
-    p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything.", D)); i += 1
+    p.append(ctl_in(i, "auto_fill", "Auto Fill", "On: a fill plays between parts (Part ◀ ▶). Off: the next part starts straight away.",
+                    "lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled", D)); i += 1
     p.append(ctl_out(i, "partie_jouee", "Playing", "",
                      enum(0, 8, [(0, "-"), (1, "Intro"), (2, "Verse"), (3, "Pre-Chorus"), (4, "Chorus"),
                                  (5, "Bridge"), (6, "Groove"), (7, "Outro"), (8, "Fill")]), D)); i += 1
     p.append(ctl_out(i, "groove_joue", "Var", "",
                      enum(0, 128, [(0, "-")] + [(k + 1, VARS[k]) for k in range(128)]), D)); i += 1
-
-    p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", T)); i += 1
-    p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
-                    "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
+    # --- Pedals ---
+    p.append(button(i, "play_stop", "Play / Stop", "Stop everything, or restart drums and loops together from bar 1.", K)); i += 1
+    p.append(button(i, "partie_prec", "Part ◀", "Previous part (verse, chorus…), skipping parts set to None.", K)); i += 1
+    p.append(button(i, "partie_suiv", "Part ▶", "Next part (verse, chorus…), skipping parts set to None; back to the first after the last.", K)); i += 1
+    p.append(button(i, "precedent", "Var ◀", "Previous variation of the current part, from the next bar.", K)); i += 1
+    p.append(button(i, "suivant", "Var ▶", "Next variation of the current part, from the next bar.", K)); i += 1
+    p.append(button(i, "fill", "Fill", "Plays a fill of the current part during the next bar, then back to the groove.", K)); i += 1
+    p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything.", K)); i += 1
+    p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", K)); i += 1
     for sym, nm, what in (("bpm_plus", "BPM +", "Raise"), ("bpm_moins", "BPM -", "Lower")):
         p.append(ctl_in(i, sym, nm, f"{what} the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds.",
-                        "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault", T)); i += 1
-    p.append(button(i, "tap", "Tap", "Tap the beat: the tempo follows your last taps (3 taps or more).", T)); i += 1
+                        "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault", K)); i += 1
+    # --- Tempo ---
+    p.append(ctl_in(i, "tempo", "Tempo", "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch.",
+                    "lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm", T)); i += 1
     p.append(ctl_in(i, "metronome", "Metronome", "Hydrogen metronome click on or off.",
                     "lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled", T)); i += 1
     p.append(ctl_out(i, "temps", "Beat", "Current beat in the bar (- when stopped).",
@@ -249,7 +255,7 @@ def drum_plugin(uri, name, label, stereo):
         rdfs:label "Song" ;
         pipedal_ui:directory "DLS Drums" ;
         lv2:index {song_index} ;
-        lv2:portGroup <{G}drum_g> ;
+        lv2:portGroup <{G}song_g> ;
         pipedal_ui:patchProperty <{SONG}> ;
         pipedal_ui:fileTypes [
             a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;

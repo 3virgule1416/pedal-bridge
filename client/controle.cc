@@ -1721,7 +1721,8 @@ void drum_poll(pb_ctl *k)
             g_dr_var_ui = vu;
             if (!take_echo(pchg ? "part" : "variation", (int)(pchg ? pu : vu))) {
                 const int np = part_from_ui(pu);
-                say("DLS Drum : %s", seq_change(np, pchg && np != g_seq.part ? g_seq.var[np] : (int)vu - 1, pchg).c_str());
+                say("DLS Drum : %s", seq_change(np, pchg && np != g_seq.part ? g_seq.var[np] : (int)vu - 1,
+                                                pchg && !PB_LOAD_RLX(&k->drum_nofill)).c_str());
             }
         }
         g_dr_groove = groove;
@@ -1770,7 +1771,7 @@ void drum_poll(pb_ctl *k)
             case PB_DBTN_PART_PREV:
             case PB_DBTN_PART_NEXT: {                  // parties actives (pas None), en revenant au début
                 const int j = g_seq.active ? next_on(g_seq.part, b == PB_DBTN_PART_NEXT ? +1 : -1) : -1;
-                r = j >= 0 ? seq_change(j, g_seq.var[j], true) : "pas d'autre partie";
+                r = j >= 0 ? seq_change(j, g_seq.var[j], !PB_LOAD_RLX(&k->drum_nofill)) : "pas d'autre partie";
                 break;
             }
             case PB_DBTN_OUTRO:    r = seq_outro(); break;

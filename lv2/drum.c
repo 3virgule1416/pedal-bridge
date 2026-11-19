@@ -43,11 +43,14 @@
 /* Ports de contrôle après les ports audio, rangés par section (PiPedal ouvre
  * une nouvelle boîte dès que la section change d'un port au suivant). */
 enum {
-    /* Drums */
-    C_KIT = 0, C_INTRO, C_PART, C_GROOVE /* Variation */, C_OUTRO, C_PREV, C_NEXT, C_FILL,
-    C_PART_PREV, C_PART_NEXT, C_OUTRO_BTN, O_PART, O_GROOVE /* variation jouée */,
-    /* Transport */
-    C_PLAYSTOP, C_TEMPO, C_BPM_UP, C_BPM_DOWN, C_TAP, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
+    /* Song */
+    C_KIT = 0, C_INTRO, C_OUTRO,
+    /* Parts */
+    C_PART, C_GROOVE /* Variation */, C_AUTOFILL, O_PART, O_GROOVE /* variation jouée */,
+    /* Pedals */
+    C_PLAYSTOP, C_PART_PREV, C_PART_NEXT, C_PREV, C_NEXT, C_FILL, C_OUTRO_BTN, C_TAP, C_BPM_UP, C_BPM_DOWN,
+    /* Tempo */
+    C_TEMPO, C_METRO, O_BEAT, O_PULSE, O_ONE, O_ROLLING, O_TEMPO,
     /* Bridge */
     C_GAIN, O_LINK,
     C_NUM,
@@ -303,6 +306,7 @@ static void run(LV2_Handle h, uint32_t n)
         PB_STORE_RLX(&ctl->drum_part, (uint32_t)lrintf(port(p, C_PART, 0.0f)) + 1u);
         PB_STORE_RLX(&ctl->drum_intro, (uint32_t)lrintf(port(p, C_INTRO, 0.0f)) + 1u);
         PB_STORE_RLX(&ctl->drum_outro, (uint32_t)lrintf(port(p, C_OUTRO, 1.0f)));
+        PB_STORE_RLX(&ctl->drum_nofill, port(p, C_AUTOFILL, 1.0f) > 0.5f ? 0u : 1u);
         PB_STORE_RLX(&ctl->drum_tempo, (uint32_t)lrintf(port(p, C_TEMPO, 120.0f) * 100.0f));
         PB_STORE_RLX(&ctl->drum_metro, port(p, C_METRO, 0.0f) > 0.5f ? 1u : 0u);
         {

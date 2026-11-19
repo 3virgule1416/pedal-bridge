@@ -126,7 +126,8 @@ typedef struct pb_ctl {
     uint32_t drum_var;          /* liste Variation : 0 None (partie sautée), 1.. A, B, C… */
     uint32_t drum_intro;        /* liste Intro : 1 Off, 2 Metronome, 3.. = A, B… ; 0 = pas choisi */
     uint32_t drum_outro;        /* liste Outro : 1.. = A, B… */
-    uint8_t  pad5[20];
+    uint32_t drum_nofill;       /* Auto Fill éteint : 1 (0 = allumé, aussi pour un ancien plugin) */
+    uint8_t  pad5[16];
 
     /* Ligne 6 : compteurs des boutons de DLS Drum. */
     uint32_t drum_btn[PB_CTL_BUTTONS];
