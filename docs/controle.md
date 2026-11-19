@@ -572,10 +572,19 @@ Drum ; Retour (ou B) ramène à DrumKit.
   les 4 parties existent quand même et puisent dans les mêmes grooves ; au
   départ Verse = A, Pre-Chorus = B, Chorus = C, Bridge = D. Pour changer :
   Part = Chorus puis Variation = G (ou Part ▶ puis Var ▶ au pied).
-- **Mémoire** : la variation de chaque partie de chaque chanson est retenue
-  dans `~/dls-batterie/choix.txt` (`chanson<TAB>partie<TAB>lettre`), écrite à
-  chaque changement, quel que soit le preset. Au chargement : mémoire, sinon
-  la Variation du preset (partie affichée), sinon A (pack : A à D).
+- **Mémoire** (`~/dls-batterie/choix.txt`, écrite à chaque changement, quel
+  que soit le preset), par chanson :
+  - la variation de chaque partie (`chanson<TAB>Verse<TAB>A`, `-` = None) ;
+    au chargement : mémoire, sinon la Variation du preset (partie affichée),
+    sinon A (pack : A à D) ;
+  - l'Intro et l'Outro (`chanson<TAB>Intro<TAB>Metronome`, `…Outro<TAB>B`),
+    remontrés dans PiPedal au changement de chanson ; jamais réglés : ceux en
+    cours (preset) ; pendant 1,5 s après un changement de chanson, un Intro /
+    Outro venu du preset ne remplace pas celui retenu ;
+  - Browse : dernier beat de chaque type (`@browse-type<TAB>Style/Type<TAB>chanson`)
+    et dernier type de chaque style (`@browse-style<TAB>Style<TAB>Style/Type`).
+
+  Dans le preset seulement : Kit, Song, Tempo, Metronome, Auto Fill, Volume.
 - Les fills tournent par liste de fills (pas par partie) : deux parties qui
   partagent les fills communs n'enchaînent pas le même.
 - **Variation = None** : la partie est sautée par Part ◀ ▶ (retenu dans la
