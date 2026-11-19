@@ -601,6 +601,15 @@ long libre). Sur ces deux pages : **A = Play/Stop**, **B = retour à DrumKit**.
 | Metronome, AutoFill | vert allumé, rouge éteint |
 | → Parts, → Browse | blanc pâle |
 
+*Architecture choisie (2026-11-18) : des pages sur le Captain, chacun écoute ce
+qui le concerne.* Le Captain a une page par mode (PiPedal, DrumKit, Browse,
+Parts, Looper), chacune avec ses propres CC (aucun CC partagé entre pages).
+PiPedal écoute le Captain directement, mais seuls les CC de la page PiPedal y
+sont liés ; le pont écoute le Captain en parallèle et traite les autres pages
+(actions, DEL, changement de page par CC 20). Seul le double switch A/B de
+l'Axe passe par le pont (appui long = changer de mode). Si le pont s'arrête, la
+page PiPedal continue de marcher (presets, effets, snapshots).
+
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le
