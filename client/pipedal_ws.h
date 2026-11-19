@@ -17,6 +17,8 @@ struct PipedalSet {
     std::string uri_prefix;   // ex. "http://pedal-bridge.local/plugins/drum-" (mono et stéréo)
     std::string symbol;       // symbole du port, ex. "groove"
     float value;
+    std::string property = {}; // sinon : propriété fichier (patch), ex. ".../drum#song"…
+    std::string path = {};     // … et son chemin
 };
 
 /* Applique chaque réglage à toutes les instances dont l'URI commence par

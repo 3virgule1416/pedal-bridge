@@ -553,6 +553,8 @@ const char *URI_LOOPER = "http://pedal-bridge.local/plugins/looper-";
 int g_ui_groove = 0;              // à afficher (0 = rien)
 int g_ui_tempo = 0;
 int g_ui_part = 0, g_ui_var = -1; // listes Part (1..4) et Variation (0 None, 1.. A…) à afficher ; -1 : rien
+int g_ui_intro = 0, g_ui_outro = 0; // listes Intro (1 Off, 2 Metronome, 3.. A…) et Outro (1.. A…) ; 0 : rien
+std::string g_ui_song;              // chemin à montrer dans le sélecteur Song (Browse) ; vide : rien
 int g_ui_tempo_late = 0;          // BPM +/- : affiché une fois le bouton relâché
 double g_bpm_step_t = 0;          // dernier pas de BPM +/-
 const char *g_ui_tempo_skip = nullptr;   // bouton qu'on tourne : ne pas lui renvoyer sa valeur
@@ -587,8 +589,13 @@ void ui_flush()
     /* Pendant qu'on tient BPM +/-, ne pas toucher aux boutons Tempo : leur
      * retour arriverait en retard et ramènerait un ancien tempo. */
     if (g_ui_tempo_late && now_s() - g_bpm_step_t > 0.4) { g_ui_tempo = g_ui_tempo_late; g_ui_tempo_late = 0; }
-    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && g_ui_var < 0) return;
+    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && g_ui_var < 0 && !g_ui_intro && !g_ui_outro && g_ui_song.empty()) return;
     std::vector<PipedalSet> v;
+    if (g_ui_intro) v.push_back({URI_DRUM, "intro", (float)(g_ui_intro - 1)});
+    if (g_ui_outro) v.push_back({URI_DRUM, "outro", (float)g_ui_outro});
+    if (!g_ui_song.empty()) v.push_back({URI_DRUM, "", 0.0f, "http://pedal-bridge.local/plugins/drum#song", g_ui_song});
+    g_ui_intro = g_ui_outro = 0;
+    g_ui_song.clear();
     if (g_ui_part) { v.push_back({URI_DRUM, "part", (float)(g_ui_part - 1)}); expect_echo("part", g_ui_part); }
     if (g_ui_var >= 0) { v.push_back({URI_DRUM, "variation", (float)g_ui_var}); expect_echo("variation", g_ui_var); }
     g_ui_part = 0;
@@ -644,6 +651,7 @@ void transport_stop_and_pause()
 }
 
 /* Séquenceur de batterie : données (le code est plus bas, avant drum_poll). */
+int g_intro_choice = 1, g_outro_choice = 1;   // listes Intro (1 Off, 2 Metronome, 3.. A…) et Outro (1.. A…)
 struct SongDef {
     std::vector<std::string> parts;                               // présentes, dans l'ordre
     std::map<std::string, std::vector<std::vector<int>>> vars;    // partie -> phrases (abs)
@@ -671,13 +679,13 @@ struct Seq {
     int cur_abs = -1;
     double switch_at = -1;                // bascule demandée (temps absolu), -1 : aucune
     std::vector<int> next_loop;
-    int intro_choice = 1, outro_choice = 1;   // listes Intro (1 Off, 2 Metronome, 3.. A..) et Outro (1.. A..)
 } g_seq;
 std::map<std::string, size_t> g_fill_turn;
 void seq_setup(uint32_t part_ui, uint32_t var_ui);
 void seq_start();
 void seq_stopped();
 void seq_display(uint32_t &part, uint32_t &var);
+void browse_display(uint32_t &style, uint32_t &type);
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -787,6 +795,10 @@ void publish_states()
         seq_display(pc, vc);
         PB_STORE_RLX(&k->groove_cur, g_seq.active ? vc : (uint32_t)groove_rel());
         PB_STORE_RLX(&k->part_cur, pc);
+        uint32_t st, ty;
+        browse_display(st, ty);
+        PB_STORE_RLX(&k->style_cur, st);
+        PB_STORE_RLX(&k->type_cur, ty);
         PB_STORE_RLX(&k->var_cur, vc);
     }
     PB_STORE_RLX(&k->groove_count, (uint32_t)groove_count());
@@ -841,6 +853,7 @@ uint64_t g_dr_owner = 0;
 uint32_t g_dr_btn[PB_DBTN_COUNT];
 uint32_t g_dr_groove = 0;
 uint32_t g_dr_part_ui = 0, g_dr_var_ui = 0;     // listes Part et Variation vues
+uint32_t g_dr_intro_ui = 0, g_dr_outro_ui = 0;  // listes Intro et Outro vues
 uint32_t g_dr_metro = 2;                        // 2 = à appliquer
 uint32_t g_dr_tempo = 0, g_dr_tempo_seen = 0;   // centièmes de BPM
 double g_dr_tempo_since = 0;
@@ -1457,6 +1470,7 @@ int fill_for_part(int pi = -1)
  * variation de la liste pour cette partie). Choisit le premier pattern. */
 void seq_setup(uint32_t part_ui, uint32_t var_ui)
 {
+    const Seq keep = g_seq;                            // pour enchaîner en jouant
     build_song_def();
     g_seq = Seq();
     g_seq.active = !g_song.parts.empty();
@@ -1483,6 +1497,18 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
     }
     g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
+    double at, bpb;
+    if (keep.active && next_bar(at, bpb)) {           // en jouant : le pattern en cours finit sa mesure,
+        g_seq.next_loop = g_seq.loop;                  // la nouvelle chanson part à la suivante
+        g_seq.next_part = g_seq.part;
+        g_seq.loop = {keep.cur_abs};
+        g_seq.cur_abs = keep.cur_abs;
+        g_seq.item_start = keep.item_start;
+        g_seq.item_len = keep.item_len;
+        g_seq.metro_after = keep.metro_after;
+        g_seq.switch_at = at;
+        return;
+    }
     seq_select(g_seq.loop.empty() ? -1 : g_seq.loop[0]);
     g_pattern = g_seq.cur_abs;
     seq_cycle(g_seq.loop);
@@ -1579,11 +1605,11 @@ std::string seq_outro()
         g_seq.outro_only = true;
         const std::string r = play_from_start(true);
         g_seq.outro_only = false;
-        return r.rfind("ok", 0) == 0 ? "ok outro " + var_name(g_seq.outro_choice - 1) + " seule (batterie)" : r;
+        return r.rfind("ok", 0) == 0 ? "ok outro " + var_name(g_outro_choice - 1) + " seule (batterie)" : r;
     }
     g_seq.once.clear();
     if (!g_song.outro.empty()) {
-        const int o = std::min(std::max(g_seq.outro_choice - 1, 0), (int)g_song.outro.size() - 1);
+        const int o = std::min(std::max(g_outro_choice - 1, 0), (int)g_song.outro.size() - 1);
         for (int a : g_song.outro[o]) g_seq.once.push_back(a);
         g_seq.once_kind = 7;
     }
@@ -1598,7 +1624,7 @@ std::string seq_outro()
 std::string seq_intro()
 {
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
-    const int ic = g_seq.intro_choice;
+    const int ic = g_intro_choice;
     if (ic <= 1) return "Intro : Off";
     if (ic >= 3 && g_song.intro.empty()) return "pas d'intro dans cette chanson";
     double at, bpb;
@@ -1632,9 +1658,9 @@ void seq_start()
     g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
     g_seq.loop_pos = 0;
-    const int ic = g_seq.intro_choice;
+    const int ic = g_intro_choice;
     if (g_seq.outro_only && !g_song.outro.empty()) {   // End à l'arrêt : l'outro seule, puis arrêt
-        const int o = std::min(std::max(g_seq.outro_choice - 1, 0), (int)g_song.outro.size() - 1);
+        const int o = std::min(std::max(g_outro_choice - 1, 0), (int)g_song.outro.size() - 1);
         for (int a : g_song.outro[o]) g_seq.once.push_back(a);
         g_seq.once_kind = 7;
         g_seq.stop_after = true;
@@ -1735,12 +1761,122 @@ void seq_tick()
     g_refresh_now = true;
 }
 
+/* Intro ▶ : intro suivante de la liste (Metronome, A, B…, sans Off), montrée
+ * dans PiPedal, puis jouée comme par le bouton Intro. Outro ▶ : pareil avec
+ * l'outro (en jouant, la chanson finit avec elle). */
+std::string seq_intro_next()
+{
+    if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
+    const int last = 2 + (int)g_song.intro.size();     // 2 Metronome, 3.. A…
+    g_intro_choice = g_intro_choice < 2 || g_intro_choice >= last ? 2 : g_intro_choice + 1;
+    g_ui_intro = g_intro_choice;
+    const std::string name = g_intro_choice == 2 ? "Metronome" : var_name(g_intro_choice - 3);
+    return "Intro " + name + " : " + seq_intro();
+}
+
+std::string seq_outro_next()
+{
+    if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
+    if (g_song.outro.empty()) return "pas d'outro dans cette chanson";
+    g_outro_choice = g_outro_choice < 1 || g_outro_choice >= (int)g_song.outro.size() ? 1 : g_outro_choice + 1;
+    g_ui_outro = g_outro_choice;
+    return "Outro " + var_name(g_outro_choice - 1) + " : " + seq_outro();
+}
+
+/* --- Browse : Style / Type / Beat au pied ---------------------------------
+ * Les chansons du gros morceau (« Style/Type/Beat.h2song », ordre du sélecteur).
+ * level 0 Style, 1 Type, 2 Beat ; dir -1 / +1, en revenant au début. Chaque
+ * type retient son dernier beat, chaque style son dernier type. */
+std::map<std::string, std::string> g_last_beat;   // "Style/Type" -> chanson
+std::map<std::string, std::string> g_last_type;   // "Style" -> "Style/Type"
+
+std::string path_part(const std::string &rel, int level)  // "Style", "Style/Type"
+{
+    size_t p = rel.find('/');
+    if (level == 0 || p == std::string::npos) return rel.substr(0, p);
+    const size_t q = rel.find('/', p + 1);
+    return q == std::string::npos ? rel.substr(0, p) : rel.substr(0, q);
+}
+
+/* Numéros affichés par les sorties Style et Type de DLS Drum : rang dans
+ * scripts/browse.txt (« Style/Type », la même liste que le plugin). */
+void browse_display(uint32_t &style, uint32_t &type)
+{
+    static std::vector<std::string> types;
+    static bool read = false;
+    if (!read) {
+        read = true;
+        std::ifstream f(scripts_dir() + "/browse.txt");
+        std::string l;
+        while (std::getline(f, l)) if (l.find('/') != std::string::npos) types.push_back(l);
+    }
+    style = type = 0;
+    if (g_song_rel.empty()) return;
+    const std::string st = path_part(g_song_rel, 0), ty = path_part(g_song_rel, 1);
+    std::vector<std::string> styles;
+    for (size_t i = 0; i < types.size(); i++) {
+        const std::string s = types[i].substr(0, types[i].find('/'));
+        if (std::find(styles.begin(), styles.end(), s) == styles.end()) styles.push_back(s);
+        if (types[i] == ty) type = (uint32_t)i + 1;
+    }
+    for (size_t i = 0; i < styles.size(); i++) if (styles[i] == st) style = (uint32_t)i + 1;
+}
+
+void browse_remember(const std::string &rel)
+{
+    g_last_beat[path_part(rel, 1)] = rel;
+    g_last_type[path_part(rel, 0)] = path_part(rel, 1);
+}
+
+std::string browse(pb_ctl *k, int level, int dir)
+{
+    if (g_index.empty() || g_song_rel.empty()) return "pas de liste de chansons (kit et chanson à choisir)";
+    std::vector<std::string> songs;
+    for (const auto &kv : g_index) songs.push_back(kv.first);
+    browse_remember(g_song_rel);
+    const std::string cur = g_song_rel;
+    std::string target;
+    if (level == 2) {                                  // beats du même type
+        std::vector<std::string> same;
+        for (const auto &r : songs) if (path_part(r, 1) == path_part(cur, 1)) same.push_back(r);
+        const auto it = std::find(same.begin(), same.end(), cur);
+        const int n = (int)same.size(), i = it == same.end() ? 0 : (int)(it - same.begin());
+        target = same[((i + dir) % n + n) % n];
+    } else {
+        std::vector<std::string> keys;                 // styles, ou types du style
+        for (const auto &r : songs) {
+            if (level == 1 && path_part(r, 0) != path_part(cur, 0)) continue;
+            const std::string key = path_part(r, level);
+            if (keys.empty() || keys.back() != key) keys.push_back(key);
+        }
+        const auto it = std::find(keys.begin(), keys.end(), path_part(cur, level));
+        const int n = (int)keys.size(), i = it == keys.end() ? 0 : (int)(it - keys.begin());
+        std::string key = keys[((i + dir) % n + n) % n];
+        if (level == 0) {                              // style -> son dernier type
+            const auto t = g_last_type.find(key);
+            if (t != g_last_type.end()) key = t->second;
+        }
+        const auto b = g_last_beat.find(key);          // type -> son dernier beat, sinon le premier
+        if (b != g_last_beat.end()) target = b->second;
+        else for (const auto &r : songs) if (r.compare(0, key.size() + 1, key + "/") == 0 || r == key) { target = r; break; }
+    }
+    if (target.empty() || target == cur) return "rien d'autre ici";
+    const std::string dir_ = songs_dir_of(g_dr_song_sel);
+    if (dir_.empty()) return "erreur : dossier des chansons inconnu";
+    g_dr_song_sel = dir_ + "/" + target;
+    g_dr_song_groove = 1;
+    if (!apply_big_choice(k)) return "erreur : changement impossible maintenant";
+    browse_remember(target);
+    g_ui_song = g_dr_song_sel;                         // le sélecteur Song de PiPedal suit
+    return "ok " + target.substr(0, target.size() - (target.size() > 7 && target.compare(target.size() - 7, 7, ".h2song") == 0 ? 7 : 0));
+}
+
 void drum_poll(pb_ctl *k)
 {
     const uint64_t owner = PB_LOAD_ACQ(&k->drum_owner);
     if (owner != g_dr_owner) {             // autre instance : se recaler sans rien exécuter
         g_dr_owner = owner;
-        for (int b = 0; b < PB_DBTN_COUNT; b++) g_dr_btn[b] = PB_LOAD_ACQ(&k->drum_btn[b]);
+        for (int b = 0; b < PB_DBTN_COUNT; b++) g_dr_btn[b] = PB_LOAD_ACQ(pb_drum_btn(k, b));
         g_dr_tempo = g_dr_tempo_seen = PB_LOAD_RLX(&k->drum_tempo);
         g_dr_groove = 0;                   // groove du preset : choisi au prochain passage (sans démarrer)
         g_taps.clear();
@@ -1756,8 +1892,9 @@ void drum_poll(pb_ctl *k)
     const uint32_t groove = PB_LOAD_RLX(&k->drum_groove);
     if (g_seq.active) {
         const uint32_t pu = PB_LOAD_RLX(&k->drum_part), vu = PB_LOAD_RLX(&k->drum_var);
-        g_seq.intro_choice = (int)PB_LOAD_RLX(&k->drum_intro);
-        g_seq.outro_choice = (int)PB_LOAD_RLX(&k->drum_outro);
+        const uint32_t iu = PB_LOAD_RLX(&k->drum_intro), ou = PB_LOAD_RLX(&k->drum_outro);
+        if (iu != g_dr_intro_ui) { g_dr_intro_ui = iu; g_intro_choice = (int)iu; }
+        if (ou != g_dr_outro_ui) { g_dr_outro_ui = ou; g_outro_choice = (int)ou; }
         if (pu != g_dr_part_ui || vu != g_dr_var_ui) {
             const bool pchg = pu != g_dr_part_ui;
             g_dr_part_ui = pu;
@@ -1793,7 +1930,7 @@ void drum_poll(pb_ctl *k)
         }
     }
     for (int b = 0; b < PB_DBTN_COUNT; b++) {
-        const uint32_t c = PB_LOAD_ACQ(&k->drum_btn[b]);
+        const uint32_t c = PB_LOAD_ACQ(pb_drum_btn(k, b));
         uint32_t d = c - g_dr_btn[b];
         g_dr_btn[b] = c;
         if (b == PB_DBTN_BPM_UP || b == PB_DBTN_BPM_DOWN) {   // pas répétés quand on tient
@@ -1819,6 +1956,14 @@ void drum_poll(pb_ctl *k)
             }
             case PB_DBTN_OUTRO:    r = seq_outro(); break;
             case PB_DBTN_INTRO:    r = seq_intro(); break;
+            case PB_DBTN_INTRO_NEXT: r = seq_intro_next(); break;
+            case PB_DBTN_OUTRO_NEXT: r = seq_outro_next(); break;
+            case PB_DBTN_STYLE_PREV: r = browse(k, 0, -1); break;
+            case PB_DBTN_STYLE_NEXT: r = browse(k, 0, +1); break;
+            case PB_DBTN_TYPE_PREV:  r = browse(k, 1, -1); break;
+            case PB_DBTN_TYPE_NEXT:  r = browse(k, 1, +1); break;
+            case PB_DBTN_BEAT_PREV:  r = browse(k, 2, -1); break;
+            case PB_DBTN_BEAT_NEXT:  r = browse(k, 2, +1); break;
             }
             say("DLS Drum : %s", r.c_str());
             g_refresh_now = true;

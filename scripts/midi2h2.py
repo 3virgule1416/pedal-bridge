@@ -330,7 +330,8 @@ def main():
             f.write(song)
         meta = {"style": style, "title": title, "bpm_ref": [min(bpms), max(bpms)] if bpms else None,
                 "grooves": index}
-        with open(os.path.join(dst, style, fname + ".parts.json"), "w", encoding="utf-8") as f:
+        # Caché (« .X.parts.json ») : le sélecteur Song de PiPedal ne montre pas les fichiers « . ».
+        with open(os.path.join(dst, style, "." + fname + ".parts.json"), "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=1)
         parts = {}
         for it in items:

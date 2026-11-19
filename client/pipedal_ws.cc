@@ -166,6 +166,19 @@ int pipedal_set_controls(int port, const std::vector<PipedalSet> &sets, std::str
     int sent = 0;
     for (const PipedalSet &set : sets)
         for (long id : find_instances(msg, set.uri_prefix)) {
+            if (!set.property.empty()) {              // propriété fichier : setPatchProperty
+                std::string esc;
+                for (char ch : set.path) {
+                    if (ch == '"' || ch == '\\') esc.push_back('\\');
+                    if ((unsigned char)ch >= 0x20) esc.push_back(ch);
+                }
+                const std::string b = "[{\"message\":\"setPatchProperty\"},{\"instanceId\":" + std::to_string(id) +
+                                      ",\"propertyUri\":\"" + set.property + "\",\"value\":{\"otype_\":\"Path\",\"value\":\"" +
+                                      esc + "\"}}]";
+                if (!send_text(s.fd, b.c_str())) { err = "envoi de setPatchProperty"; return -1; }
+                sent++;
+                continue;
+            }
             char b[256];
             std::snprintf(b, sizeof b,
                           "[{\"message\":\"setControl\"},{\"clientId\":0,\"instanceId\":%ld,\"symbol\":\"%s\",\"value\":%g}]",

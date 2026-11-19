@@ -18,6 +18,11 @@
     lv2:name "Song" ;
     lv2:symbol "song_g" .
 
+<http://pedal-bridge.local/plugins/drum#browse_g>
+    a pg:ControlGroup ;
+    lv2:name "Browse" ;
+    lv2:symbol "browse_g" .
+
 <http://pedal-bridge.local/plugins/drum#drum_g>
     a pg:ControlGroup ;
     lv2:name "Parts" ;
@@ -109,7 +114,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       rdfs:comment "Plays the intro (chosen in Intro) at the next bar, then back to the part. Stopped: plays the intro alone." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "outro" ; lv2:name "Outro" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 5 ; lv2:symbol "intro_suiv" ; lv2:name "Intro ▶" ;
+      rdfs:comment "Next intro in the Intro list, and plays it." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "outro" ; lv2:name "Outro" ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 26 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
                      [ rdfs:label "B" ; rdf:value 2 ] ,
@@ -138,18 +147,97 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "Y" ; rdf:value 25 ] ,
                      [ rdfs:label "Z" ; rdf:value 26 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 6 ; lv2:symbol "fin" ; lv2:name "End" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "fin" ; lv2:name "End" ;
       rdfs:comment "Plays the outro (chosen in Outro), then stops everything. Stopped: plays the outro alone." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "part" ; lv2:name "Part" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "fin_suiv" ; lv2:name "Outro ▶" ;
+      rdfs:comment "Next outro in the Outro list, and plays it (playing: ends the song with it)." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "style_prec" ; lv2:name "Style ◀" ;
+      rdfs:comment "Previous style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "style_suiv" ; lv2:name "Style ▶" ;
+      rdfs:comment "Next style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "type_prec" ; lv2:name "Type ◀" ;
+      rdfs:comment "Previous type of beat in this style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "type_suiv" ; lv2:name "Type ▶" ;
+      rdfs:comment "Next type of beat in this style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "beat_prec" ; lv2:name "Beat ◀" ;
+      rdfs:comment "Previous beat of this type. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "beat_suiv" ; lv2:name "Beat ▶" ;
+      rdfs:comment "Next beat of this type. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 15 ; lv2:symbol "style_affiche" ; lv2:name "Style" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 15 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Ballad" ; rdf:value 1 ] ,
+                     [ rdfs:label "Blues" ; rdf:value 2 ] ,
+                     [ rdfs:label "Country" ; rdf:value 3 ] ,
+                     [ rdfs:label "Electro" ; rdf:value 4 ] ,
+                     [ rdfs:label "Funk" ; rdf:value 5 ] ,
+                     [ rdfs:label "Hip Hop" ; rdf:value 6 ] ,
+                     [ rdfs:label "Jazz" ; rdf:value 7 ] ,
+                     [ rdfs:label "Latin" ; rdf:value 8 ] ,
+                     [ rdfs:label "Metal" ; rdf:value 9 ] ,
+                     [ rdfs:label "Misc" ; rdf:value 10 ] ,
+                     [ rdfs:label "Pop" ; rdf:value 11 ] ,
+                     [ rdfs:label "Punk" ; rdf:value 12 ] ,
+                     [ rdfs:label "Reggae" ; rdf:value 13 ] ,
+                     [ rdfs:label "Rock" ; rdf:value 14 ] ,
+                     [ rdfs:label "Surf" ; rdf:value 15 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 16 ; lv2:symbol "type_affiche" ; lv2:name "Type" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 28 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Ballad" ; rdf:value 1 ] ,
+                     [ rdfs:label "Waltz" ; rdf:value 2 ] ,
+                     [ rdfs:label "Blues" ; rdf:value 3 ] ,
+                     [ rdfs:label "Shuffle" ; rdf:value 4 ] ,
+                     [ rdfs:label "Country" ; rdf:value 5 ] ,
+                     [ rdfs:label "DnB" ; rdf:value 6 ] ,
+                     [ rdfs:label "Funk" ; rdf:value 7 ] ,
+                     [ rdfs:label "Chill" ; rdf:value 8 ] ,
+                     [ rdfs:label "Hip Hop" ; rdf:value 9 ] ,
+                     [ rdfs:label "Jazz and Swing" ; rdf:value 10 ] ,
+                     [ rdfs:label "Bossa and Samba" ; rdf:value 11 ] ,
+                     [ rdfs:label "Cha-cha and Afro" ; rdf:value 12 ] ,
+                     [ rdfs:label "Tango and Paso" ; rdf:value 13 ] ,
+                     [ rdfs:label "Backbeat" ; rdf:value 14 ] ,
+                     [ rdfs:label "Doom" ; rdf:value 15 ] ,
+                     [ rdfs:label "Odd Meters" ; rdf:value 16 ] ,
+                     [ rdfs:label "Straight" ; rdf:value 17 ] ,
+                     [ rdfs:label "Endings" ; rdf:value 18 ] ,
+                     [ rdfs:label "Dance" ; rdf:value 19 ] ,
+                     [ rdfs:label "Pop" ; rdf:value 20 ] ,
+                     [ rdfs:label "Pop Punk" ; rdf:value 21 ] ,
+                     [ rdfs:label "Punk" ; rdf:value 22 ] ,
+                     [ rdfs:label "Reggae and Ska" ; rdf:value 23 ] ,
+                     [ rdfs:label "Alt Rock" ; rdf:value 24 ] ,
+                     [ rdfs:label "Half-time" ; rdf:value 25 ] ,
+                     [ rdfs:label "Shuffle and 12-8" ; rdf:value 26 ] ,
+                     [ rdfs:label "Straight" ; rdf:value 27 ] ,
+                     [ rdfs:label "Surf" ; rdf:value 28 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "part" ; lv2:name "Part" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "Verse" ; rdf:value 0 ] ,
                      [ rdfs:label "Pre-Chorus" ; rdf:value 1 ] ,
                      [ rdfs:label "Chorus" ; rdf:value 2 ] ,
                      [ rdfs:label "Bridge" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "variation" ; lv2:name "Variation" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 18 ; lv2:symbol "variation" ; lv2:name "Variation" ;
       lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "None" ; rdf:value 0 ] ,
                      [ rdfs:label "A" ; rdf:value 1 ] ,
@@ -281,11 +369,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "127" ; rdf:value 127 ] ,
                      [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "auto_fill" ; lv2:name "Auto Fill" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "auto_fill" ; lv2:name "Auto Fill" ;
       rdfs:comment "On: a fill plays between parts (Part ◀ ▶). Off: the next part starts straight away." ;
       lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 10 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 20 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
                      [ rdfs:label "Intro" ; rdf:value 1 ] ,
@@ -297,7 +385,7 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "Outro" ; rdf:value 7 ] ,
                      [ rdfs:label "Fill" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 11 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 21 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
                      [ rdfs:label "A" ; rdf:value 1 ] ,
@@ -429,51 +517,51 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "127" ; rdf:value 127 ] ,
                      [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 22 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart drums and loops together from bar 1." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 23 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
       rdfs:comment "Previous part (verse, chorus…), skipping parts set to None." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 24 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
       rdfs:comment "Next part (verse, chorus…), skipping parts set to None; back to the first after the last." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 25 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
       rdfs:comment "Previous variation of the current part, from the next bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 16 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 26 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
       rdfs:comment "Next variation of the current part, from the next bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "fill" ; lv2:name "Fill" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 27 ; lv2:symbol "fill" ; lv2:name "Fill" ;
       rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 18 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 28 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 29 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
       rdfs:comment "Lower the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 20 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 30 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
       rdfs:comment "Raise the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 21 ; lv2:symbol "tap" ; lv2:name "Tap" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 31 ; lv2:symbol "tap" ; lv2:name "Tap" ;
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 22 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 32 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
       rdfs:comment "Hydrogen metronome click on or off." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 23 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 33 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -486,22 +574,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 24 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 34 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 25 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 35 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 26 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 36 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 27 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 37 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -707,11 +795,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 28 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 38 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 29 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 39 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
@@ -719,9 +807,9 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
     [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
-      lv2:designation lv2:control ; lv2:index 30 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+      lv2:designation lv2:control ; lv2:index 40 ; lv2:symbol "control" ; lv2:name "Control" ] ,
     [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
-      lv2:designation lv2:control ; lv2:index 31 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+      lv2:designation lv2:control ; lv2:index 41 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
 
 <http://pedal-bridge.local/plugins/drum-mono> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-mono#ui> .
 
@@ -732,7 +820,7 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
         rdfs:label "Song" ;
         pipedal_ui:directory "DLS Drums" ;
         lv2:index 3 ;
-        lv2:portGroup <http://pedal-bridge.local/plugins/drum#song_g> ;
+        pg:group <http://pedal-bridge.local/plugins/drum#song_g> ;
         pipedal_ui:patchProperty <http://pedal-bridge.local/plugins/drum#song> ;
         pipedal_ui:fileTypes [
             a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;
@@ -807,7 +895,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
       rdfs:comment "Plays the intro (chosen in Intro) at the next bar, then back to the part. Stopped: plays the intro alone." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "outro" ; lv2:name "Outro" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 7 ; lv2:symbol "intro_suiv" ; lv2:name "Intro ▶" ;
+      rdfs:comment "Next intro in the Intro list, and plays it." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "outro" ; lv2:name "Outro" ;
       lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 26 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "A" ; rdf:value 1 ] ,
                      [ rdfs:label "B" ; rdf:value 2 ] ,
@@ -836,18 +928,97 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "Y" ; rdf:value 25 ] ,
                      [ rdfs:label "Z" ; rdf:value 26 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 8 ; lv2:symbol "fin" ; lv2:name "End" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "fin" ; lv2:name "End" ;
       rdfs:comment "Plays the outro (chosen in Outro), then stops everything. Stopped: plays the outro alone." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 9 ; lv2:symbol "part" ; lv2:name "Part" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "fin_suiv" ; lv2:name "Outro ▶" ;
+      rdfs:comment "Next outro in the Outro list, and plays it (playing: ends the song with it)." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#song_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "style_prec" ; lv2:name "Style ◀" ;
+      rdfs:comment "Previous style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 12 ; lv2:symbol "style_suiv" ; lv2:name "Style ▶" ;
+      rdfs:comment "Next style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 13 ; lv2:symbol "type_prec" ; lv2:name "Type ◀" ;
+      rdfs:comment "Previous type of beat in this style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "type_suiv" ; lv2:name "Type ▶" ;
+      rdfs:comment "Next type of beat in this style. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "beat_prec" ; lv2:name "Beat ◀" ;
+      rdfs:comment "Previous beat of this type. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 16 ; lv2:symbol "beat_suiv" ; lv2:name "Beat ▶" ;
+      rdfs:comment "Next beat of this type. Playing: changes at the next bar. The Song selector shows the result." ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 17 ; lv2:symbol "style_affiche" ; lv2:name "Style" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 15 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Ballad" ; rdf:value 1 ] ,
+                     [ rdfs:label "Blues" ; rdf:value 2 ] ,
+                     [ rdfs:label "Country" ; rdf:value 3 ] ,
+                     [ rdfs:label "Electro" ; rdf:value 4 ] ,
+                     [ rdfs:label "Funk" ; rdf:value 5 ] ,
+                     [ rdfs:label "Hip Hop" ; rdf:value 6 ] ,
+                     [ rdfs:label "Jazz" ; rdf:value 7 ] ,
+                     [ rdfs:label "Latin" ; rdf:value 8 ] ,
+                     [ rdfs:label "Metal" ; rdf:value 9 ] ,
+                     [ rdfs:label "Misc" ; rdf:value 10 ] ,
+                     [ rdfs:label "Pop" ; rdf:value 11 ] ,
+                     [ rdfs:label "Punk" ; rdf:value 12 ] ,
+                     [ rdfs:label "Reggae" ; rdf:value 13 ] ,
+                     [ rdfs:label "Rock" ; rdf:value 14 ] ,
+                     [ rdfs:label "Surf" ; rdf:value 15 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 18 ; lv2:symbol "type_affiche" ; lv2:name "Type" ;
+      lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 28 ; lv2:portProperty lv2:integer, lv2:enumeration ;
+      lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
+                     [ rdfs:label "Ballad" ; rdf:value 1 ] ,
+                     [ rdfs:label "Waltz" ; rdf:value 2 ] ,
+                     [ rdfs:label "Blues" ; rdf:value 3 ] ,
+                     [ rdfs:label "Shuffle" ; rdf:value 4 ] ,
+                     [ rdfs:label "Country" ; rdf:value 5 ] ,
+                     [ rdfs:label "DnB" ; rdf:value 6 ] ,
+                     [ rdfs:label "Funk" ; rdf:value 7 ] ,
+                     [ rdfs:label "Chill" ; rdf:value 8 ] ,
+                     [ rdfs:label "Hip Hop" ; rdf:value 9 ] ,
+                     [ rdfs:label "Jazz and Swing" ; rdf:value 10 ] ,
+                     [ rdfs:label "Bossa and Samba" ; rdf:value 11 ] ,
+                     [ rdfs:label "Cha-cha and Afro" ; rdf:value 12 ] ,
+                     [ rdfs:label "Tango and Paso" ; rdf:value 13 ] ,
+                     [ rdfs:label "Backbeat" ; rdf:value 14 ] ,
+                     [ rdfs:label "Doom" ; rdf:value 15 ] ,
+                     [ rdfs:label "Odd Meters" ; rdf:value 16 ] ,
+                     [ rdfs:label "Straight" ; rdf:value 17 ] ,
+                     [ rdfs:label "Endings" ; rdf:value 18 ] ,
+                     [ rdfs:label "Dance" ; rdf:value 19 ] ,
+                     [ rdfs:label "Pop" ; rdf:value 20 ] ,
+                     [ rdfs:label "Pop Punk" ; rdf:value 21 ] ,
+                     [ rdfs:label "Punk" ; rdf:value 22 ] ,
+                     [ rdfs:label "Reggae and Ska" ; rdf:value 23 ] ,
+                     [ rdfs:label "Alt Rock" ; rdf:value 24 ] ,
+                     [ rdfs:label "Half-time" ; rdf:value 25 ] ,
+                     [ rdfs:label "Shuffle and 12-8" ; rdf:value 26 ] ,
+                     [ rdfs:label "Straight" ; rdf:value 27 ] ,
+                     [ rdfs:label "Surf" ; rdf:value 28 ] ;
+      pg:group <http://pedal-bridge.local/plugins/drum#browse_g> ] ,
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "part" ; lv2:name "Part" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "Verse" ; rdf:value 0 ] ,
                      [ rdfs:label "Pre-Chorus" ; rdf:value 1 ] ,
                      [ rdfs:label "Chorus" ; rdf:value 2 ] ,
                      [ rdfs:label "Bridge" ; rdf:value 3 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 10 ; lv2:symbol "variation" ; lv2:name "Variation" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 20 ; lv2:symbol "variation" ; lv2:name "Variation" ;
       lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "None" ; rdf:value 0 ] ,
                      [ rdfs:label "A" ; rdf:value 1 ] ,
@@ -979,11 +1150,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "127" ; rdf:value 127 ] ,
                      [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 11 ; lv2:symbol "auto_fill" ; lv2:name "Auto Fill" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 21 ; lv2:symbol "auto_fill" ; lv2:name "Auto Fill" ;
       rdfs:comment "On: a fill plays between parts (Part ◀ ▶). Off: the next part starts straight away." ;
       lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 12 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 22 ; lv2:symbol "partie_jouee" ; lv2:name "Playing" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
                      [ rdfs:label "Intro" ; rdf:value 1 ] ,
@@ -995,7 +1166,7 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "Outro" ; rdf:value 7 ] ,
                      [ rdfs:label "Fill" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 13 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 23 ; lv2:symbol "groove_joue" ; lv2:name "Var" ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 128 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
                      [ rdfs:label "A" ; rdf:value 1 ] ,
@@ -1127,51 +1298,51 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "127" ; rdf:value 127 ] ,
                      [ rdfs:label "128" ; rdf:value 128 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#drum_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 14 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 24 ; lv2:symbol "play_stop" ; lv2:name "Play / Stop" ;
       rdfs:comment "Stop everything, or restart drums and loops together from bar 1." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 15 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 25 ; lv2:symbol "partie_prec" ; lv2:name "Part ◀" ;
       rdfs:comment "Previous part (verse, chorus…), skipping parts set to None." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 16 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 26 ; lv2:symbol "partie_suiv" ; lv2:name "Part ▶" ;
       rdfs:comment "Next part (verse, chorus…), skipping parts set to None; back to the first after the last." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 17 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 27 ; lv2:symbol "precedent" ; lv2:name "Var ◀" ;
       rdfs:comment "Previous variation of the current part, from the next bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 18 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 28 ; lv2:symbol "suivant" ; lv2:name "Var ▶" ;
       rdfs:comment "Next variation of the current part, from the next bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 19 ; lv2:symbol "fill" ; lv2:name "Fill" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 29 ; lv2:symbol "fill" ; lv2:name "Fill" ;
       rdfs:comment "Plays a fill of the current part during the next bar, then back to the groove." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#pedales_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 20 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 30 ; lv2:symbol "tempo" ; lv2:name "Tempo" ;
       rdfs:comment "Tempo in BPM, applied when you change it. Set it before recording: loops do not stretch." ;
       lv2:default 120 ; lv2:minimum 40 ; lv2:maximum 240 ; lv2:portProperty lv2:integer ; units:unit units:bpm ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 21 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 31 ; lv2:symbol "bpm_moins" ; lv2:name "BPM -" ;
       rdfs:comment "Lower the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 22 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 32 ; lv2:symbol "bpm_plus" ; lv2:name "BPM +" ;
       rdfs:comment "Raise the tempo by 1 BPM. Hold it to keep going, faster after 2 seconds." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, mod:preferMomentaryOffByDefault ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 23 ; lv2:symbol "tap" ; lv2:name "Tap" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 33 ; lv2:symbol "tap" ; lv2:name "Tap" ;
       rdfs:comment "Tap the beat: the tempo follows your last taps (3 taps or more)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled, epp:trigger ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 24 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 34 ; lv2:symbol "metronome" ; lv2:name "Metronome" ;
       rdfs:comment "Hydrogen metronome click on or off." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 25 ; lv2:symbol "temps" ; lv2:name "Beat" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 35 ; lv2:symbol "temps" ; lv2:name "Beat" ;
       rdfs:comment "Current beat in the bar (- when stopped)." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -1184,22 +1355,22 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "7" ; rdf:value 7 ] ,
                      [ rdfs:label "8" ; rdf:value 8 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 26 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 36 ; lv2:symbol "pulsation" ; lv2:name "♩" ;
       rdfs:comment "Beat: flashes on every beat." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 27 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 37 ; lv2:symbol "sur_le_1" ; lv2:name "1" ;
       rdfs:comment "Flashes on the first beat of each bar." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "red" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 28 ; lv2:symbol "lecture" ; lv2:name "▶" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 38 ; lv2:symbol "lecture" ; lv2:name "▶" ;
       rdfs:comment "Lit while the transport is playing." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ; lv2:portProperty lv2:toggled ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ;
       pipedal_ui:ledColor "green" ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 29 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 39 ; lv2:symbol "tempo_actuel" ; lv2:name "BPM" ;
       rdfs:comment "Tempo currently used by the bridge." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 240 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "-" ; rdf:value 0 ] ,
@@ -1405,11 +1576,11 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "239" ; rdf:value 239 ] ,
                      [ rdfs:label "240" ; rdf:value 240 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#transport_g> ] ,
-    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 30 ; lv2:symbol "gain" ; lv2:name "Volume" ;
+    [ a lv2:ControlPort, lv2:InputPort ; lv2:index 40 ; lv2:symbol "gain" ; lv2:name "Volume" ;
       rdfs:comment "Level of the drums mixed into your signal." ;
       lv2:default 0.0 ; lv2:minimum -60.0 ; lv2:maximum 12.0 ; units:unit units:db ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
-    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 31 ; lv2:symbol "liaison" ; lv2:name "Link" ;
+    [ a lv2:ControlPort, lv2:OutputPort ; lv2:index 41 ; lv2:symbol "liaison" ; lv2:name "Link" ;
       rdfs:comment "OK: drums arrive from Hydrogen through the bridge. No audio: the pedal_bridge client runs but the drum link is not up. No bridge: the pedal_bridge client is not running." ;
       lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ; lv2:portProperty lv2:integer, lv2:enumeration ;
       lv2:scalePoint [ rdfs:label "no bridge" ; rdf:value 0 ] ,
@@ -1417,9 +1588,9 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
                      [ rdfs:label "OK" ; rdf:value 2 ] ;
       pg:group <http://pedal-bridge.local/plugins/drum#pont_g> ] ,
     [ a atom:AtomPort, lv2:InputPort ; atom:bufferType atom:Sequence ; atom:supports patch:Message ;
-      lv2:designation lv2:control ; lv2:index 32 ; lv2:symbol "control" ; lv2:name "Control" ] ,
+      lv2:designation lv2:control ; lv2:index 42 ; lv2:symbol "control" ; lv2:name "Control" ] ,
     [ a atom:AtomPort, lv2:OutputPort ; atom:bufferType atom:Sequence ;
-      lv2:designation lv2:control ; lv2:index 33 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
+      lv2:designation lv2:control ; lv2:index 43 ; lv2:symbol "notify" ; lv2:name "Notify" ] .
 
 <http://pedal-bridge.local/plugins/drum-stereo> pipedal_ui:ui <http://pedal-bridge.local/plugins/drum-stereo#ui> .
 
@@ -1430,7 +1601,7 @@ Needs the pedal_bridge client and Hydrogen running on the Raspberry Pi (scripts/
         rdfs:label "Song" ;
         pipedal_ui:directory "DLS Drums" ;
         lv2:index 5 ;
-        lv2:portGroup <http://pedal-bridge.local/plugins/drum#song_g> ;
+        pg:group <http://pedal-bridge.local/plugins/drum#song_g> ;
         pipedal_ui:patchProperty <http://pedal-bridge.local/plugins/drum#song> ;
         pipedal_ui:fileTypes [
             a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;

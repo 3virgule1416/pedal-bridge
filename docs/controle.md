@@ -521,14 +521,39 @@ Sections de DLS Drum dans PiPedal (2026-11-18) : réglages d'un côté, boutons
 
 | Section | Contenu |
 |---|---|
-| Song | Kit, Song, Intro (liste) + Intro (bouton), Outro (liste) + End (bouton) |
+| Song | Kit, Song, Intro (liste) + Intro + Intro ▶, Outro (liste) + End + Outro ▶ |
+| Browse | Style ◀ ▶, Type ◀ ▶, Beat ◀ ▶ ; affichages Style et Type |
 | Parts | Part, Variation, Auto Fill, Playing, Var |
 | Pedals | Play/Stop, Part ◀ ▶, Var ◀ ▶, Fill |
 | Tempo | Tempo, BPM −, BPM +, Tap, Metronome, Beat, voyants ♩ 1 ▶, BPM |
+| Bridge | Volume, Link |
 
 Intro et End sont à côté de leur liste pour écouter et choisir (à l'arrêt) ;
 l'assignation aux pédales ne dépend pas de la section.
-| Bridge | Volume, Link |
+
+- **Intro ▶ / Outro ▶** (appui long sur Intro / End au Captain) : choix
+  suivant de la liste (Intro : Metronome, A, B… sans Off ; revient au début),
+  montré dans PiPedal, puis joué comme par Intro / End (à l'arrêt : seul ;
+  en jouant, Outro ▶ finit la chanson avec cette outro).
+- **Browse** : Beat ◀ ▶ dans le type, Type ◀ ▶ dans le style, Style ◀ ▶ ;
+  chaque type retient son dernier beat et chaque style son dernier type (en
+  mémoire tant que le pont tourne). En jouant : à la mesure suivante, sans
+  coupure (gros morceau). Le pont renvoie le chemin au sélecteur Song de
+  PiPedal (websocket `setPatchProperty`) : il montre le Beat ; les sorties
+  **Style** et **Type** montrent le reste. Liste des noms : `scripts/browse.txt`
+  (« Style/Type », ordre du pont) ; un nouveau dossier demande de la refaire
+  et de régénérer le TTL (sinon l'affichage montre « - »).
+- Les `.parts.json` sont cachés (`.X.parts.json`) : le sélecteur de PiPedal ne
+  montre pas les fichiers qui commencent par un point.
+
+**Page Browse du Captain (prévue)** : on y entre depuis la page DrumKit par un
+appui long sur Batterie on/off (seul appui long libre) ; seulement en mode
+Drum ; Retour (ou B) ramène à DrumKit.
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| Haut | Style ◀ | Style ▶ | Type ◀ | Type ▶ | Play/Stop |
+| Bas | Beat ◀ | Beat ▶ | Intro (long : Intro ▶) | End (long : Outro ▶) | Retour DrumKit |
 
 - **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
   coupée à 4, limite d'Hydrogen) forment **une** variation, jouée d'affilée.

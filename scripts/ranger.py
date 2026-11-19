@@ -135,11 +135,19 @@ def jj_target(name):
     return f"Metal/{group}/{label}"
 
 
+def meta(base, ext):
+    """X.h2song, ou .X.parts.json (caché : le sélecteur de PiPedal ne le montre pas)."""
+    if ext == ".h2song":
+        return base + ext
+    d, b = os.path.split(base)
+    return os.path.join(d, "." + b + ext)
+
+
 def move(src_base, dst_base, root):
     """Déplace X.h2song et X.parts.json (sans écraser)."""
     os.makedirs(os.path.dirname(os.path.join(root, dst_base)), exist_ok=True)
     for ext in (".h2song", ".parts.json"):
-        s, d = os.path.join(root, src_base + ext), os.path.join(root, dst_base + ext)
+        s, d = os.path.join(root, meta(src_base, ext)), os.path.join(root, meta(dst_base, ext))
         if os.path.exists(s) and not os.path.exists(d):
             os.rename(s, d)
             os.utime(d)                      # plus récent : le gros morceau sera refait
@@ -165,9 +173,9 @@ def main():
     olds = [f[:-7] for f in os.listdir(os.path.join(root, "Metal")) if f.startswith("JJ ") and f.endswith(".h2song")]
     for base in olds:
         for ext in (".h2song", ".parts.json"):
-            s = os.path.join(root, "Metal", base + ext)
+            s = os.path.join(root, "Metal", meta(base, ext))
             if os.path.exists(s):
-                shutil.move(s, os.path.join(archive, base + ext))
+                shutil.move(s, os.path.join(archive, meta(base, ext)))
     used = set()
     jj_files = sorted(f[:-7] for f in os.listdir(os.path.join(jj_new, "Metal")) if f.endswith(".h2song"))
     for base in jj_files:
@@ -181,10 +189,10 @@ def main():
         used.add(t)
         os.makedirs(os.path.dirname(os.path.join(root, t)), exist_ok=True)
         for ext in (".h2song", ".parts.json"):
-            s = os.path.join(jj_new, "Metal", base + ext)
+            s = os.path.join(jj_new, "Metal", meta(base, ext))
             if os.path.exists(s):
-                shutil.copy2(s, os.path.join(root, t + ext))
-                os.utime(os.path.join(root, t + ext))
+                shutil.copy2(s, os.path.join(root, meta(t, ext)))
+                os.utime(os.path.join(root, meta(t, ext)))
         m = re.match(r"JJ (.+ \d+-\d+) ", base)
         if m and base.endswith(("Straight", "Groove")):
             aliases.setdefault(f"Metal/JJ {m.group(1)}", t)   # ancien fichier par plage -> famille principale

@@ -47,8 +47,8 @@ for uri in http://pedal-bridge.local/plugins/looper-mono http://pedal-bridge.loc
 done
 for uri in http://pedal-bridge.local/plugins/drum-mono http://pedal-bridge.local/plugins/drum-stereo; do
   out="$(LV2_PATH="$B/lv2:/usr/lib/lv2" lv2info "$uri" 2>&1)" || true
-  if echo "$out" | grep -q "Name:.*Davis Loop Station Drum" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 9 ]      && echo "$out" | grep -q '"Pre-Chorus"' && echo "$out" | grep -q '"no bridge"'; then
-    echo "  ok    $uri (9 boutons, parties, liaison)"
+  if echo "$out" | grep -q "Name:.*Davis Loop Station Drum" && [ "$(echo "$out" | grep -c 'port-props#trigger')" -eq 17 ]      && echo "$out" | grep -q '"Pre-Chorus"' && echo "$out" | grep -q '"no bridge"'; then
+    echo "  ok    $uri (17 boutons, parties, liaison)"
   else
     echo "  ÉCHEC $uri"; echo "$out" | head -40; FAIL=1
   fi

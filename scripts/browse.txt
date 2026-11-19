@@ -1,0 +1,28 @@
+Ballad/Ballad
+Ballad/Waltz
+Blues/Blues
+Blues/Shuffle
+Country/Country
+Electro/DnB
+Funk/Funk
+Hip Hop/Chill
+Hip Hop/Hip Hop
+Jazz/Jazz and Swing
+Latin/Bossa and Samba
+Latin/Cha-cha and Afro
+Latin/Tango and Paso
+Metal/Backbeat
+Metal/Doom
+Metal/Odd Meters
+Metal/Straight
+Misc/Endings
+Pop/Dance
+Pop/Pop
+Punk/Pop Punk
+Punk/Punk
+Reggae/Reggae and Ska
+Rock/Alt Rock
+Rock/Half-time
+Rock/Shuffle and 12-8
+Rock/Straight
+Surf/Surf

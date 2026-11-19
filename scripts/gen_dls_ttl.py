@@ -158,7 +158,7 @@ open(os.path.join(HERE, "looper.ttl"), "w", encoding="utf-8", newline="\n").writ
 
 # ------------------------------------------------------------- DLS Drum ---
 G = "http://pedal-bridge.local/plugins/drum#"
-DRUM_GROUPS = [("song_g", "Song"), ("drum_g", "Parts"), ("pedales_g", "Pedals"), ("transport_g", "Tempo"), ("pont_g", "Bridge")]
+DRUM_GROUPS = [("song_g", "Song"), ("browse_g", "Browse"), ("drum_g", "Parts"), ("pedales_g", "Pedals"), ("transport_g", "Tempo"), ("pont_g", "Bridge")]
 
 DRUM_DESC = '"""' + """Drums for Davis Loop Station: the Hydrogen drum machine, played in time with your loops and driven from PiPedal and your MIDI pedals.
 
@@ -175,12 +175,18 @@ SONG = G + "song"
 KITS = sorted(f[:-4] for f in os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kits"))
               if f.endswith(".kit"))
 KIT_DEFAULT = KITS.index("GM Rock Kit") if "GM Rock Kit" in KITS else 0
+TYPES = [l.strip() for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "browse.txt"),
+                                 encoding="utf-8") if "/" in l]
+STYLES = []
+for t in TYPES:
+    if t.split("/", 1)[0] not in STYLES:
+        STYLES.append(t.split("/", 1)[0])
 
 
 def drum_plugin(uri, name, label, stereo):
     p = audio_ports(stereo)
     i = 4 if stereo else 2
-    S, D, K, T, P = "song_g", "drum_g", "pedales_g", "transport_g", "pont_g"
+    S, N, D, K, T, P = "song_g", "browse_g", "drum_g", "pedales_g", "transport_g", "pont_g"
     # Ordre = enum de lv2/drum.c, rangé par section : réglages (listes) d'un
     # côté, boutons à assigner aux pédales de l'autre.
     song_index = i + 1                            # Song (sélecteur) juste après Kit
@@ -192,9 +198,22 @@ def drum_plugin(uri, name, label, stereo):
     p.append(ctl_in(i, "intro", "Intro", "",
                     enum(0, 27, [(0, "Off"), (1, "Metronome")] + [(k + 2, LETTERS[k]) for k in range(26)]), S)); i += 1
     p.append(button(i, "intro_btn", "Intro", "Plays the intro (chosen in Intro) at the next bar, then back to the part. Stopped: plays the intro alone.", S)); i += 1
+    p.append(button(i, "intro_suiv", "Intro ▶", "Next intro in the Intro list, and plays it.", S)); i += 1
     p.append(ctl_in(i, "outro", "Outro", "",
                     enum(1, 26, [(k + 1, LETTERS[k]) for k in range(26)]), S)); i += 1
     p.append(button(i, "fin", "End", "Plays the outro (chosen in Outro), then stops everything. Stopped: plays the outro alone.", S)); i += 1
+    p.append(button(i, "fin_suiv", "Outro ▶", "Next outro in the Outro list, and plays it (playing: ends the song with it).", S)); i += 1
+    # --- Browse : naviguer dans la liste des chansons (Style / Type / Beat) ---
+    for sym, nm, what in (("style_prec", "Style ◀", "Previous style"), ("style_suiv", "Style ▶", "Next style"),
+                          ("type_prec", "Type ◀", "Previous type of beat in this style"),
+                          ("type_suiv", "Type ▶", "Next type of beat in this style"),
+                          ("beat_prec", "Beat ◀", "Previous beat of this type"), ("beat_suiv", "Beat ▶", "Next beat of this type")):
+        p.append(button(i, sym, nm, what + ". Playing: changes at the next bar. The Song selector shows the result.", N)); i += 1
+    # Style et Type de la chanson (le Beat : le sélecteur Song). Listes fixes,
+    # tirées de scripts/browse.txt (« Style/Type », même ordre que le pont).
+    p.append(ctl_out(i, "style_affiche", "Style", "", enum(0, len(STYLES), [(0, "-")] + [(k + 1, n) for k, n in enumerate(STYLES)]), N)); i += 1
+    p.append(ctl_out(i, "type_affiche", "Type", "",
+                     enum(0, len(TYPES), [(0, "-")] + [(k + 1, t.split("/", 1)[1]) for k, t in enumerate(TYPES)]), N)); i += 1
     # --- Parts ---
     p.append(ctl_in(i, "part", "Part", "",
                     enum(0, 3, [(0, "Verse"), (1, "Pre-Chorus"), (2, "Chorus"), (3, "Bridge")]), D)); i += 1
@@ -256,7 +275,7 @@ def drum_plugin(uri, name, label, stereo):
         rdfs:label "Song" ;
         pipedal_ui:directory "DLS Drums" ;
         lv2:index {song_index} ;
-        lv2:portGroup <{G}song_g> ;
+        pg:group <{G}song_g> ;
         pipedal_ui:patchProperty <{SONG}> ;
         pipedal_ui:fileTypes [
             a pipedal_ui:fileType ; rdfs:label "Hydrogen song" ;

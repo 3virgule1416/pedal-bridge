@@ -62,7 +62,15 @@ enum pb_drum_btn {
     PB_DBTN_PART_NEXT,  /* partie suivante (fill de transition) */
     PB_DBTN_OUTRO,      /* fin de la chanson, puis arrêt (à l'arrêt : l'outro seule) */
     PB_DBTN_INTRO,      /* intro une fois, puis la partie (à l'arrêt : l'intro seule) */
-    PB_DBTN_COUNT
+    PB_DBTN_INTRO_NEXT, /* intro suivante, et la jouer */
+    PB_DBTN_OUTRO_NEXT, /* outro suivante, et la jouer */
+    PB_DBTN_STYLE_PREV, /* Browse : style précédent / suivant */
+    PB_DBTN_STYLE_NEXT,
+    PB_DBTN_TYPE_PREV,  /* Browse : type (groupe) précédent / suivant, dans le style */
+    PB_DBTN_TYPE_NEXT,
+    PB_DBTN_BEAT_PREV,  /* Browse : beat précédent / suivant, dans le type */
+    PB_DBTN_BEAT_NEXT,
+    PB_DBTN_COUNT       /* au plus PB_CTL_BUTTONS + 8 (drum_btn puis drum_btn_x) */
 };
 
 #define PB_CTL_GROOVES  160u    /* grooves du menu et affichables (patterns d'Hydrogen) */
@@ -139,7 +147,10 @@ typedef struct pb_ctl {
     uint32_t groove_count;      /* patterns du morceau (0 = inconnu) */
     uint32_t part_cur;          /* partie jouée : 0 -, 1 Intro, 2 Verse, 3 Pre-Chorus, 4 Chorus, 5 Bridge, 6 Groove, 7 Outro, 8 Fill */
     uint32_t var_cur;           /* variation jouée, à partir de 1 (0 = -) */
-    uint8_t  pad7[44];
+    uint32_t drum_btn_x[8];     /* compteurs des boutons de DLS Drum 16 à 23 (voir pb_drum_btn) */
+    uint32_t style_cur;         /* style de la chanson : 1.. (scripts/browse.txt), 0 = - */
+    uint32_t type_cur;          /* type (Style/Type) : 1.. (ligne de scripts/browse.txt), 0 = - */
+    uint8_t  pad7[4];
 
     /* Ligne 8 et suivantes : morceau Hydrogen choisi dans DLS Drum (sélecteur
      * de fichier). Verrou de séquence : le plugin met drum_song_seq impair,
@@ -158,6 +169,13 @@ typedef struct pb_ctl {
      * les nouveaux champs ne font qu'ajouter, la version reste 1. */
     uint8_t  reserved[PB_CTL_BYTES - 10 * 64 - 2 * PB_CTL_PATH];
 } pb_ctl;
+
+/* Compteur du bouton b de DLS Drum (les 16 premiers sur la ligne 6, les
+ * suivants sur la ligne 7). */
+static inline uint32_t *pb_drum_btn(pb_ctl *c, int b)
+{
+    return b < (int)PB_CTL_BUTTONS ? &c->drum_btn[b] : &c->drum_btn_x[b - (int)PB_CTL_BUTTONS];
+}
 
 #ifdef __cplusplus
 static_assert(sizeof(pb_ctl) == PB_CTL_BYTES, "pb_ctl");

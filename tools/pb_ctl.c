@@ -33,7 +33,8 @@ static const char *STATES[PB_LS_COUNT] = {
 };
 static const char *BTN[PB_BTN_COUNT] = { "record", "overdub", "undo", "redo", "mute", "effacer", "play" };
 static const char *DBTN[PB_DBTN_COUNT] = { "play", "prev", "next", "tap", "bpm+", "bpm-", "fill",
-                                           "part-", "part+", "outro", "intro" };
+                                           "part-", "part+", "outro", "intro", "intro+", "outro+",
+                                           "style-", "style+", "type-", "type+", "beat-", "beat+" };
 
 static int usage(void)
 {
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
         int b = -1;
         for (int i = 0; i < PB_DBTN_COUNT; i++) if (!strcmp(argv[2], DBTN[i])) b = i;
         if (b < 0) { pb_ctl_close(c); return usage(); }
-        PB_STORE_REL(&c->drum_btn[b], PB_LOAD_RLX(&c->drum_btn[b]) + 1u);
+        PB_STORE_REL(pb_drum_btn(c, b), PB_LOAD_RLX(pb_drum_btn(c, b)) + 1u);
         printf("ok drum %s\n", DBTN[b]);
     } else if (!strcmp(cmd, "drum-groove") && argc > 2) {
         const int v = atoi(argv[2]);
