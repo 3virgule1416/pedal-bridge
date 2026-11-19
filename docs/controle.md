@@ -698,6 +698,11 @@ lecture, il accumule des notes qui ne s'éteignent plus (CPU d'h2cli ×3 à ×4,
 son brouillon) jusqu'au prochain Stop. Avant ce correctif aussi (la mesure
 sautait). Mesures : 3 % -> 11-12 % après quelques changements, 3 % après
 Stop/Play ; changer de pattern ne l'efface pas, un relocate non plus.
+C'est le bug Hydrogen #1953 (« Audio sounds duplicated after tempo change as
+transport slave »), corrigé dans la 1.2.4. **Réglé (2026-11-18)** avec Hydrogen
+1.2.7 compilé dans `~/hydrogen-1.2.7` (voir `docs/installations.md`) :
+2 % de CPU avant, après le balayage de tempo et après Stop/Play ; gros morceau
+ouvert en 2,3 s (3,5 s avec la 1.2.0-beta) ; Fill, parties, fin vérifiés.
 
 Les boucles déjà enregistrées à l'ancien tempo ne s'étirent pas, sauf si l'option
 « t. stretch » de SooperLooper le fait proprement (à tester).

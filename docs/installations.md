@@ -41,15 +41,15 @@ sudo apt autoremove -s
 | `~/dls-batterie/` | 115 Mo | gros morceaux par kit (`gros/`), rendus, anciennes variantes, `choix.txt` (mémoire des variations, intro, outro, Browse) |
 | `~/dls-modeles/` | 0,4 Mo | modèles `.h2song` des kits (instruments) |
 | `~/.hydrogen/data/drumkits/` | 72 Mo | kits AVL Black Pearl, Red Zeppelin, Death Metal |
-| `~/.hydrogen/hydrogen.conf.bak-*` | — | copies de sauvegarde de la configuration d'Hydrogen |
+| `~/.hydrogen/hydrogen.conf.bak-*` | — | copies de sauvegarde de la configuration d'Hydrogen (`…-avant-1.2.7` : avant le passage à la 1.2.7) |
 | `~/kits-dl/` | 50 Mo | kits téléchargés (`.h2drumkit`), déjà importés dans `~/.hydrogen` |
 | `~/lsp/`, `~/lsp-plugins-1.2.35-Linux-aarch64.7z` | 169 Mo | archive et fichiers des plugins LSP (déjà installés dans `/usr/local/lib/lv2`) |
 | `~/bridge-env/` | 28 Mo | environnement Python (python-osc, websockets) des premiers essais |
 | `~/pedal-bridge/` | 6 Mo | premiers essais (`chansons/`, `travail/`) |
 | `~/pp_set.py`, `~/sl_init.py`, `~/sl_meter.py`, `~/sl_test.py` | — | scripts des premiers essais |
 | `~/Downloads/pipedal_2.0.110_arm64.deb` | 31 Mo | paquet PiPedal d'origine |
-| `~/src/hydrogen-1.2.7/` (à venir) | — | sources et compilation d'Hydrogen 1.2.7 |
-| `~/hydrogen-1.2.7/` (à venir) | — | Hydrogen 1.2.7 installé hors système ; `session.sh` l'utilise s'il existe. Retour au Hydrogen de Debian : renommer ce dossier |
+| `~/src/hydrogen-1.2.7/`, `~/src/hydrogen-1.2.7.tar.gz` | — | sources (GitHub, tag 1.2.7) et compilation d'Hydrogen ; peut être effacé une fois `~/hydrogen-1.2.7` installé |
+| `~/hydrogen-1.2.7/` | — | Hydrogen 1.2.7 installé hors système (`make install`, préfixe privé) ; `session.sh` l'utilise s'il existe (`PB_H2=/usr` : celui de Debian). Retour au Hydrogen de Debian : renommer ce dossier |
 
 ## 4. Autres
 

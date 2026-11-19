@@ -182,11 +182,17 @@ do_start() {
   [ "$GUI" != 0 ] && { running slgui || launch slgui slgui; }
 
   echo "== Hydrogen"
+  # Hydrogen compilé (~/hydrogen-1.2.7 : corrige le son doublé après un
+  # changement de tempo, bug #1953) s'il existe, sinon celui de Debian.
+  # PB_H2=/usr pour forcer celui de Debian.
+  local H2="${PB_H2:-$HOME/hydrogen-1.2.7}"
+  [ -x "$H2/bin/h2cli" ] || H2=/usr
+  echo "  Hydrogen : $H2/bin"
   if ! running hydrogen && ! running h2cli; then
     if [ "$GUI" != 0 ]; then
-      launch hydrogen hydrogen -d jack -n
+      launch hydrogen env LD_LIBRARY_PATH="$H2/lib" "$H2/bin/hydrogen" -d jack -n
     else                                   # sans fenêtre ; le pont ouvre ensuite le bon morceau
-      launch h2cli h2cli -d jack -s /usr/share/hydrogen/data/demo_songs/GM_kit_demo1.h2song
+      launch h2cli env LD_LIBRARY_PATH="$H2/lib" "$H2/bin/h2cli" -d jack -s "$H2/share/hydrogen/data/demo_songs/GM_kit_demo1.h2song"
     fi
     wait_port Hydrogen:out_L 20
   elif [ "$GUI" = 0 ] && running hydrogen; then
