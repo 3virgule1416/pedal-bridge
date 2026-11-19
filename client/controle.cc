@@ -652,6 +652,7 @@ void transport_stop_and_pause()
 
 /* Séquenceur de batterie : données (le code est plus bas, avant drum_poll). */
 int g_intro_choice = 1, g_outro_choice = 1;   // listes Intro (1 Off, 2 Metronome, 3.. A…) et Outro (1.. A…)
+double g_song_set_t = 0;                      // heure du dernier changement de chanson (séquenceur)
 struct SongDef {
     std::vector<std::string> parts;                               // présentes, dans l'ordre
     std::map<std::string, std::vector<std::vector<int>>> vars;    // partie -> phrases (abs)
@@ -1319,8 +1320,10 @@ void build_song_def()
 /* Mémoire : variation choisie pour chaque partie de chaque chanson, gardée
  * sur le Pi (~/dls-batterie/choix.txt : « chanson<TAB>partie<TAB>A »), quel
  * que soit le preset. Écrite à chaque changement (hors temps réel). */
-std::map<std::string, std::map<std::string, int>> g_memo;
+std::map<std::string, std::map<std::string, int>> g_memo;   // chanson -> partie -> variation ; "Intro", "Outro" -> choix
 bool g_memo_read = false;
+std::map<std::string, std::string> g_last_beat;   // Browse : "Style/Type" -> dernière chanson choisie
+std::map<std::string, std::string> g_last_type;   // Browse : "Style" -> dernier "Style/Type"
 
 std::string memo_path() { return home_dir() + "/dls-batterie/choix.txt"; }
 
@@ -1333,10 +1336,53 @@ void memo_load()
     while (std::getline(f, l)) {
         const size_t a = l.find('\t'), b = l.find('\t', a + 1);
         if (a == std::string::npos || b == std::string::npos || b + 1 >= l.size()) continue;
-        const char c = l[b + 1];
-        const int v = c == '-' ? -1 : c >= 'A' && c <= 'Z' && b + 2 == l.size() ? c - 'A' : std::atoi(l.c_str() + b + 1) - 1;
-        if (v >= -1) g_memo[l.substr(0, a)][l.substr(a + 1, b - a - 1)] = v;
+        const std::string song = l.substr(0, a), key = l.substr(a + 1, b - a - 1), val = l.substr(b + 1);
+        if (song == "@browse-type") { g_last_beat[key] = val; continue; }       // Browse : type -> beat
+        if (song == "@browse-style") { g_last_type[key] = val; continue; }      // Browse : style -> type
+        const char c = val[0];
+        const int letter = c >= 'A' && c <= 'Z' && val.size() == 1 ? c - 'A' : -2;
+        int v;
+        if (key == "Intro") v = val == "Off" ? 1 : val == "Metronome" ? 2 : letter >= 0 ? letter + 3 : -2;
+        else if (key == "Outro") v = letter >= 0 ? letter + 1 : -2;
+        else v = c == '-' ? -1 : letter >= 0 ? letter : std::atoi(val.c_str()) - 1;
+        if (v >= -1) g_memo[song][key] = v;
     }
+}
+
+/* Réécrit choix.txt (fichier temporaire puis renommage). */
+void memo_write()
+{
+    const std::string path = memo_path(), tmp = path + ".tmp";
+    {
+        std::ofstream f(tmp);
+        for (const auto &song : g_memo)
+            for (const auto &pv : song.second) {
+                const int v = pv.second;
+                f << song.first << '\t' << pv.first << '\t';
+                if (pv.first == "Intro") {
+                    if (v == 1) f << "Off"; else if (v == 2) f << "Metronome"; else f << (char)('A' + std::min(v - 3, 25));
+                } else if (pv.first == "Outro") {
+                    f << (char)('A' + std::min(std::max(v - 1, 0), 25));
+                } else if (v < 0) f << '-'; else if (v < 26) f << (char)('A' + v); else f << v + 1;
+                f << '\n';
+            }
+        for (const auto &kv : g_last_beat) f << "@browse-type\t" << kv.first << '\t' << kv.second << '\n';
+        for (const auto &kv : g_last_type) f << "@browse-style\t" << kv.first << '\t' << kv.second << '\n';
+        if (!f) return;
+    }
+    std::rename(tmp.c_str(), path.c_str());
+}
+
+/* Intro ou Outro choisi pour la chanson en cours (key "Intro" / "Outro"). */
+void memo_choice(const char *key, int v)
+{
+    if (g_song_rel.empty() || v < 1) return;
+    memo_load();
+    auto &song = g_memo[g_song_rel];
+    const auto q = song.find(key);
+    if (q != song.end() && q->second == v) return;
+    song[key] = v;
+    memo_write();
 }
 
 void memo_save(int part)
@@ -1346,19 +1392,7 @@ void memo_save(int part)
     const auto q = song.find(g_song.parts[part]);
     if (q != song.end() && q->second == g_seq.var[part]) return;
     song[g_song.parts[part]] = g_seq.var[part];
-    const std::string path = memo_path(), tmp = path + ".tmp";
-    {
-        std::ofstream f(tmp);
-        for (const auto &song : g_memo)
-            for (const auto &pv : song.second) {
-                const int v = pv.second;
-                f << song.first << '\t' << pv.first << '\t';
-                if (v < 0) f << '-'; else if (v < 26) f << (char)('A' + v); else f << v + 1;
-                f << '\n';
-            }
-        if (!f) return;
-    }
-    std::rename(tmp.c_str(), path.c_str());
+    memo_write();
 }
 
 /* Partie de la liste du plugin (1 Verse … 4 Bridge) -> index dans la chanson
@@ -1505,6 +1539,15 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
         const int j = next_on(g_seq.part, +1);
         if (j >= 0) g_seq.part = j;
         else g_seq.var[g_seq.part] = 0;               // toutes à None : on garde celle-ci
+    }
+    /* Intro et Outro retenus pour cette chanson (montrés dans PiPedal) ;
+     * jamais réglés : on garde ceux en cours (preset). Pendant 1,5 s, un
+     * changement de ces listes venu du preset ne les écrase pas. */
+    g_song_set_t = now_s();
+    if (mem != g_memo.end()) {
+        const auto qi = mem->second.find("Intro"), qo = mem->second.find("Outro");
+        if (qi != mem->second.end()) { g_intro_choice = qi->second; g_ui_intro = qi->second; }
+        if (qo != mem->second.end()) { g_outro_choice = qo->second; g_ui_outro = qo->second; }
     }
     g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
@@ -1809,6 +1852,7 @@ std::string seq_intro_next()
     const int last = 2 + (int)g_song.intro.size();     // 2 Metronome, 3.. A…
     g_intro_choice = g_intro_choice < 2 || g_intro_choice >= last ? 2 : g_intro_choice + 1;
     g_ui_intro = g_intro_choice;
+    memo_choice("Intro", g_intro_choice);
     const std::string name = g_intro_choice == 2 ? "Metronome" : var_name(g_intro_choice - 3);
     return "Intro " + name + " : " + seq_intro();
 }
@@ -1823,11 +1867,13 @@ std::string seq_outro_next()
         if (n > 0) {
             g_outro_choice = g_outro_choice < 1 || g_outro_choice >= n ? 1 : g_outro_choice + 1;
             g_ui_outro = g_outro_choice;
+            memo_choice("Outro", g_outro_choice);
         }
         return seq_outro();
     }
     g_outro_choice = g_outro_choice < 1 || g_outro_choice >= (int)g_song.outro.size() ? 1 : g_outro_choice + 1;
     g_ui_outro = g_outro_choice;
+    memo_choice("Outro", g_outro_choice);
     return "Outro " + var_name(g_outro_choice - 1) + " : " + seq_outro();
 }
 
@@ -1835,8 +1881,6 @@ std::string seq_outro_next()
  * Les chansons du gros morceau (« Style/Type/Beat.h2song », ordre du sélecteur).
  * level 0 Style, 1 Type, 2 Beat ; dir -1 / +1, en revenant au début. Chaque
  * type retient son dernier beat, chaque style son dernier type. */
-std::map<std::string, std::string> g_last_beat;   // "Style/Type" -> chanson
-std::map<std::string, std::string> g_last_type;   // "Style" -> "Style/Type"
 
 std::string path_part(const std::string &rel, int level)  // "Style", "Style/Type"
 {
@@ -1942,8 +1986,12 @@ void browse_display(uint32_t &style, uint32_t &type)
 
 void browse_remember(const std::string &rel)
 {
-    g_last_beat[path_part(rel, 1)] = rel;
-    g_last_type[path_part(rel, 0)] = path_part(rel, 1);
+    memo_load();
+    const std::string ty = path_part(rel, 1), st = path_part(rel, 0);
+    if (g_last_beat[ty] == rel && g_last_type[st] == ty) return;
+    g_last_beat[ty] = rel;
+    g_last_type[st] = ty;
+    memo_write();
 }
 
 std::string browse(pb_ctl *k, int level, int dir)
@@ -2011,8 +2059,28 @@ void drum_poll(pb_ctl *k)
     if (g_seq.active) {
         const uint32_t pu = PB_LOAD_RLX(&k->drum_part), vu = PB_LOAD_RLX(&k->drum_var);
         const uint32_t iu = PB_LOAD_RLX(&k->drum_intro), ou = PB_LOAD_RLX(&k->drum_outro);
-        if (iu != g_dr_intro_ui) { g_dr_intro_ui = iu; g_intro_choice = (int)iu; }
-        if (ou != g_dr_outro_ui) { g_dr_outro_ui = ou; g_outro_choice = (int)ou; }
+        /* Juste après un changement de chanson, un Intro / Outro du preset ne
+         * remplace pas celui retenu pour la chanson : on le remontre. */
+        const bool fresh = now_s() - g_song_set_t < 1.5;
+        const auto mem = g_memo.find(g_song_rel);
+        if (iu != g_dr_intro_ui) {
+            g_dr_intro_ui = iu;
+            if (fresh && mem != g_memo.end() && mem->second.count("Intro")) {
+                if ((int)iu != g_intro_choice) g_ui_intro = g_intro_choice;
+            } else {
+                g_intro_choice = (int)iu;
+                if (!fresh) memo_choice("Intro", g_intro_choice);
+            }
+        }
+        if (ou != g_dr_outro_ui) {
+            g_dr_outro_ui = ou;
+            if (fresh && mem != g_memo.end() && mem->second.count("Outro")) {
+                if ((int)ou != g_outro_choice) g_ui_outro = g_outro_choice;
+            } else {
+                g_outro_choice = (int)ou;
+                if (!fresh) memo_choice("Outro", g_outro_choice);
+            }
+        }
         if (pu != g_dr_part_ui || vu != g_dr_var_ui) {
             const bool pchg = pu != g_dr_part_ui;
             g_dr_part_ui = pu;
