@@ -610,6 +610,26 @@ sont liés ; le pont écoute le Captain en parallèle et traite les autres pages
 l'Axe passe par le pont (appui long = changer de mode). Si le pont s'arrête, la
 page PiPedal continue de marcher (presets, effets, snapshots).
 
+*Pages du Captain* (`captain/pageN.txt`, faites par `scripts/gen_captain.py` à
+partir de l'en-tête de la page 0 du musicien, `captain/entete.txt`) : rangée du
+haut key1 à key5, du bas keyA à keyE ; chaque touche envoie 127 à l'appui et 0
+au relâchement (aussi après un appui long : le pont mesure la durée).
+
+| Page | Nom | Messages |
+|---|---|---|
+| 0 (PiPedal) | celle du musicien | CC1 à CC10, canal 1 (liés dans PiPedal), inchangée |
+| 1 DrumKit | `DRUM` | CC21 à CC30, canal 2 |
+| 2 Browse | `BRWS` | CC31 à CC40, canal 2 |
+| 3 Parts | `PART` | CC41 à CC50, canal 2 |
+| 4 Looper (plus tard) | `LOOP` | CC51 à CC60, canal 2 |
+
+Format des pages (firmware officiel, « super mode ») : par touche `short_dw`
+(appui), `short_up` (relâchement), `long` / `long_up` (appui long, durée
+`long_press_timing`, 1 s ici), `ledcolor0/1` (3 DEL), `keytimes` (états à
+bascule) ; `[preset][value_inc]` change de page ; `page_name` 4 lettres.
+Copie de la mémoire du Captain : `E:/DWL/Pedalboard/supersetup/` (page 0 du
+musicien, pages 1 à 27 d'usine).
+
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le

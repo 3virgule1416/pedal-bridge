@@ -1,0 +1,214 @@
+[globalsetup]
+
+# 0-100
+ledbright = [80]
+
+# 0-100
+screenbright = [80]
+
+# 1 / 1.5 / 2 / 2.5 --long press time in second
+long_press_timing = [1]
+
+# wireless setup only valid on MIDI Captain Blue/Gold version
+WIRELESS_2.4G = [on]
+
+# ID range 1-99 --Set to be the same with the MIDI MATE
+WIRELESS_ID   = [8]
+
+# 0:12dBm 1:10dBm 2:9dBm 3:8dBm 4:6dBm 5:3dBm 6:0dBm 7:-2dBm 8:-5dBm 9:-10dBm 10:-15dBm 11:-20dBm 12:-25dBm 13:-30dBm 14:-25dBm
+WIRELESS_dB   = [6]
+
+[PAGE]
+
+# Change the "NAME" below in uppercase letters <= 4 characters
+page_name = [BRWS]
+
+# This section sets the global items within a page
+
+exp1_CH = [1]
+exp1_CC = [1]
+
+exp1_min = [0]
+exp1_max = [127]
+
+exp2_CH = [1]
+exp2_CC = [7]
+
+exp2_min = [0]
+exp2_max = [127]
+
+PC_Opennum = [0]
+
+# on / off
+midithrough = [on]
+
+tapcountMIN = [20]
+
+tapcountMAX = [256]
+
+encoderCH = [1]
+
+encoderCCnum = [43]
+
+encoderkeyCCtoggle = [40]
+
+# on / off
+externalmidicontrol = [on]
+
+externalmidicontrolch = [16]
+
+encoder_CC = [20]
+encoderkey_CCT = [89]
+
+# 123 / abc3 / abc4 / abc5 / abc8 --Only this 5 options
+# Setting 123 is to display the PC as a numerical value
+# abc3 means PC display as 1A,1B,1C,2A... abc5 means 1A,1B,1C,1D,1E,2A...
+display_number_ABC = [abc5]
+
+# 3 / 4 / 5 / 8 define how many patches in one group or bank
+# This is used when display_number_ABC is selected as '123'
+group_number = [5]
+
+#取值范围：0-9 bank
+CC_value_gropnumber = 
+
+#当效果器支持大于127时，组合值输入位置
+PC_Bank_Select = [5]
+PC_group_0 = [1][CC][32][0]
+PC_group_1 = [1][CC][32][1]
+PC_group_2 = [1][CC][32][2]
+PC_group_3 = [1][CC][32][3]
+PC_group_4 = [1][CC][32][4]
+PC_group_5 = 
+PC_group_6 = 
+PC_group_7 = 
+PC_group_8 = 
+PC_group_9 = 
+
+
+# 0 / 1 
+# set to 0 so that when abcX display selected above, bank is start from 0A,0B,0C...
+# set to 1 so that when abcX display selected above, bank is start from 1A,1B,1C...
+display_bank_offset = [1]
+
+
+[key1]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x404000][0x404000][0x404000]
+ledcolor1 = [0x404000][0x404000][0x404000]
+short_dw1_name = [Styl<]
+short_dw1 = [2][CC][31][127]
+short_up1_name = []
+short_up1 = [2][CC][31][0]
+long_up1_name = []
+long_up1 = [2][CC][31][0]
+
+[key2]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x404000][0x404000][0x404000]
+ledcolor1 = [0x404000][0x404000][0x404000]
+short_dw1_name = [Styl>]
+short_dw1 = [2][CC][32][127]
+short_up1_name = []
+short_up1 = [2][CC][32][0]
+long_up1_name = []
+long_up1 = [2][CC][32][0]
+
+[key3]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x404040][0x404040][0x404040]
+ledcolor1 = [0x404040][0x404040][0x404040]
+short_dw1_name = [Kit<]
+short_dw1 = [2][CC][33][127]
+short_up1_name = []
+short_up1 = [2][CC][33][0]
+long_up1_name = []
+long_up1 = [2][CC][33][0]
+
+[key4]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x404040][0x404040][0x404040]
+ledcolor1 = [0x404040][0x404040][0x404040]
+short_dw1_name = [Kit>]
+short_dw1 = [2][CC][34][127]
+short_up1_name = []
+short_up1 = [2][CC][34][0]
+long_up1_name = []
+long_up1 = [2][CC][34][0]
+
+[key5]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x400000][0x400000][0x400000]
+ledcolor1 = [0x400000][0x400000][0x400000]
+short_dw1_name = [Metr]
+short_dw1 = [2][CC][35][127]
+short_up1_name = []
+short_up1 = [2][CC][35][0]
+long_up1_name = []
+long_up1 = [2][CC][35][0]
+
+[keyA]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x401800][0x401800][0x401800]
+ledcolor1 = [0x401800][0x401800][0x401800]
+short_dw1_name = [Type<]
+short_dw1 = [2][CC][36][127]
+short_up1_name = []
+short_up1 = [2][CC][36][0]
+long_up1_name = []
+long_up1 = [2][CC][36][0]
+
+[keyB]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x401800][0x401800][0x401800]
+ledcolor1 = [0x401800][0x401800][0x401800]
+short_dw1_name = [Type>]
+short_dw1 = [2][CC][37][127]
+short_up1_name = []
+short_up1 = [2][CC][37][0]
+long_up1_name = []
+long_up1 = [2][CC][37][0]
+
+[keyC]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x003840][0x003840][0x003840]
+ledcolor1 = [0x003840][0x003840][0x003840]
+short_dw1_name = [Beat<]
+short_dw1 = [2][CC][38][127]
+short_up1_name = []
+short_up1 = [2][CC][38][0]
+long_up1_name = []
+long_up1 = [2][CC][38][0]
+
+[keyD]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x003840][0x003840][0x003840]
+ledcolor1 = [0x003840][0x003840][0x003840]
+short_dw1_name = [Beat>]
+short_dw1 = [2][CC][39][127]
+short_up1_name = []
+short_up1 = [2][CC][39][0]
+long_up1_name = []
+long_up1 = [2][CC][39][0]
+
+[keyE]
+keytimes = [1]
+ledmode = [normal]
+ledcolor0 = [0x404040][0x404040][0x404040]
+ledcolor1 = [0x404040][0x404040][0x404040]
+short_dw1_name = [Part]
+short_dw1 = [2][CC][40][127]
+short_up1_name = []
+short_up1 = [2][CC][40][0]
+long_up1_name = []
+long_up1 = [2][CC][40][0]
+
