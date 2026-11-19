@@ -15,7 +15,14 @@
  * « beats N » change le nombre de temps par mesure, ex. 3 pour une valse).
  * La mesure est comptée depuis la trame 0 : changer le nombre de temps
  * pendant la lecture fait sauter la position (à faire de préférence à l'arrêt).
- * Le callback JACK ne fait que du calcul.
+ *
+ * Tempo changé pendant la lecture : appliqué au début de la mesure suivante,
+ * et à cet instant le transport est replacé à la trame de cette mesure au
+ * nouveau tempo (trame = mesure × temps × trames par temps). La mesure ne saute
+ * pas (Hydrogen et le pont ne voient pas de saut : sans cela, Hydrogen empilait
+ * des notes jusqu'au prochain Stop), et la grille de SooperLooper, comptée
+ * depuis la trame 0, reste alignée sur les mesures.
+ * Les callbacks JACK ne font que du calcul (et jack_transport_locate).
  */
 #define _GNU_SOURCE
 #include <jack/jack.h>
@@ -46,20 +53,47 @@ static double beats_get(void) { double v; __atomic_load(&g_beats, &v, __ATOMIC_R
 static void beats_set(double v) { __atomic_store(&g_beats, &v, __ATOMIC_RELAXED); }
 static jack_nframes_t g_sr = 48000;
 
-/* Tempo vu par le callback. */
+/* Tempo appliqué (callbacks JACK seulement). */
 static double   cb_bpm = 120.0;
+static int      g_pending;          /* repositionnement demandé, tempo pas encore appliqué */
+static double   g_pending_bpm;
+static jack_client_t *g_client;
+
+/* Callback de traitement : en lecture, si un nouveau tempo est demandé et que
+ * le début de la mesure suivante tombe dans ce cycle, repositionner le
+ * transport à cette mesure au nouveau tempo ; le tempo est appliqué au cycle
+ * du repositionnement (timebase, new_pos). */
+static int process(jack_nframes_t n, void *arg)
+{
+    (void)arg;
+    const double req = bpm_get();
+    if (g_pending || req == cb_bpm) return 0;
+    jack_position_t p;
+    if (jack_transport_query(g_client, &p) != JackTransportRolling) return 0;   /* arrêt : timebase() */
+    const double beats = beats_get();
+    const double spb_old = 60.0 * g_sr / cb_bpm, spb_new = 60.0 * g_sr / req;   /* trames par temps */
+    const double bar = ceil((double)p.frame / spb_old / beats - 1e-9);            /* mesure suivante (0 = 1re) */
+    const double f_bar = bar * beats * spb_old;
+    if (f_bar >= (double)p.frame + n) return 0;                                  /* pas dans ce cycle */
+    const double past = (double)p.frame + n - f_bar;                             /* trames après la barre */
+    g_pending_bpm = req;
+    g_pending = 1;
+    jack_transport_locate(g_client, (jack_nframes_t)llround(bar * beats * spb_new + past * spb_new / spb_old));
+    return 0;
+}
 
 static void timebase(jack_transport_state_t state, jack_nframes_t nframes,
                      jack_position_t *pos, int new_pos, void *arg)
 {
-    (void)state; (void)nframes; (void)new_pos; (void)arg;
+    (void)nframes; (void)arg;
     /* Mesure calculée depuis la trame 0 avec le tempo actuel, SANS ancrage aux
      * changements de tempo : SooperLooper (synchro JACK) place sa grille de
      * cycles par fmod(trame, durée du cycle) depuis la trame 0. Avec un ancrage,
      * les deux grilles se décalent après un changement de tempo (mesuré : départs
      * à 1,98 temps au lieu de 1,00). Prix : changer le tempo pendant la lecture
-     * fait sauter la position. */
-    cb_bpm = bpm_get();
+     * fait sauter la position : d'où le repositionnement de process(). */
+    if (g_pending && new_pos) { cb_bpm = g_pending_bpm; g_pending = 0; }   /* repositionné : nouveau tempo */
+    else if (state != JackTransportRolling) { cb_bpm = bpm_get(); g_pending = 0; }   /* arrêt : tout de suite */
     const double beats = beats_get();
     const jack_nframes_t f = pos->frame;
     double total = (double)f * cb_bpm / (60.0 * g_sr);
@@ -140,6 +174,8 @@ int main(int argc, char **argv)
         : jack_client_open("pb_timebase", JackNoStartServer, &st);
     if (!c) { fprintf(stderr, "Impossible de joindre JACK\n"); return 1; }
     g_sr = jack_get_sample_rate(c);
+    g_client = c;
+    jack_set_process_callback(c, process, NULL);
     if (jack_set_timebase_callback(c, 0, timebase, NULL) != 0) {
         fprintf(stderr, "Impossible de devenir maître du temps JACK\n");
         return 1;

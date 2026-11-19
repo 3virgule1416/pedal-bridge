@@ -1,7 +1,7 @@
 /*
  * pb_transport : pilote le transport JACK.
  *
- *   pb_transport start | stop | zero | query
+ *   pb_transport start | stop | zero | query | relocate
  *   pb_transport pause  [port OSC SooperLooper, défaut 9951]
  *   pb_transport resume [port OSC SooperLooper, défaut 9951]
  *
@@ -75,6 +75,11 @@ int main(int argc, char **argv)
     else if (!strcmp(cmd, "start")) jack_transport_start(c);
     else if (!strcmp(cmd, "stop")) jack_transport_stop(c);
     else if (!strcmp(cmd, "zero")) jack_transport_locate(c, 0);
+    else if (!strcmp(cmd, "relocate")) {           /* même position : les clients se recalent */
+        jack_position_t p;
+        jack_transport_query(c, &p);
+        jack_transport_locate(c, p.frame + jack_get_buffer_size(c));
+    }
     else if (!strcmp(cmd, "query")) {
         jack_position_t p;
         jack_transport_state_t s = jack_transport_query(c, &p);

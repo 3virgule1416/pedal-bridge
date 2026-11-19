@@ -684,8 +684,20 @@ Correction prévue dans le maître du temps : appliquer un nouveau tempo **au
 prochain début de mesure**, et à ce moment **repositionner le transport** à la
 trame qui correspond à ce numéro de mesure au nouveau tempo
 (`trame = (mesure − 1) × 4 temps × trames par temps`). Mesure, Hydrogen et grille
-de SooperLooper restent alors d'accord, sans saut audible de la batterie. À
-valider sur le banc (`sl-sync-test.sh`).
+de SooperLooper restent alors d'accord, sans saut audible de la batterie.
+
+**Fait (2026-11-18)** dans `pb_timebase` (callback de traitement : quand la
+barre suivante tombe dans le cycle, `jack_transport_locate` à la trame de cette
+mesure au nouveau tempo ; le tempo est appliqué au cycle du repositionnement).
+Vérifié : « mesure 5 temps 4 » à 160 BPM -> « mesure 6 temps 1 » à 200 BPM ;
+`sl-sync-test.sh` essai 3 (100 -> 120 -> 100 puis record) : départ à la mesure
+10 temps 1.00, décalage -2,8 ms comme sans changement.
+
+**Reste un défaut d'Hydrogen 1.2.0-beta** : après un changement de tempo en
+lecture, il accumule des notes qui ne s'éteignent plus (CPU d'h2cli ×3 à ×4,
+son brouillon) jusqu'au prochain Stop. Avant ce correctif aussi (la mesure
+sautait). Mesures : 3 % -> 11-12 % après quelques changements, 3 % après
+Stop/Play ; changer de pattern ne l'efface pas, un relocate non plus.
 
 Les boucles déjà enregistrées à l'ancien tempo ne s'étirent pas, sauf si l'option
 « t. stretch » de SooperLooper le fait proprement (à tester).
