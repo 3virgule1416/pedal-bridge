@@ -650,6 +650,21 @@ Axe A = CC 65, B = CC 67 (canal 1, 127 / 0) ; page PEDAL : CC 1 à 10 canal 1
 (appui seulement) ; page DRUM : CC 21 à 30 canal 2, appui et relâchement ;
 changement de page depuis le Pi : `captain page 1` affiche DRUM, `page 0` PEDAL.
 
+*Page DRUM active (2026-11-19)* : le pont fait les actions de la page DRUM
+(même fonction `drum_button` que les boutons de DLS Drum). Une touche sans
+action longue agit dès l'appui ; Part ◀ et → Browse font leur action courte au
+relâchement et la longue dès 0,5 s de maintien ; Tap compte le coup à l'appui
+et, tenu, l'annule et bascule le métronome (Tap vert quand il est allumé) ;
+BPM ± : un pas, puis répétition (0,4 s, plus vite après 2 s). Var ◀ s'arrête à
+A (None seulement par la liste Variation ou la page Parts). Le Captain remet la
+DEL d'une touche appuyée à la couleur de la page (noire) : le pont repeint la
+page après chaque appui et relâchement. Vérifié sur le matériel : Fill, Var ◀ ▶,
+Part ◀ (court et Intro), BPM ± tenu, Tap et métronome, DEL.
+Provisoire tant que B ne passe pas par le pont : sur DRUM, → Browse **tenu**
+ramène à PEDAL ; sur BROWSE et PARTS, la dernière touche **tenue** ramène à DRUM
+(appuyée brièvement : l'autre page). Pas encore faits : Crash, Batterie légère,
+Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
+
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le

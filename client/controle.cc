@@ -689,6 +689,7 @@ void seq_stopped();
 void seq_display(uint32_t &part, uint32_t &var);
 void browse_display(uint32_t &style, uint32_t &type);
 void browse_check(const std::string &songs);
+void cap_page(int page);                           // routeur MIDI : page du Captain (plus bas)
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -2038,6 +2039,38 @@ std::string browse(pb_ctl *k, int level, int dir)
     return "ok " + target.substr(0, target.size() - (target.size() > 7 && target.compare(target.size() - 7, 7, ".h2song") == 0 ? 7 : 0));
 }
 
+/* Un bouton de DLS Drum (enum pb_drum_btn), qu'il vienne de PiPedal ou d'une
+ * page du Captain (routeur MIDI). */
+std::string drum_button(pb_ctl *k, int b)
+{
+    std::string r = "?";
+    switch (b) {
+        case PB_DBTN_PLAYSTOP: r = transport_rolling() ? stop_all() : play_from_start(); break;
+        case PB_DBTN_PREV:                             // Var ◀ s'arrête à A (None : liste Variation, page Parts)
+        r = g_seq.active ? seq_change(g_seq.part, std::max(g_seq.var[g_seq.part] - 1, 0), false) : step_groove(-1); break;
+        case PB_DBTN_NEXT:     r = g_seq.active ? seq_change(g_seq.part, g_seq.var[g_seq.part] + 1, false) : step_groove(+1); break;
+        case PB_DBTN_TAP:      r = tap_tempo(); break;
+        case PB_DBTN_FILL:     r = seq_fill(); break;
+        case PB_DBTN_PART_PREV:
+        case PB_DBTN_PART_NEXT: {                  // parties actives (pas None), en revenant au début
+            const int j = g_seq.active ? next_on(g_seq.part, b == PB_DBTN_PART_NEXT ? +1 : -1) : -1;
+            r = j >= 0 ? seq_change(j, g_seq.var[j], !PB_LOAD_RLX(&k->drum_nofill)) : "pas d'autre partie";
+            break;
+        }
+        case PB_DBTN_OUTRO:    r = seq_outro(); break;
+        case PB_DBTN_INTRO:    r = seq_intro(); break;
+        case PB_DBTN_INTRO_NEXT: r = seq_intro_next(); break;
+        case PB_DBTN_OUTRO_NEXT: r = seq_outro_next(); break;
+        case PB_DBTN_STYLE_PREV: r = browse(k, 0, -1); break;
+        case PB_DBTN_STYLE_NEXT: r = browse(k, 0, +1); break;
+        case PB_DBTN_TYPE_PREV:  r = browse(k, 1, -1); break;
+        case PB_DBTN_TYPE_NEXT:  r = browse(k, 1, +1); break;
+        case PB_DBTN_BEAT_PREV:  r = browse(k, 2, -1); break;
+        case PB_DBTN_BEAT_NEXT:  r = browse(k, 2, +1); break;
+    }
+    return r;
+}
+
 void drum_poll(pb_ctl *k)
 {
     const uint64_t owner = PB_LOAD_ACQ(&k->drum_owner);
@@ -2128,31 +2161,7 @@ void drum_poll(pb_ctl *k)
         }
         if (d > 4) d = 4;                  // garde-fou
         for (uint32_t j = 0; j < d; j++) {
-            std::string r;
-            switch (b) {
-            case PB_DBTN_PLAYSTOP: r = transport_rolling() ? stop_all() : play_from_start(); break;
-            case PB_DBTN_PREV:     r = g_seq.active ? seq_change(g_seq.part, g_seq.var[g_seq.part] - 1, false) : step_groove(-1); break;
-            case PB_DBTN_NEXT:     r = g_seq.active ? seq_change(g_seq.part, g_seq.var[g_seq.part] + 1, false) : step_groove(+1); break;
-            case PB_DBTN_TAP:      r = tap_tempo(); break;
-            case PB_DBTN_FILL:     r = seq_fill(); break;
-            case PB_DBTN_PART_PREV:
-            case PB_DBTN_PART_NEXT: {                  // parties actives (pas None), en revenant au début
-                const int j = g_seq.active ? next_on(g_seq.part, b == PB_DBTN_PART_NEXT ? +1 : -1) : -1;
-                r = j >= 0 ? seq_change(j, g_seq.var[j], !PB_LOAD_RLX(&k->drum_nofill)) : "pas d'autre partie";
-                break;
-            }
-            case PB_DBTN_OUTRO:    r = seq_outro(); break;
-            case PB_DBTN_INTRO:    r = seq_intro(); break;
-            case PB_DBTN_INTRO_NEXT: r = seq_intro_next(); break;
-            case PB_DBTN_OUTRO_NEXT: r = seq_outro_next(); break;
-            case PB_DBTN_STYLE_PREV: r = browse(k, 0, -1); break;
-            case PB_DBTN_STYLE_NEXT: r = browse(k, 0, +1); break;
-            case PB_DBTN_TYPE_PREV:  r = browse(k, 1, -1); break;
-            case PB_DBTN_TYPE_NEXT:  r = browse(k, 1, +1); break;
-            case PB_DBTN_BEAT_PREV:  r = browse(k, 2, -1); break;
-            case PB_DBTN_BEAT_NEXT:  r = browse(k, 2, +1); break;
-            }
-            say("DLS Drum : %s", r.c_str());
+            say("DLS Drum : %s", drum_button(k, b).c_str());
             g_refresh_now = true;
         }
     }
@@ -2541,7 +2550,7 @@ std::string handle(const std::string &line)
     if (cmd == "captain") {                                  // « captain page N » : CC 20 canal 16
         int n = -1;
         if (std::sscanf(arg.c_str(), "page %d", &n) != 1 || n < 0 || n > 127) return "erreur : captain page N";
-        midi_captain_cc(16, 20, n);
+        cap_page(n);
         return "ok captain page " + std::to_string(n) + " (" + midi_status() + ")";
     }
     return "erreur : commande inconnue (play, stop, save NOM, load NOM, list, status, groove N, tempo BPM)";
@@ -2552,23 +2561,145 @@ std::string handle(const std::string &line)
  * PiPedal et note chaque appui et relâchement avec sa durée. Aucune action
  * encore : PiPedal reçoit tout comme avant. */
 const double LONG_S = 0.5, VERY_LONG_S = 1.5;      // appui long, très long
-std::map<int, double> g_pressed;                   // (source, canal, CC) -> heure de l'appui
+
+/* Pages du Captain (captain/pageN.txt) : 0 PEDAL (PiPedal), 1 DRUM, 2 BROWSE,
+ * 3 PARTS. Les pages du pont envoient sur le canal 2 : CC 21 + 10 × (page − 1)
+ * + touche (0 à 9 : rangée du haut puis du bas), 127 à l'appui, 0 au relâchement. */
+const int CAP_CH = 2, CAP_CC0 = 21;
+int g_cap_page = -1;                               // page affichée (-1 : inconnue)
+
+/* Couleurs des DEL : ici seulement (les pages n'en ont pas). RVB 8 bits. */
+enum : uint32_t {
+    C_OFF = 0x000000, C_WHITE = 0xFFFFFF, C_DIM = 0x303030, C_YELLOW = 0xFFC000, C_ORANGE = 0xFF5000,
+    C_CYAN = 0x00C0FF, C_GREEN = 0x00FF00, C_DGREEN = 0x004000, C_RED = 0xFF0000,
+};
+
+/* Une touche (1 à 10) : ses 3 DEL de la même couleur (SysEx du Captain,
+ * composantes divisées par 2). */
+void cap_led(int key, uint32_t rgb)
+{
+    const uint8_t r = (uint8_t)((rgb >> 16 & 0xFF) / 2), g = (uint8_t)((rgb >> 8 & 0xFF) / 2), b = (uint8_t)((rgb & 0xFF) / 2);
+    midi_captain_sysex({0xF0, 0x00, 0x04, 0x10, (uint8_t)key, r, g, b, r, g, b, r, g, b, 0xF7});
+}
+
+void paint_page()
+{
+    if (g_cap_page == 1) {                             // DRUM
+        const uint32_t c[10] = {g_h2_metro == 1 ? C_GREEN : C_WHITE, C_YELLOW, C_YELLOW, C_DIM, C_DIM,
+                                C_ORANGE, C_CYAN, C_CYAN, C_GREEN, C_DGREEN};
+        for (int k = 0; k < 10; k++) cap_led(k + 1, c[k]);
+    } else if (g_cap_page == 2 || g_cap_page == 3) {   // BROWSE, PARTS : à venir (seul le retour est actif)
+        for (int k = 0; k < 10; k++) cap_led(k + 1, C_DIM);
+    }
+}
+
+void cap_page(int page)
+{
+    midi_captain_cc(16, 20, page);
+    g_cap_page = page;
+    paint_page();
+    say("Captain : page %d", page);
+}
+
+/* Touche tenue : action longue faite dès LONG_S (sans attendre le relâchement),
+ * répétition pour BPM ±. */
+struct Held {
+    int page = -1, key = -1;
+    double t = 0, next = 0;
+    bool long_done = false;
+};
+Held g_held;
+
+int g_metro_seen = -1;                             // pour repeindre Tap quand le métronome change
+
+/* Ce que fait chaque touche de la page DRUM (voir docs/controle.md, §7).
+ * when : 0 appui, 1 relâchement court, 2 appui long (atteint), 3 répétition. */
+void drum_key(pb_ctl *k, int key, int when)
+{
+    auto act = [&](int b) { say("Captain DRUM : %s", drum_button(k, b).c_str()); g_refresh_now = true; };
+    switch (key) {
+    case 0:                                            // Tap (long : métronome)
+        if (when == 0) act(PB_DBTN_TAP);
+        if (when == 2) {
+            if (!g_taps.empty()) g_taps.pop_back();    // ce coup-là n'était pas un tap
+            say("Captain DRUM : %s", set_metronome(g_h2_metro != 1).c_str());
+        }
+        break;
+    case 1: case 2:                                    // BPM − / BPM + : un pas, puis répétition
+        if (when == 0 || when == 3) { g_bpm_delta += key == 2 ? 1 : -1; g_bpm_step_t = now_s(); }
+        break;
+    case 3:                                            // → Browse (long, provisoire : retour à PEDAL)
+        if (when == 1) cap_page(2);
+        if (when == 2) cap_page(0);
+        break;
+    case 4: if (when == 0) cap_page(3); break;         // → Parts
+    case 5: if (when == 0) act(PB_DBTN_FILL); break;   // Fill (long : Crash, à venir)
+    case 6: if (when == 0) act(PB_DBTN_PREV); break;   // Var ◀ (long : Batterie légère, à venir)
+    case 7: if (when == 0) act(PB_DBTN_NEXT); break;   // Var ▶ (long : Fill long, à venir)
+    case 8:                                            // Part ◀ (long : Intro)
+        if (when == 1) act(PB_DBTN_PART_PREV);
+        if (when == 2) act(PB_DBTN_INTRO);
+        break;
+    case 9: if (when == 0) say("Captain DRUM : Batterie on/off et Break pas encore faits"); break;
+    }
+}
+
+/* Touches qui ont une action longue (ou une répétition) : leur action courte
+ * part au relâchement ; les autres agissent dès l'appui. */
+bool drum_waits(int key) { return key == 3 || key == 8; }
+
+void cap_key(pb_ctl *k, int page, int key, bool down)
+{
+    if (page == 1) {
+        if (down) {
+            g_held = {page, key, now_s(), now_s() + 0.4, false};
+            if (!drum_waits(key)) drum_key(k, key, 0);
+        } else if (g_held.page == page && g_held.key == key) {
+            if (drum_waits(key) && !g_held.long_done) drum_key(k, key, 1);
+            g_held = Held();
+        }
+    } else if ((page == 2 || page == 3) && key == 9) { // BROWSE / PARTS : à venir ; dernière touche :
+        if (down) g_held = {page, key, now_s(), 0, false};   // court -> l'autre page, tenu -> DRUM
+        else if (g_held.page == page && g_held.key == key) {
+            cap_page(now_s() - g_held.t >= LONG_S ? 1 : (page == 2 ? 3 : 2));
+            g_held = Held();
+        }
+    }
+}
+
+/* Appelé à chaque tour : appui long atteint, répétition de BPM ±, couleur de Tap. */
+void cap_tick(pb_ctl *k)
+{
+    if (g_held.page == 1 && g_held.key >= 0) {
+        const double held = now_s() - g_held.t;
+        if (!g_held.long_done && held >= LONG_S && (drum_waits(g_held.key) || g_held.key == 0)) {
+            g_held.long_done = true;
+            drum_key(k, g_held.key, 2);
+        }
+        if ((g_held.key == 1 || g_held.key == 2) && now_s() >= g_held.next) {
+            drum_key(k, g_held.key, 3);
+            g_held.next = now_s() + (held > 2.0 ? 0.04 : 0.12);
+        }
+    }
+    if (g_cap_page == 1 && g_h2_metro != g_metro_seen) { g_metro_seen = g_h2_metro; paint_page(); }
+}
 
 void midi_event(const MidiEv &e)
 {
     const char *src = e.src == MidiSrc::Captain ? "Captain" : "Axe";
-    const int key = ((int)e.src << 16) | (e.ch << 8) | e.cc;
-    if (e.value > 0) {
-        g_pressed[key] = now_s();
-        say("MIDI %s : canal %d CC %d = %d (appui)", src, e.ch, e.cc, e.value);
+    if (e.src == MidiSrc::Captain && e.ch == CAP_CH && e.cc >= CAP_CC0 && e.cc < CAP_CC0 + 30) {
+        const int page = 1 + (e.cc - CAP_CC0) / 10, key = (e.cc - CAP_CC0) % 10;
+        if (page != g_cap_page) { g_cap_page = page; paint_page(); }   // page changée sans nous
+        pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+        if (k) cap_key(k, page, key, e.value > 0);
+        /* Le Captain remet la DEL d'une touche appuyée (ou relâchée) à la couleur
+         * de sa page (noire) : la repeindre aussitôt. */
+        if (g_cap_page == page) paint_page();
         return;
     }
-    const auto it = g_pressed.find(key);
-    if (it == g_pressed.end()) { say("MIDI %s : canal %d CC %d = 0", src, e.ch, e.cc); return; }
-    const double d = now_s() - it->second;
-    g_pressed.erase(it);
-    say("MIDI %s : canal %d CC %d relâché après %.2f s (%s)", src, e.ch, e.cc, d,
-        d >= VERY_LONG_S ? "très long" : d >= LONG_S ? "long" : "court");
+    /* Double switch de l'Axe (A = CC 65, B = CC 67) : PiPedal l'écoute encore
+     * directement (étape 2 du routeur à venir) ; le pont ne fait que noter. */
+    say("MIDI %s : canal %d CC %d = %d", src, e.ch, e.cc, e.value);
 }
 
 void thread_main()
@@ -2590,6 +2721,7 @@ void thread_main()
         timeval tv{0, 5000};               // 5 ms : boutons de DLS Looper
         const int sel = select(std::max(g_cmd, mfd) + 1, &rs, nullptr, nullptr, &tv);
         midi_poll(midi_event);
+        if (pb_ctl *k = g_ctl.load(std::memory_order_acquire)) cap_tick(k);
         if (midi_status() != midi_seen) { midi_seen = midi_status(); say("MIDI : %s", midi_seen.c_str()); }
         if (sel > 0 && FD_ISSET(g_cmd, &rs)) {
             char buf[512];
