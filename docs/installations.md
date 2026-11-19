@@ -58,3 +58,16 @@ sudo apt autoremove -s
 | `/var/pipedal/audio_uploads/DLS Drums/` (40 Mo) | chansons de batterie (Style/Type/Beat), `.alias.txt`, `.X.parts.json` cachés |
 | `/tmp/pedal-bridge-session/` | journaux de la session (effacés au redémarrage du Pi) |
 | `/dev/shm/pedal-bridge-*` | mémoire partagée plugins ↔ client (disparaît au redémarrage) |
+
+## 5. Sauvegarde sur le PC
+
+`bash scripts/sauvegarde.sh [DOSSIER]` (défaut `E:/DWL/Pedalboard`) copie ce
+qui n'existe que sur le Pi, sans rien supprimer :
+
+- `DOSSIER/DLS Drums/` : les chansons (Style/Type/Beat, `.alias.txt`,
+  `.X.parts.json` cachés) ;
+- `DOSSIER/dls-pi/choix.txt` : mémoire des variations, intro, outro, Browse ;
+- `DOSSIER/dls-pi/dls-modeles/` : modèles des kits.
+
+Les gros morceaux (`~/dls-batterie/gros/`) ne sont pas copiés : le pont les
+refait à partir des chansons et des kits.
