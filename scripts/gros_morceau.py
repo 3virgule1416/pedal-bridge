@@ -179,6 +179,20 @@ def main():
     silence = len(all_pats)
     all_pats.append("<pattern>\n<name>Silence</name>\n<info></info>\n<category>DLS</category>\n"
                     "<size>192</size>\n<denominator>4</denominator>\n<noteList>\n</noteList>\n</pattern>")
+    # Coup final (End d'une chanson sans outro, après un fill) : grosse caisse et
+    # crash(s) sur le 1, une mesure pour laisser sonner.
+    ids = {name: i for i, name in rk.instruments(template)}
+    hit = []
+    for role in ("K", "C", "C2"):
+        inst = next((ids[n] for n in roles.get(role, []) if n in ids), None)
+        if inst is not None and inst not in hit:
+            hit.append(inst)
+    final = len(all_pats)
+    all_pats.append("<pattern>\n<name>Final hit</name>\n<info></info>\n<category>DLS</category>\n"
+                    "<size>192</size>\n<denominator>4</denominator>\n<noteList>\n" +
+                    "".join(f"<note>\n<position>0</position>\n<velocity>1</velocity>\n<pan>0</pan>\n"
+                            f"<instrument>{i}</instrument>\n</note>\n" for i in hit) +
+                    "</noteList>\n</pattern>")
     a, b = template.find("<patternList>"), template.find("</patternList>")
     s, e = template.find("<patternSequence>"), template.find("</patternSequence>")
     first = re.search(r"<name>([^<]*)</name>", all_pats[0]).group(1)
@@ -195,6 +209,7 @@ def main():
         for rel, e in index.items():
             f.write(f"{e['first']}\t{e['count']}\t{rel}\n")
         f.write(f"{silence}\t1\t@silence\n")
+        f.write(f"{final}\t1\t@final\n")
     # Structure des parties, pour le pont : « chemin<TAB>clé<TAB>1,2,3 ».
     with open(out_path + ".parts.txt", "w", encoding="utf-8", newline="\n") as f:
         for rel, e in index.items():

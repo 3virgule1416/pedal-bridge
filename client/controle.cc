@@ -1106,6 +1106,7 @@ bool build_big(const std::string &big, const std::string &kit, const std::string
  * -> numéros de groove dans la chanson (à partir de 1). */
 std::map<std::string, std::map<std::string, std::vector<std::vector<int>>>> g_parts;
 int g_silence_abs = -1;                              // pattern « Silence » (décompte du métronome)
+int g_final_abs = -1;                                // pattern « Final hit » (fin sans outro)
 std::string g_song_rel;                               // chanson en cours (chemin relatif)
 
 void load_index(const std::string &big)
@@ -1138,6 +1139,7 @@ void load_index(const std::string &big)
         const size_t a = line.find('\t'), b = line.find('\t', a + 1);
         if (a == std::string::npos || b == std::string::npos) continue;
         if (line.substr(b + 1) == "@silence") { g_silence_abs = std::atoi(line.c_str()); continue; }
+        if (line.substr(b + 1) == "@final") { g_final_abs = std::atoi(line.c_str()); continue; }
         g_index[line.substr(b + 1)] = {std::atoi(line.c_str()), std::atoi(line.c_str() + a + 1)};
     }
 }
@@ -1596,16 +1598,34 @@ std::string seq_change(int part, int var, bool transition)
     return "ok vers " + g_song.parts[part] + " " + var_name(var);
 }
 
+/* Fin d'une chanson sans outro : un fill de la partie qui joue, puis le coup
+ * final (grosse caisse + crash sur le 1). false : rien pour la faire. */
+bool ending_fill_hit(double &at, double bpb)
+{
+    if (g_final_abs < 0) return false;
+    g_seq.once.clear();
+    const int f = fill_for_part(g_seq.loop_part);
+    if (f >= 0) {
+        g_seq.once.push_back(f);
+        if (size_beats(f) < bpb) at += bpb - size_beats(f);   // un fill court finit avec la mesure
+    }
+    g_seq.once.push_back(g_final_abs);
+    g_seq.once_kind = 7;
+    return true;
+}
+
 std::string seq_outro()
 {
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
     double at, bpb;
     if (!next_bar(at, bpb)) {                          // à l'arrêt : écouter l'outro choisie, batterie seule
-        if (g_song.outro.empty()) return "pas d'outro dans cette chanson";
+        if (g_song.outro.empty() && g_final_abs < 0) return "pas d'outro dans cette chanson";
         g_seq.outro_only = true;
         const std::string r = play_from_start(true);
         g_seq.outro_only = false;
-        return r.rfind("ok", 0) == 0 ? "ok outro " + var_name(g_outro_choice - 1) + " seule (batterie)" : r;
+        if (r.rfind("ok", 0) != 0) return r;
+        return g_song.outro.empty() ? "ok fin : fill + coup final (batterie)"
+                                    : "ok outro " + var_name(g_outro_choice - 1) + " seule (batterie)";
     }
     g_seq.once.clear();
     if (!g_song.outro.empty()) {
@@ -1613,9 +1633,11 @@ std::string seq_outro()
         for (int a : g_song.outro[o]) g_seq.once.push_back(a);
         g_seq.once_kind = 7;
     }
+    bool hit = false;
+    if (g_song.outro.empty()) hit = ending_fill_hit(at, bpb);
     g_seq.stop_after = true;
     g_seq.switch_at = at;
-    return g_song.outro.empty() ? "ok fin (pas d'outro : arrêt à la barre)" : "ok outro";
+    return !g_song.outro.empty() ? "ok outro" : hit ? "ok fin : fill + coup final" : "ok fin (arrêt à la barre)";
 }
 
 /* Bouton Intro. En jouant : l'intro choisie à la mesure suivante, puis la
@@ -1663,6 +1685,10 @@ void seq_start()
         const int o = std::min(std::max(g_outro_choice - 1, 0), (int)g_song.outro.size() - 1);
         for (int a : g_song.outro[o]) g_seq.once.push_back(a);
         g_seq.once_kind = 7;
+        g_seq.stop_after = true;
+    } else if (g_seq.outro_only) {                     // pas d'outro : fill + coup final
+        double at0 = 0;
+        ending_fill_hit(at0, 4.0);                     // à la mesure 1 : le fill part au début
         g_seq.stop_after = true;
     } else if (ic == 2 && g_silence_abs >= 0) {        // décompte : 1 mesure de clic
         g_seq.once.push_back(g_silence_abs);
@@ -1777,7 +1803,7 @@ std::string seq_intro_next()
 std::string seq_outro_next()
 {
     if (!g_seq.active) return "erreur : pas de structure pour cette chanson";
-    if (g_song.outro.empty()) return "pas d'outro dans cette chanson";
+    if (g_song.outro.empty()) return "pas d'outro : " + seq_outro();
     g_outro_choice = g_outro_choice < 1 || g_outro_choice >= (int)g_song.outro.size() ? 1 : g_outro_choice + 1;
     g_ui_outro = g_outro_choice;
     return "Outro " + var_name(g_outro_choice - 1) + " : " + seq_outro();

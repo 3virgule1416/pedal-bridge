@@ -511,7 +511,7 @@ Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
 | Var ◀ ▶ | boutons | variation précédente / suivante, à la mesure suivante |
 | Fill | bouton | fill de la partie, puis la phrase reprend (même pattern, ou le suivant si le fill le finissait) |
 | Part ◀ ▶ | boutons | partie précédente / suivante : transition de la chanson, sinon un fill de la partie quittée, puis la nouvelle partie |
-| End | bouton | outro choisie puis arrêt (pas d'outro : arrêt à la barre) ; **à l'arrêt** : l'outro seule, batterie seule (boucles en pause), pour la choisir |
+| End | bouton | outro choisie puis arrêt (pas d'outro, 86 chansons sur 102 : un fill de la partie puis un **coup final**, grosse caisse + crash sur le 1, pattern « Final hit » du gros morceau, une mesure pour sonner) ; **à l'arrêt** : l'outro seule, batterie seule (boucles en pause), pour la choisir |
 | Intro (bouton) | bouton | intro choisie à la mesure suivante, puis la partie reprend ; **à l'arrêt** : l'intro seule (ou la mesure de décompte), batterie seule |
 | Auto Fill | interrupteur (allumé) | allumé : fill de transition entre deux parties ; éteint : la partie suivante part tout de suite (Fill marche toujours) |
 | Playing, Var | sorties | partie jouée (Intro, Verse…, Outro, Fill) et variation |
