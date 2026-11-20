@@ -684,6 +684,7 @@ struct Seq {
     bool in_once = false;
     bool stop_after = false, metro_after = false;
     bool outro_only = false;              // Play demandé par End à l'arrêt : l'outro seule
+    bool click_last = false;              // la dernière mesure « une fois » est un décompte (métronome)
     bool intro_only = false;              // Play demandé par Intro à l'arrêt : l'intro seule
     size_t resume_pos = 0;                // après un fill : où reprendre la phrase
     double item_start = 0, item_len = 0;  // élément en cours (temps du transport)
@@ -1823,6 +1824,7 @@ void seq_stopped()
     g_seq.once.clear();
     g_seq.switch_at = -1;
     g_seq.in_once = g_seq.stop_after = false;
+    g_seq.click_last = false;
     g_seq.resume_pos = 0;
     g_seq.next_loop.clear();
     if (!phrase_of(g_seq.part).empty()) {             // partie affichée (sinon : celle qui jouait)
@@ -1835,31 +1837,41 @@ void seq_stopped()
 
 /* Appelé à chaque passage (~5 ms). */
 /* --- Mode démo (page BROWSE du Captain, en jouant) ---
- * La chanson se déroule en boucle : Intro -> Verse ×2 -> Pre-Chorus ->
- * Chorus ×2 -> Bridge -> Outro -> Intro… (parties à None sautées ; fill entre
- * deux parties si Auto Fill). Le séquenceur compte les phrases jouées. */
+ * La chanson se déroule en boucle comme une vraie : Intro, puis deux fois
+ * [Verse ×2, Pre-Chorus, Chorus ×2, Bridge], puis Outro et une mesure sans
+ * batterie (on entend que c'est fini), puis on recommence. Parties à None
+ * sautées ; fill entre deux parties si Auto Fill. Le séquenceur compte les
+ * phrases jouées. */
 struct Demo {
     bool on = false;
-    std::vector<int> P;          // parties jouées (index dans g_song.parts), dans l'ordre
-    size_t i = 0;                // partie en cours
-    int r = 0;                   // phrases déjà jouées de cette partie
+    std::vector<int> P;          // déroulé : parties (index dans g_song.parts)
+    std::vector<int> R;          // phrases à jouer pour chacune
+    size_t i = 0;                // étape en cours
+    int r = 0;                   // phrases déjà jouées de cette étape
 } g_demo;
 
-int demo_reps(const std::string &pn) { return pn == "Verse" || pn == "Chorus" ? 2 : 1; }
-
-std::vector<int> demo_list()
+/* Le déroulé de la chanson (deux blocs). */
+std::vector<int> demo_list(std::vector<int> &reps)
 {
     std::vector<int> P;
-    for (const char *pn : {"Verse", "Pre-Chorus", "Chorus", "Bridge", "Groove"})
-        for (size_t i = 0; i < g_song.parts.size(); i++)
-            if (g_song.parts[i] == pn && g_seq.var[(int)i] >= 0) P.push_back((int)i);
+    reps.clear();
+    for (int round = 0; round < 2; round++)
+        for (const char *pn : {"Verse", "Pre-Chorus", "Chorus", "Bridge", "Groove"})
+            for (size_t i = 0; i < g_song.parts.size(); i++)
+                if (g_song.parts[i] == pn && g_seq.var[(int)i] >= 0) {
+                    P.push_back((int)i);
+                    reps.push_back(std::string(pn) == "Verse" || std::string(pn) == "Chorus" ? 2 : 1);
+                }
     return P;
 }
 
-/* L'intro de la démo : celle choisie (A, B…), sinon la première de la chanson
- * même si l'Intro est sur Off ou Metronome (on veut entendre toute la chanson). */
-std::vector<int> demo_intro()
+/* L'intro de la démo, d'après la liste Intro : A, B… -> cette intro ;
+ * Metronome -> une mesure de clic (click = true) ; Off -> la première intro de
+ * la chanson s'il y en a une. */
+std::vector<int> demo_intro(bool &click)
 {
+    click = false;
+    if (g_intro_choice == 2 && g_silence_abs >= 0) { click = true; return {g_silence_abs}; }
     if (g_song.intro.empty()) return {};
     if (g_intro_choice >= 3) return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
     return g_song.intro[0];
@@ -1886,9 +1898,12 @@ void demo_go(size_t ni, bool wrap)
 {
     const int from = g_demo.P[g_demo.i];
     g_seq.once.clear();
-    if (wrap) {                                        // fin de la chanson : outro, puis intro
+    if (wrap) {                                        // fin : outro, une mesure vide, puis intro
         for (int a : demo_outro(from)) g_seq.once.push_back(a);
-        for (int a : demo_intro()) g_seq.once.push_back(a);
+        if (g_silence_abs >= 0) g_seq.once.push_back(g_silence_abs);
+        bool click;
+        for (int a : demo_intro(click)) g_seq.once.push_back(a);
+        g_seq.click_last = click;                      // décompte : métronome sur la dernière mesure
         g_seq.once_kind = 7;
     } else if (demo_autofill()) {
         const int f = fill_for_part(from);
@@ -1907,7 +1922,7 @@ void demo_boundary()
 {
     if (g_demo.P.empty()) return;
     if (g_demo.i >= g_demo.P.size()) g_demo.i = 0;
-    if (++g_demo.r < demo_reps(g_song.parts[g_demo.P[g_demo.i]])) return;
+    if (++g_demo.r < g_demo.R[g_demo.i]) return;
     const size_t ni = (g_demo.i + 1) % g_demo.P.size();
     demo_go(ni, ni == 0);
 }
@@ -1916,7 +1931,7 @@ void demo_boundary()
  * mesure suivante ; sinon on continue depuis la partie en cours. */
 void demo_start(bool restart)
 {
-    g_demo.P = demo_list();
+    g_demo.P = demo_list(g_demo.R);
     g_demo.on = !g_demo.P.empty();
     if (!g_demo.on) return;
     g_demo.i = 0;
@@ -1926,14 +1941,17 @@ void demo_start(bool restart)
     if (restart && next_bar(at, bpb)) {
         g_demo.i = 0;
         g_seq.once.clear();
-        for (int a : demo_intro()) g_seq.once.push_back(a);
+        bool click;
+        for (int a : demo_intro(click)) g_seq.once.push_back(a);
+        g_seq.click_last = click;
         g_seq.once_kind = 1;
         g_seq.next_loop = phrase_of(g_demo.P[0]);
         g_seq.next_part = g_demo.P[0];
         g_seq.part = g_demo.P[0];
         g_seq.switch_at = at;
     } else if (restart) {
-        g_seq.part = g_demo.P[0];                       // à l'arrêt : Play part de l'intro, sur Verse
+        g_demo.i = 0;                                   // à l'arrêt : Play part de l'intro, sur Verse
+        g_seq.part = g_demo.P[0];
     }
 }
 
@@ -1972,6 +1990,10 @@ void seq_tick()
         demo_boundary();
     int abs;
     if (!g_seq.once.empty()) {
+        if (g_seq.click_last && g_seq.once.size() == 1) {      // décompte de la démo : métronome
+            g_seq.click_last = false;
+            if (g_h2_metro != 1) { set_metronome(true); g_seq.metro_after = true; }
+        }
         abs = g_seq.once.front();
         g_seq.once.pop_front();
         if (!g_seq.in_once && !g_seq.loop.empty()) {   // fill qui coupe la phrase : reprise au même

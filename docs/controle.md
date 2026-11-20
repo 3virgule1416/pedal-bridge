@@ -670,18 +670,19 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   rouge), **Kit ◀ ▶** (liste Kit de PiPedal ; en jouant : Stop, chargement, puis
   reprise sur la même partie et variation, sans intro, **à la mesure 1** pour
   rester calé avec les boucles).
-- **Mode démo** (BROWSE, en jouant) : la chanson se déroule en boucle, Intro
-  → Verse ×2 → Pre-Chorus → Chorus ×2 → Bridge → Outro → Intro… (parties à
-  None sautées ; fill entre deux parties si Auto Fill ; sans outro : fill + coup
-  final ; intro : celle choisie, sinon la première de la chanson même si l'Intro
-  est sur Off ou Metronome ; pas d'intro dans la chanson : on part du Verse). Nouveau
-  beat (Style, Type, Beat) : la démo repart à l'intro, à la mesure suivante ;
-  Play depuis BROWSE, ou arrivée sur BROWSE pendant la lecture : la démo
-  repart toujours à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
-  tenus** : partie précédente / suivante de la démo (courts : beat). En quittant
-  BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct
-  (Pantteri fast 2 : Verse ×2, fill, Pre-Chorus, fill, Chorus ×2, fill, Bridge,
-  fill + coup final, Verse…).
+- **Mode démo** (BROWSE, en jouant) : la chanson se déroule en boucle comme
+  une vraie : Intro, puis **deux fois** [Verse ×2, Pre-Chorus, Chorus ×2,
+  Bridge], puis Outro, **une mesure sans batterie** (on entend que c'est fini),
+  et on recommence. Parties à None sautées ; fill entre deux parties si Auto
+  Fill ; sans outro : fill + coup final. Intro selon la liste Intro : A, B… ->
+  cette intro ; **Metronome -> une mesure de clic** (au début et à chaque tour) ;
+  Off -> la première intro de la chanson s'il y en a une. Play depuis BROWSE, ou
+  arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
+  la démo repart à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
+  tenus** : étape précédente / suivante de la démo (courts : beat). En quittant
+  BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct à
+  240 BPM (Pantteri fast 2) : décompte, 2 blocs avec fills, fill + coup final,
+  mesure vide, décompte, Verse.
 - PARTS (audition) : la sélection (Intro, partie, Outro) boucle ; **à l'arrêt,
   choisir ne fait que sélectionner**, Play (Play/Stop de DLS Drum, plus tard A)
   la lance, batterie seule ; **en jouant**, changement à la mesure suivante.
