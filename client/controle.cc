@@ -1589,6 +1589,11 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
         if (qi != mem->second.end()) { g_intro_choice = qi->second; g_ui_intro = qi->second; }
         if (qo != mem->second.end()) { g_outro_choice = qo->second; g_ui_outro = qo->second; }
     }
+    if (g_song.intro.empty() && g_intro_choice >= 3) {   // pas d'intro dans la chanson : A, B… -> Off
+        g_intro_choice = 1;
+        g_ui_intro = 1;
+        memo_choice("Intro", 1);
+    }
     g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
     double at, bpb;
@@ -2296,6 +2301,10 @@ void drum_poll(pb_ctl *k)
             g_dr_intro_ui = iu;
             if (fresh && mem != g_memo.end() && mem->second.count("Intro")) {
                 if ((int)iu != g_intro_choice) g_ui_intro = g_intro_choice;
+            } else if (g_seq.active && g_song.intro.empty() && iu >= 3) {
+                g_intro_choice = 1;                    // pas d'intro dans la chanson : A, B… -> Off
+                g_ui_intro = 1;
+                memo_choice("Intro", 1);
             } else {
                 g_intro_choice = (int)iu;
                 if (!fresh) memo_choice("Intro", g_intro_choice);

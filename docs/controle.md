@@ -676,7 +676,9 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   et on recommence. Parties à None sautées ; fill entre deux parties si Auto
   Fill ; sans outro : fill + coup final. Intro selon la liste Intro : A, B… ->
   cette intro ; **Metronome -> une mesure de clic** (au début et à chaque tour) ;
-  Off -> la première intro de la chanson s'il y en a une. Play depuis BROWSE, ou
+  Off -> la première intro de la chanson s'il y en a une. Chanson **sans intro**
+  et liste Intro sur A, B… : le pont la remet à **Off** (retenu pour la
+  chanson), pour que la liste ne montre pas une intro qui n'existe pas. Play depuis BROWSE, ou
   arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
   la démo repart à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
   tenus** : étape précédente / suivante de la démo (courts : beat). En quittant
