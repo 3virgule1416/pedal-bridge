@@ -206,6 +206,8 @@ do_start() {
     launch pedal_bridge "$B/pedal_bridge" --links "$LINKS" --stats 10 --sl-osc 9951
     wait_port "pedal_bridge:send${LINKS%%,*}_L" 5
   fi
+  # Gardien : si le pont plante, double switch rendu à PiPedal et Captain page 0.
+  running pb_garde || launch pb_garde "$B/pb_garde"
 
   do_connect
   echo
@@ -215,9 +217,21 @@ do_start() {
   echo "Suivi du pont : bash scripts/session.sh status"
 }
 
+# Le pont prend le double switch de l'Axe à PiPedal tant qu'il tourne (il
+# débranche la connexion MIDI Axe -> PiPedal) et le rend en s'arrêtant. Filet,
+# s'il a planté : sans pont, rebrancher l'Axe à PiPedal (A et B changent de
+# preset comme avant).
+axe_back() {
+  running pedal_bridge && return 0
+  aconnect -l 2>/dev/null | grep -q "AXE IO One" || return 0
+  aconnect "AXE IO One:0" "PiPedal:0" 2>/dev/null && echo "  double switch rendu à PiPedal (pont absent)"
+  return 0
+}
+
 do_status() {
+  axe_back
   echo "== Programmes"
-  for p in jackd pb_timebase Xvfb openbox x11vnc sooperlooper slgui hydrogen h2cli pedal_bridge; do
+  for p in jackd pb_timebase Xvfb openbox x11vnc sooperlooper slgui hydrogen h2cli pedal_bridge pb_garde; do
     pid=$(pgrep -u "$USER" -x "$p" | head -1)
     if [ -n "$pid" ]; then st="en marche (pid $pid)"; else st="arrêté"; fi
     printf "  %-13s %s\n" "$p" "$st"
@@ -246,6 +260,7 @@ stop_one() {
 do_stop() {
   echo "== Arrêt"
   stop_one pedal_bridge
+  axe_back
   stop_one hydrogen
   stop_one h2cli
   stop_one slgui
@@ -270,6 +285,6 @@ case "${1:-}" in
   list)  "$B/pedal_bridge" --cmd list ;;
   boucles) "$B/pedal_bridge" --cmd status ;;
   stop)     do_stop ;;
-  stop-all) do_stop; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
+  stop-all) do_stop; stop_one pb_garde; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
   *) sed -n '2,32p' "$0"; exit 2 ;;
 esac

@@ -33,7 +33,7 @@ suivante, ou du cycle), jamais au moment approximatif de l'appui.
 | Hydrogen **1.2.7** (`h2cli`, sans fenêtre) | batterie, pilotée par OSC | fait (compilé, §10) |
 | SooperLooper 1.7.8 | boucles, pilotées par OSC | fait |
 | Pages du **MIDI Captain** DRUM, BROWSE, PARTS | jouer et régler la batterie au pied | fait (§7) |
-| Double switch A/B par le pont | Play/Stop, End, Part ▶, changer de mode | **à faire** (§7) |
+| Double switch A/B par le pont | presets (mode PiPedal) ; Play/Stop, End, Part ▶ (mode Drum) ; changer de mode | fait (§7.3) |
 | Page LOOPER du Captain, sections | boucles au pied, enchaîner | à faire (§9) |
 | Écran OLED | état lisible | à faire (§11) |
 
@@ -326,20 +326,36 @@ URI `…/looper-mono`, `…/looper-stereo` (« DLS Looper », « DLS Looper St. 
   relâchement** et la longue **dès 0,5 s** de maintien.
 - Commande du pont `captain page N` (aussi utilisée par les touches → Browse…).
 
-### 7.3 Double switch (A, B) — à faire
+### 7.3 Double switch (A, B)
 
-| | Court | Long |
-|---|---|---|
-| **A** | Play / Stop (à l'arrêt : dès l'appui ; en jouant : au relâchement) | **End** |
-| **B** | **Part ▶** | **changer de mode** (Drum → Looper → PiPedal) |
+Axe I/O One : A = CC 65, B = CC 67, canal 1, 127 à l'appui et 0 au
+relâchement. Le pont le traite **selon le mode** :
 
-Vérifié : l'Axe envoie l'appui (127) et le relâchement (0) : A = CC 65,
-B = CC 67, canal 1. Il faut **ne plus faire écouter l'Axe par PiPedal** (réglage
-MIDI de PiPedal, avec l'accord du musicien) : aujourd'hui, PiPedal change de
-preset à chaque appui. Le changement de preset passera sur la page PEDAL.
+| Mode | A court | A long | B court | B long |
+|---|---|---|---|---|
+| **PiPedal** (page PEDAL) | preset précédent | — | preset suivant | changer de mode |
+| **Drum** (DRUM, BROWSE, PARTS) | Play / Stop | End | Part ▶ | changer de mode |
 
-En attendant (provisoire) : sur DRUM, **→ Browse tenu** ramène à PEDAL ; sur
-BROWSE et PARTS, la dernière touche **tenue** ramène à DRUM.
+- En mode PiPedal, le pont **renvoie à PiPedal les mêmes CC** que l'Axe (65,
+  67 : liaisons « Previous / Next Preset », « Trigger on rising edge » de
+  PiPedal, inchangées), au relâchement (~0,2 s plus tard qu'en direct, pour
+  reconnaître l'appui long de B).
+- A en mode Drum : **à l'arrêt, Play part dès l'appui** ; en jouant, court =
+  Stop au relâchement, long = End.
+- Changer de mode : PiPedal ↔ Drum (le Captain passe sur PEDAL ou DRUM).
+- **Sans toucher aux réglages de PiPedal** : la liaison Axe → PiPedal est une
+  connexion MIDI ALSA que PiPedal fait lui-même ; le pont la **débranche** en
+  démarrant (et de nouveau si PiPedal la refait) et la **rebranche** en
+  s'arrêtant, après avoir remis le Captain sur la **page 0**. `PB_AXE=0` :
+  le pont laisse le double switch à PiPedal.
+- **Gardien `pb_garde`** (lancé par `session.sh`) : si le pont plante ou est
+  tué, il rebranche l'Axe à PiPedal et remet le Captain sur la page 0 dans la
+  seconde. Pont qui ne démarre pas : rien n'est débranché. Donc, **sans pont,
+  on retombe toujours en mode PiPedal normal**. Vérifié : arrêt normal et
+  `kill -9`.
+
+En plus (provisoire, inutile avec B) : sur DRUM, → Browse **tenu** ramène à
+PEDAL ; sur BROWSE et PARTS, la dernière touche **tenue** ramène à DRUM.
 
 ### 7.4 Page DRUM (jouer)
 
@@ -530,8 +546,7 @@ Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
 
 ## 12. Suite
 
-1. **Double switch A/B par le pont** (§7.3) — avec l'accord pour le réglage
-   MIDI de PiPedal ; puis changement de mode et DEL de la page PEDAL (§7.8).
+1. DEL de la page PEDAL et changement de mode (§7.8).
 2. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
    Crash, Batterie légère, Fill long.
 3. **Page LOOPER** du Captain.

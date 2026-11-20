@@ -3206,6 +3206,68 @@ void cap_tick(pb_ctl *k)
     if (g_cap_page == 3 && PB_LOAD_RLX(&k->drum_nofill) != nofill_seen) { nofill_seen = PB_LOAD_RLX(&k->drum_nofill); paint_page(); }
 }
 
+/* --- Double switch A / B (Axe I/O One : CC 65 et 67, canal 1) ---
+ * Le pont le prend à PiPedal tant qu'il tourne (midi_take_axe) et le traite
+ * selon le mode :
+ *   mode PiPedal (page PEDAL) : A = preset précédent, B = preset suivant (le
+ *     pont renvoie à PiPedal les mêmes CC que l'Axe, au relâchement) ;
+ *   mode Drum (pages DRUM, BROWSE, PARTS) : A = Play / Stop (à l'arrêt : dès
+ *     l'appui), A long = End ; B = Part ▶.
+ *   B long, partout : changer de mode (PiPedal <-> Drum). */
+const int AXE_A = 65, AXE_B = 67;
+struct AxeKey { bool down = false; double t = 0; bool long_done = false, done = false; } g_axe[2];
+
+bool drum_mode() { return g_cap_page >= 1 && g_cap_page <= 3; }
+
+void mode_switch()
+{
+    if (drum_mode()) { cap_page(0); say("Mode PiPedal"); }
+    else { cap_page(1); say("Mode Drum"); }
+}
+
+void axe_key(int w, bool down)
+{
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+    AxeKey &a = g_axe[w];
+    if (down) {
+        a = {true, now_s(), false, false};
+        if (w == 0 && drum_mode() && k && !transport_rolling()) {   // Play dès l'appui, pour partir pile
+            say("A : %s", drum_button(k, PB_DBTN_PLAYSTOP).c_str());
+            a.done = true;
+        }
+        return;
+    }
+    if (!a.down) return;
+    a.down = false;
+    if (a.done || a.long_done) return;                 // déjà fait (Play à l'appui, ou appui long)
+    if (!drum_mode()) {                                // mode PiPedal : preset précédent / suivant
+        const int cc = w == 0 ? AXE_A : AXE_B;
+        midi_pipedal_cc(1, cc, 127);
+        midi_pipedal_cc(1, cc, 0);
+        say("%s : preset %s (PiPedal)", w == 0 ? "A" : "B", w == 0 ? "précédent" : "suivant");
+        return;
+    }
+    if (!k) return;
+    if (w == 0) say("A : %s", drum_button(k, PB_DBTN_PLAYSTOP).c_str());   // en jouant : Stop
+    else say("B : %s", drum_button(k, PB_DBTN_PART_NEXT).c_str());
+    g_refresh_now = true;
+}
+
+void axe_tick()
+{
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
+    for (int w = 0; w < 2; w++) {
+        AxeKey &a = g_axe[w];
+        if (!a.down || a.done || a.long_done || now_s() - a.t < LONG_S) continue;
+        a.long_done = true;
+        if (w == 1) mode_switch();                     // B long : changer de mode
+        else if (drum_mode() && k) {                   // A long : End
+            say("A long : %s", drum_button(k, PB_DBTN_OUTRO).c_str());
+            g_refresh_now = true;
+        }
+    }
+}
+
 void midi_event(const MidiEv &e)
 {
     const char *src = e.src == MidiSrc::Captain ? "Captain" : "Axe";
@@ -3224,8 +3286,10 @@ void midi_event(const MidiEv &e)
         if (g_cap_page == page) paint_page();
         return;
     }
-    /* Double switch de l'Axe (A = CC 65, B = CC 67) : PiPedal l'écoute encore
-     * directement (étape 2 du routeur à venir) ; le pont ne fait que noter. */
+    if (e.src == MidiSrc::Axe && e.ch == 1 && (e.cc == AXE_A || e.cc == AXE_B)) {
+        axe_key(e.cc == AXE_A ? 0 : 1, e.value > 0);
+        return;
+    }
     say("MIDI %s : canal %d CC %d = %d", src, e.ch, e.cc, e.value);
 }
 
@@ -3235,7 +3299,12 @@ void thread_main()
     read_h2_current_song();
     {
         std::string err;
-        if (midi_open(err)) say("MIDI : %s", midi_status().c_str());
+        if (midi_open(err)) {
+            /* Le double switch passe par le pont (PB_AXE=0 : le laisser à PiPedal). */
+            const char *ax = std::getenv("PB_AXE");
+            midi_take_axe(!(ax && std::string(ax) == "0"));
+            say("MIDI : %s", midi_status().c_str());
+        }
         else say("MIDI : %s", err.c_str());
     }
     std::string midi_seen = midi_status();
@@ -3248,6 +3317,7 @@ void thread_main()
         timeval tv{0, 5000};               // 5 ms : boutons de DLS Looper
         const int sel = select(std::max(g_cmd, mfd) + 1, &rs, nullptr, nullptr, &tv);
         midi_poll(midi_event);
+        axe_tick();
         if (pb_ctl *k = g_ctl.load(std::memory_order_acquire)) cap_tick(k);
         if (midi_status() != midi_seen) { midi_seen = midi_status(); say("MIDI : %s", midi_seen.c_str()); }
         if (sel > 0 && FD_ISSET(g_cmd, &rs)) {

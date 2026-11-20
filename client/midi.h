@@ -38,5 +38,15 @@ void midi_poll(const std::function<void(const MidiEv &)> &on_cc);
 void midi_captain_cc(int ch, int cc, int value);
 void midi_captain_sysex(const std::vector<uint8_t> &data);   // F0 … F7 compris
 
+/* Vers PiPedal (rien s'il est absent) : le pont retransmet le double switch
+ * en mode PiPedal. */
+void midi_pipedal_cc(int ch, int cc, int value);
+
+/* Le double switch (Axe) : tant que le pont tourne, il le prend à PiPedal
+ * (connexion ALSA Axe -> PiPedal débranchée, et redébranchée si PiPedal la
+ * refait) ; midi_close() la rebranche, pour que A et B changent de preset
+ * comme avant quand le pont n'est pas là. */
+void midi_take_axe(bool take);
+
 /* État des appareils, pour le journal : « Captain oui, Axe oui ». */
 std::string midi_status();

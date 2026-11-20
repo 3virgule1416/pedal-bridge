@@ -63,6 +63,9 @@ target_link_libraries(pedal_bridge_client PRIVATE pb_shm PkgConfig::JACK PkgConf
 # Maître du temps JACK (remplace celui, défectueux, d'Hydrogen 1.2.0-beta)
 add_executable(pb_timebase tools/pb_timebase.c)
 target_link_libraries(pb_timebase PRIVATE PkgConfig::JACK m)
+# Gardien : pont absent -> double switch rendu à PiPedal, Captain page 0
+add_executable(pb_garde tools/pb_garde.c)
+target_link_libraries(pb_garde PRIVATE PkgConfig::ALSA)
 add_executable(pb_transport tools/pb_transport.c)
 target_link_libraries(pb_transport PRIVATE PkgConfig::JACK)
 add_executable(pb_lag tools/pb_lag.c)
