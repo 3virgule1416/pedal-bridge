@@ -670,6 +670,17 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   rouge), **Kit ◀ ▶** (liste Kit de PiPedal ; en jouant : Stop, chargement, puis
   reprise sur la même partie et variation, sans intro, **à la mesure 1** pour
   rester calé avec les boucles).
+- **Mode démo** (BROWSE, en jouant) : la chanson se déroule en boucle, Intro
+  → Verse ×2 → Pre-Chorus → Chorus ×2 → Bridge → Outro → Intro… (parties à
+  None sautées ; fill entre deux parties si Auto Fill ; sans outro : fill + coup
+  final ; intro jouée seulement si l'Intro est A, B…, pas Metronome). Nouveau
+  beat (Style, Type, Beat) : la démo repart à l'intro, à la mesure suivante ;
+  Play depuis BROWSE : départ à l'intro puis Verse ; en arrivant sur BROWSE
+  pendant la lecture : on continue depuis la partie en cours. **Beat ◀ ▶
+  tenus** : partie précédente / suivante de la démo (courts : beat). En quittant
+  BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct
+  (Pantteri fast 2 : Verse ×2, fill, Pre-Chorus, fill, Chorus ×2, fill, Bridge,
+  fill + coup final, Verse…).
 - PARTS (audition) : la sélection (Intro, partie, Outro) boucle ; **à l'arrêt,
   choisir ne fait que sélectionner**, Play (Play/Stop de DLS Drum, plus tard A)
   la lance, batterie seule ; **en jouant**, changement à la mesure suivante.
