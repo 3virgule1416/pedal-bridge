@@ -343,6 +343,9 @@ relâchement. Le pont le traite **selon le mode** :
 - A en mode Drum : **à l'arrêt, Play part dès l'appui** ; en jouant, court =
   Stop au relâchement, long = End.
 - Changer de mode : PiPedal ↔ Drum (le Captain passe sur PEDAL ou DRUM).
+  Le Captain ne dit jamais sur quelle page il est : au démarrage, le pont le
+  met sur PEDAL ; ensuite, la page se déduit aussi des boutons appuyés (CC 1 à
+  10 canal 1 = PEDAL ; canal 2 = DRUM, BROWSE ou PARTS).
 - **Sans toucher aux réglages de PiPedal** : la liaison Axe → PiPedal est une
   connexion MIDI ALSA que PiPedal fait lui-même ; le pont la **débranche** en
   démarrant (et de nouveau si PiPedal la refait) et la **rebranche** en

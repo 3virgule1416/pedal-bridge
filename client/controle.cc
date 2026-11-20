@@ -3286,6 +3286,12 @@ void midi_event(const MidiEv &e)
         if (g_cap_page == page) paint_page();
         return;
     }
+    if (e.src == MidiSrc::Captain && e.ch == 1 && e.cc >= 1 && e.cc <= 10 && g_cap_page != 0) {
+        if (g_cap_page == 3) aud_leave();             // page PEDAL : le Captain y est (mode PiPedal)
+        if (g_cap_page == 2) g_demo.on = false;
+        g_cap_page = 0;
+        say("Captain : page 0 (vue)");
+    }
     if (e.src == MidiSrc::Axe && e.ch == 1 && (e.cc == AXE_A || e.cc == AXE_B)) {
         axe_key(e.cc == AXE_A ? 0 : 1, e.value > 0);
         return;
@@ -3304,6 +3310,7 @@ void thread_main()
             const char *ax = std::getenv("PB_AXE");
             midi_take_axe(!(ax && std::string(ax) == "0"));
             say("MIDI : %s", midi_status().c_str());
+            cap_page(0);                               // le Captain ne dit pas sa page : on part de PEDAL
         }
         else say("MIDI : %s", err.c_str());
     }
