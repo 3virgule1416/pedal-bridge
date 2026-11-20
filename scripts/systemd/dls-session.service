@@ -1,0 +1,20 @@
+[Unit]
+Description=DLS : session (JACK, pb_timebase, SooperLooper, Hydrogen, pont) ; bouton 10 au démarrage = mode spectacle
+After=pipedald.service sound.target pb-leds.service pb-garde.service
+Wants=pipedald.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=pedalboard
+Group=audio
+# Comme pipedald : temps réel et mémoire verrouillée pour JACK (les limites du
+# groupe audio de /etc/security/limits.d ne s'appliquent pas aux services).
+LimitRTPRIO=95
+LimitMEMLOCK=infinity
+ExecStart=/bin/bash /home/pedalboard/pedal-bridge-build/src/scripts/dls-demarrage.sh
+ExecStop=/bin/bash /home/pedalboard/pedal-bridge-build/src/scripts/session.sh stop-all
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

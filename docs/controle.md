@@ -37,9 +37,19 @@ suivante, ou du cycle), jamais au moment approximatif de l'appui.
 | Page LOOPER du Captain, sections | boucles au pied, enchaîner | à faire (§9) |
 | Écran OLED | état lisible | à faire (§11) |
 
-Démarrage : `bash scripts/session.sh start` (JACK, `pb_timebase`,
-SooperLooper, Hydrogen, le pont, branchements). Pas automatique au démarrage
-du Pi. Inventaire de ce qui est installé : `docs/installations.md`.
+**Démarrage du Pi** (services systemd, `scripts/systemd/`, sous le compte
+`pedalboard`) :
+
+| Service | Rôle |
+|---|---|
+| `pb-leds` | DEL de la page PEDAL du Captain (suit PiPedal), toujours, relancé s'il plante |
+| `pb-garde` | gardien : pont absent → double switch rendu à PiPedal, Captain sur la page 0 |
+| `dls-session` | **fenêtre de choix** (`pb_demarrage`) : le bouton 10 du Captain clignote en orange 8 s ; un appui = **mode spectacle** (PiPedal seul : ni JACK, ni Hydrogen, ni SooperLooper, ni le pont ; bouton 10 vert) ; sinon la session complète (`session.sh start`) |
+
+En mode spectacle, le double switch et les DEL de la page PEDAL marchent
+comme avec PiPedal seul. À la main : `bash scripts/session.sh start` /
+`stop` / `status`, ou `sudo systemctl stop dls-session`. Inventaire de ce qui
+est installé : `docs/installations.md`.
 
 ## 3. Architecture
 
@@ -439,12 +449,30 @@ morceaux.
 | **Fill long** | fill de 2 mesures ou plus ; à défaut, deux fills courts |
 | **Page LOOPER** | boutons du looper au pied, état des boucles en couleur |
 
-### 7.8 DEL : un seul responsable
+### 7.8 DEL de la page PEDAL : `pb_leds`
 
-`pipedal_leds.py` (dépôt `captain-manager`) colore la page PEDAL selon les
-effets et snapshots de PiPedal ; le pont colore ses pages. Ils ne doivent pas
-écrire en même temps : à décider quand on fera le changement de mode (intégrer
-`pipedal_leds.py` au pont, ou lui transmettre le mode).
+Programme à part (`client/pb_leds.cc`, service `pb-leds`), pour que les DEL de
+PiPedal marchent **même sans le pont**. Il suit PiPedal par son websocket
+(`hello`, `currentPedalboard`, `getPresets`, puis `onPedalboardChanged`,
+`onItemEnabledChanged`, `onControlChanged`, `onSelectedSnapshotChanged`,
+`onPresetsChanged`) ; règles reprises de `captain-manager/pipedal_leds.py` :
+
+- touche N = CC N (1 à 10) lié dans PiPedal : **bypass d'un effet** (allumé si
+  l'effet est actif) ou **interrupteur d'un effet** (allumé s'il est à 1) ;
+- **couleur de l'effet** = sa couleur d'icône dans PiPedal (clic sur le nom de
+  l'effet), sinon vert ; allumé : 3 DEL vives, éteint : 1 DEL à 5 % ;
+- snapshots 1 à 5 sur les touches 6 à 10 (devant), dans leur couleur,
+  vifs si sélectionnés ;
+- **éclair blanc** de toutes les touches au chargement d'un preset ;
+- reconnexion à PiPedal (3 s) et repeinture si le Captain est rebranché ; il
+  écoute aussi les boutons de la page PEDAL (le Captain remet en noir la DEL
+  appuyée) et repeint.
+
+**Un seul responsable des DEL** : le pont publie la page du Captain
+(`cap_page` dans `/dev/shm/pedal-bridge-control`) ; `pb_leds` ne peint que sur
+la page PEDAL, ou si le pont ne donne plus signe de vie (`client_heartbeat`
+figé). Pendant la fenêtre de démarrage, il laisse le bouton 10 à
+`pb_demarrage`. `pipedal_leds.py` reste dans `captain-manager` comme référence.
 
 ## 8. Tempo sans saut
 
@@ -549,7 +577,7 @@ Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
 
 ## 12. Suite
 
-1. DEL de la page PEDAL et changement de mode (§7.8).
+1. Vérifier au prochain redémarrage du Pi : services, fenêtre du bouton 10.
 2. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
    Crash, Batterie légère, Fill long.
 3. **Page LOOPER** du Captain.
@@ -559,9 +587,6 @@ Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
 
 ## 13. Questions ouvertes
 
-- `pipedal_leds.py` : l'intégrer au pont, ou lui transmettre le mode (§7.8) ?
 - Changement de preset au relâchement (appui court de la page PEDAL ou du
   double switch) : acceptable à l'usage ?
 - SooperLooper : « t. stretch » utilisable au changement de tempo ?
-- Démarrage automatique de la session au démarrage du Pi (service système,
-  avec accord) ?

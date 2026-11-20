@@ -127,6 +127,37 @@ std::vector<long> find_instances(const std::string &json, const std::string &pre
 
 }  // namespace
 
+/* --- Connexion qui reste ouverte (pb_leds) --- */
+int pipedal_ws_open(int port, std::string &err)
+{
+    const int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) { err = "socket"; return -1; }
+    timeval tv{2, 0};                                  // une trame qui n'arrive pas en entier : connexion perdue
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_port = htons((uint16_t)port);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (connect(fd, (sockaddr *)&a, sizeof a) != 0) { close(fd); err = "PiPedal ne répond pas"; return -1; }
+    const std::string req = "GET /pipedal HTTP/1.1\r\nHost: 127.0.0.1\r\nUpgrade: websocket\r\n"
+                            "Connection: Upgrade\r\nSec-WebSocket-Key: cGVkYWwtYnJpZGdlLWtleQ==\r\n"
+                            "Sec-WebSocket-Version: 13\r\n\r\n";
+    if (!send_all(fd, req.data(), req.size())) { close(fd); err = "poignée de main"; return -1; }
+    std::string head;
+    char c;
+    while (head.size() < 8192 && head.find("\r\n\r\n") == std::string::npos) {
+        if (recv(fd, &c, 1, 0) != 1) { close(fd); err = "réponse coupée"; return -1; }
+        head.push_back(c);
+    }
+    if (head.compare(0, 12, "HTTP/1.1 101") != 0) { close(fd); err = "websocket refusé"; return -1; }
+    return fd;
+}
+
+bool pipedal_ws_send(int fd, const std::string &text) { return send_text(fd, text); }
+
+int pipedal_ws_recv(int fd, std::string &out) { return recv_message(fd, out); }
+
 int pipedal_set_controls(int port, const std::vector<PipedalSet> &sets, std::string &err)
 {
     Fd s;

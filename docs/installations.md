@@ -31,6 +31,7 @@ sudo apt autoremove -s
 |---|---|---|
 | `/usr/local/lib/lv2/pedal-bridge.lv2/` | plugins DLS Looper, DLS Drum, Send/Return (`*.ttl`, `pedal_bridge.so`, `browse.txt`) | `sudo rm -r` le dossier, puis redémarrer pipedald |
 | `/usr/local/lib/lv2/pedal-bridge-test.lv2/` | plugin de test (banc d'essai) | idem |
+| `/etc/systemd/system/pb-leds.service`, `pb-garde.service`, `dls-session.service` | services au démarrage du Pi (copies de `scripts/systemd/`) | `sudo systemctl disable --now pb-leds pb-garde dls-session`, puis `sudo rm` des trois fichiers et `sudo systemctl daemon-reload` |
 | `/usr/local/lib/lv2/lsp-plugins.lv2/` | plugins LSP (Send/Return de LSP) | **à garder tant que le musicien ne demande pas** (consigne) |
 
 ## 3. Dossier personnel (`/home/pedalboard`)

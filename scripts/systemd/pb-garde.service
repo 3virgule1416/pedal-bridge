@@ -1,0 +1,14 @@
+[Unit]
+Description=DLS : gardien (pont absent -> double switch rendu à PiPedal, Captain page 0)
+After=pipedald.service sound.target
+Wants=pipedald.service
+
+[Service]
+User=pedalboard
+Group=audio
+ExecStart=/home/pedalboard/pedal-bridge-build/build/pb_garde
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

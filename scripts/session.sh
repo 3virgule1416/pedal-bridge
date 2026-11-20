@@ -285,6 +285,6 @@ case "${1:-}" in
   list)  "$B/pedal_bridge" --cmd list ;;
   boucles) "$B/pedal_bridge" --cmd status ;;
   stop)     do_stop ;;
-  stop-all) do_stop; stop_one pb_garde; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
+  stop-all) do_stop; stop_one x11vnc; stop_one openbox; stop_one Xvfb; stop_one pb_timebase; stop_one jackd ;;
   *) sed -n '2,32p' "$0"; exit 2 ;;
 esac

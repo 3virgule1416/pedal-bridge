@@ -63,6 +63,13 @@ target_link_libraries(pedal_bridge_client PRIVATE pb_shm PkgConfig::JACK PkgConf
 # Maître du temps JACK (remplace celui, défectueux, d'Hydrogen 1.2.0-beta)
 add_executable(pb_timebase tools/pb_timebase.c)
 target_link_libraries(pb_timebase PRIVATE PkgConfig::JACK m)
+# DEL de la page PEDAL du Captain (suit PiPedal ; service au démarrage du Pi)
+add_executable(pb_leds client/pb_leds.cc client/pipedal_ws.cc)
+target_include_directories(pb_leds PRIVATE common client)
+target_link_libraries(pb_leds PRIVATE pb_shm PkgConfig::ALSA)
+# Fenêtre de choix au démarrage du Pi (mode spectacle, bouton 10 du Captain)
+add_executable(pb_demarrage tools/pb_demarrage.c)
+target_link_libraries(pb_demarrage PRIVATE PkgConfig::ALSA)
 # Gardien : pont absent -> double switch rendu à PiPedal, Captain page 0
 add_executable(pb_garde tools/pb_garde.c)
 target_link_libraries(pb_garde PRIVATE PkgConfig::ALSA)

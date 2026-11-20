@@ -150,7 +150,7 @@ typedef struct pb_ctl {
     uint32_t drum_btn_x[8];     /* compteurs des boutons de DLS Drum 16 à 23 (voir pb_drum_btn) */
     uint32_t style_cur;         /* style de la chanson : 1.. (scripts/browse.txt), 0 = - */
     uint32_t type_cur;          /* type (Style/Type) : 1.. (ligne de scripts/browse.txt), 0 = - */
-    uint8_t  pad7[4];
+    uint32_t cap_page;          /* page du MIDI Captain + 1 (0 = inconnue), écrite par le pont (pb_leds) */
 
     /* Ligne 8 et suivantes : morceau Hydrogen choisi dans DLS Drum (sélecteur
      * de fichier). Verrou de séquence : le plugin met drum_song_seq impair,

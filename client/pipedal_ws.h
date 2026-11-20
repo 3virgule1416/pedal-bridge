@@ -25,3 +25,10 @@ struct PipedalSet {
  * uri_prefix dans le pedalboard courant. Retourne le nombre de réglages
  * envoyés, ou -1 (message dans err). */
 int pipedal_set_controls(int port, const std::vector<PipedalSet> &sets, std::string &err);
+
+/* Connexion qui reste ouverte (pb_leds) : ouvre le websocket (descripteur,
+ * ou -1 et err), envoie un message texte, lit un message entier (opcode :
+ * 1 texte, 8 fermeture ; -1 connexion perdue). Fermer avec close(fd). */
+int pipedal_ws_open(int port, std::string &err);
+bool pipedal_ws_send(int fd, const std::string &text);
+int pipedal_ws_recv(int fd, std::string &out);

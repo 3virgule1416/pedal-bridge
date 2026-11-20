@@ -1,0 +1,14 @@
+[Unit]
+Description=DLS : DEL de la page PEDAL du MIDI Captain (suit PiPedal)
+After=pipedald.service sound.target
+Wants=pipedald.service
+
+[Service]
+User=pedalboard
+Group=audio
+ExecStart=/home/pedalboard/pedal-bridge-build/build/pb_leds
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

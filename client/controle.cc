@@ -3201,6 +3201,7 @@ void cap_tick(pb_ctl *k)
             g_held.next = now_s() + (held > 2.0 ? 0.04 : 0.12);
         }
     }
+    PB_STORE_RLX(&k->cap_page, (uint32_t)(g_cap_page + 1));   // pour pb_leds (DEL de la page PEDAL)
     if ((g_cap_page == 1 || g_cap_page == 2) && g_h2_metro != g_metro_seen) { g_metro_seen = g_h2_metro; paint_page(); }
     static uint32_t nofill_seen = 2;
     if (g_cap_page == 3 && PB_LOAD_RLX(&k->drum_nofill) != nofill_seen) { nofill_seen = PB_LOAD_RLX(&k->drum_nofill); paint_page(); }
