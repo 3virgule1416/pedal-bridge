@@ -575,15 +575,62 @@ Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
   Type et du Beat**, partie et variation, tempo, mesure et temps, état des
   boucles. Mise en page d'abord en images PNG sur le PC.
 
+## 11 bis. Fenêtre de démarrage, hotspot et carte verrouillée (décidé 2026-11-20, à faire)
+
+Trois options **indépendantes**, choisies au Captain dans la fenêtre de 8 s au
+démarrage du Pi (`pb_demarrage`, service `dls-session`) :
+
+| Option | Effet | Dure |
+|---|---|---|
+| **PiPedal seul** | sans batterie ni looper (ni JACK, Hydrogen, SooperLooper, pont) | ce démarrage |
+| **Hotspot Wi-Fi** | active le hotspot (désactivé par défaut) | ce démarrage |
+| **Carte verrouillée** (read-only) | rien n'est écrit sur la carte SD : **on peut couper le courant** sans risque | jusqu'à ce qu'on la rebascule (demande un redémarrage) |
+
+Combinaisons utiles : session complète + carte normale (répétition) ; session
+complète + verrouillée (spectacle avec batterie et looper) ; PiPedal seul +
+verrouillée (spectacle le plus sûr).
+
+**Page START du Captain** (page 5, canal 2, rien n'y est lié dans PiPedal) :
+pendant la fenêtre, le Captain y est : les appuis ne déclenchent rien dans
+PiPedal, et l'écran affiche START. À la fin, retour sur la page PEDAL (le pont
+ou le gardien la remettent de toute façon).
+
+| Bouton | Pendant la fenêtre | Appui |
+|---|---|---|
+| Rangée du bas (6 à 10) | clignote en orange | **PiPedal seul** : clignotement arrêté, vert fixe |
+| Bouton 5 (haut droite) | clignote en bleu | **hotspot** : clignotement arrêté, bleu fixe |
+| Bouton 1 (haut gauche) | fixe : **rouge** = carte verrouillée, **blanc** = normale | bascule rouge ↔ blanc |
+
+- Chaque option est une **bascule** : un deuxième appui annule (le bouton
+  reprend son état de départ : clignotement, ou sa couleur d'avant).
+- À la fin des 8 s, on applique ce qui est choisi à ce moment-là ; si l'état
+  de la carte a changé, le Pi bascule le verrouillage et **redémarre**.
+- **Carte verrouillée** : système de fichiers en surcouche de Raspberry Pi OS
+  (`raspi-config`, overlay) ; toutes les écritures vont en mémoire et
+  disparaissent à l'extinction. Rien de ce qui change pendant la soirée n'est
+  gardé (presets modifiés, `choix.txt`, boucles sauvegardées, chansons
+  ajoutées). Basculer demande root : petit service root dédié, avec accord.
+- Avant de verrouiller : commande **« préparer »** qui fabrique ou met à jour
+  les gros morceaux de **tous les kits** (sinon un kit périmé serait refait en
+  mémoire à chaque démarrage : quelques secondes et du processeur au mauvais
+  moment) ; lancée aussi automatiquement avant le redémarrage qui verrouille.
+- Hotspot : voir d'abord si PiPedal le gère déjà (réglages Wi-Fi de son
+  interface) et passer par lui. Avec la carte verrouillée, le « désactivé par
+  défaut » vient tout seul.
+- À vérifier : PiPedal démarre bien en read-only ; journal du pont et fichiers
+  temporaires déjà en mémoire (`/tmp`, `/dev/shm`).
+
 ## 12. Suite
 
 1. Vérifier au prochain redémarrage du Pi : services, fenêtre de la rangée du bas.
-2. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
+2. **Fenêtre de démarrage complète** (§11 bis) : page START, hotspot, carte
+   verrouillée, commande « préparer ».
+3. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
    Crash, Batterie légère, Fill long.
-3. **Page LOOPER** du Captain.
-4. **Sections** (§9).
-5. **Écran OLED** (§11).
-6. Mode libre (§6 bis).
+4. **Page LOOPER** du Captain.
+5. **Sections** (§9).
+6. **Écran OLED** (§11).
+7. Mode libre (§6 bis).
 
 ## 13. Questions ouvertes
 
