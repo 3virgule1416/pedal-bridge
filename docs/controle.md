@@ -676,9 +676,7 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   et on recommence. Parties à None sautées ; fill entre deux parties si Auto
   Fill ; sans outro : fill + coup final. Intro selon la liste Intro : A, B… ->
   cette intro ; **Metronome -> une mesure de clic** (au début et à chaque tour) ;
-  Off -> la première intro de la chanson s'il y en a une. Chanson **sans intro**
-  et liste Intro sur A, B… : le pont la remet à **Off** (retenu pour la
-  chanson), pour que la liste ne montre pas une intro qui n'existe pas. Play depuis BROWSE, ou
+  Off -> pas d'intro. Play depuis BROWSE, ou
   arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
   la démo repart à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
   tenus** : étape précédente / suivante de la démo (courts : beat). En quittant
@@ -724,6 +722,10 @@ relâchement : déjà vérifié) ; (2) réglage MIDI de PiPedal pour ne plus éc
   - la variation de chaque partie (`chanson<TAB>Verse<TAB>A`, `-` = None) ;
     au chargement : mémoire, sinon la Variation du preset (partie affichée),
     sinon A (pack : A à D) ;
+  - **la liste Intro montre toujours l'intro qui jouera** : chanson jamais
+    réglée -> **A** si elle a des intros, sinon **Off** ; A, B… sur une chanson
+    sans intro -> Off ; lettre au-delà de ses intros -> la dernière qui existe
+    (corrigé dans la liste et retenu) ;
   - l'Intro et l'Outro (`chanson<TAB>Intro<TAB>Metronome`, `…Outro<TAB>B`),
     remontrés dans PiPedal au changement de chanson ; jamais réglés : ceux en
     cours (preset) ; pendant 1,5 s après un changement de chanson, un Intro /

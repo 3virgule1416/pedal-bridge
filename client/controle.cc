@@ -704,6 +704,7 @@ extern bool g_start_plain;
 extern int g_cap_page, g_psel;
 std::string parts_play();
 const std::vector<int> &phrase_of(int part);
+void intro_fix();
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -1589,11 +1590,12 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
         if (qi != mem->second.end()) { g_intro_choice = qi->second; g_ui_intro = qi->second; }
         if (qo != mem->second.end()) { g_outro_choice = qo->second; g_ui_outro = qo->second; }
     }
-    if (g_song.intro.empty() && g_intro_choice >= 3) {   // pas d'intro dans la chanson : A, B… -> Off
-        g_intro_choice = 1;
-        g_ui_intro = 1;
-        memo_choice("Intro", 1);
+    const bool intro_set = mem != g_memo.end() && mem->second.count("Intro");
+    if (!intro_set) {                                  // jamais réglée : A si la chanson a des intros, sinon Off
+        const int v = g_song.intro.empty() ? 1 : 3;
+        if (v != g_intro_choice) { g_intro_choice = v; g_ui_intro = v; }
     }
+    intro_fix();
     g_seq.loop_part = g_seq.part;
     g_seq.loop = phrase_of(g_seq.part);
     double at, bpb;
@@ -1870,16 +1872,28 @@ std::vector<int> demo_list(std::vector<int> &reps)
     return P;
 }
 
-/* L'intro de la démo, d'après la liste Intro : A, B… -> cette intro ;
- * Metronome -> une mesure de clic (click = true) ; Off -> la première intro de
- * la chanson s'il y en a une. */
+/* L'intro de la démo, exactement celle de la liste Intro : A, B… -> cette
+ * intro ; Metronome -> une mesure de clic (click = true) ; Off -> aucune. */
 std::vector<int> demo_intro(bool &click)
 {
     click = false;
     if (g_intro_choice == 2 && g_silence_abs >= 0) { click = true; return {g_silence_abs}; }
-    if (g_song.intro.empty()) return {};
-    if (g_intro_choice >= 3) return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
-    return g_song.intro[0];
+    if (g_song.intro.empty() || g_intro_choice < 3) return {};
+    return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
+}
+
+/* La liste Intro montre toujours ce qui jouera : A, B… sans intro -> Off ;
+ * lettre au-delà des intros de la chanson -> la dernière qui existe. */
+void intro_fix()
+{
+    const int last = 2 + (int)g_song.intro.size();
+    int v = g_intro_choice;
+    if (v >= 3 && g_song.intro.empty()) v = 1;
+    else if (v > last) v = last;
+    if (v == g_intro_choice) return;
+    g_intro_choice = v;
+    g_ui_intro = v;
+    memo_choice("Intro", v);
 }
 
 std::vector<int> demo_outro(int from_part)
@@ -2301,13 +2315,10 @@ void drum_poll(pb_ctl *k)
             g_dr_intro_ui = iu;
             if (fresh && mem != g_memo.end() && mem->second.count("Intro")) {
                 if ((int)iu != g_intro_choice) g_ui_intro = g_intro_choice;
-            } else if (g_seq.active && g_song.intro.empty() && iu >= 3) {
-                g_intro_choice = 1;                    // pas d'intro dans la chanson : A, B… -> Off
-                g_ui_intro = 1;
-                memo_choice("Intro", 1);
             } else {
                 g_intro_choice = (int)iu;
                 if (!fresh) memo_choice("Intro", g_intro_choice);
+                if (g_seq.active) intro_fix();         // la liste montre ce qui jouera
             }
         }
         if (ou != g_dr_outro_ui) {
