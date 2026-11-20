@@ -680,6 +680,7 @@ struct Seq {
     std::vector<int> loop;                // phrase qui tourne
     size_t loop_pos = 0;
     std::deque<int> once;                 // à jouer une fois, dans l'ordre
+    std::deque<int> once_k;               // étiquette de chacune (Playing) ; vide : once_kind pour toutes
     int once_kind = 0;                    // 1 intro, 7 outro, 8 fill/transition
     bool in_once = false;
     bool stop_after = false, metro_after = false;
@@ -705,6 +706,7 @@ extern int g_cap_page, g_psel;
 std::string parts_play();
 const std::vector<int> &phrase_of(int part);
 void intro_fix();
+void demo_rewind();
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -1637,6 +1639,7 @@ std::string seq_fill()
     const double len = size_beats(f);
     if (len < bpb) at += bpb - len;                   // un fill court finit avec la mesure
     g_seq.once.assign(1, f);
+    g_seq.once_k.clear();
     g_seq.once_kind = 8;
     g_seq.switch_at = at;
     return "ok fill " + std::to_string(f - g_off + 1);
@@ -1660,7 +1663,7 @@ std::string seq_change(int part, int var, bool transition)
         if (g_seq.switch_at >= 0 && g_seq.next_part == part) {
             g_seq.switch_at = -1;
             g_seq.next_loop.clear();
-            g_seq.once.clear();
+            g_seq.once.clear(); g_seq.once_k.clear();
         }
         return "ok " + g_song.parts[part] + " : None (sautée par Part ◀ ▶)";
     }
@@ -1678,7 +1681,7 @@ std::string seq_change(int part, int var, bool transition)
     if (same) return "déjà là";
     g_seq.next_loop = ph;
     g_seq.next_part = part;
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     if (transition) {                                  // transition, sinon un fill de la partie quittée
         int f = -1;
         if (!g_song.transition.empty()) {
@@ -1702,7 +1705,7 @@ std::string seq_change(int part, int var, bool transition)
 bool ending_fill_hit(double &at, double bpb)
 {
     if (g_final_abs < 0) return false;
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     /* Liste Outro : A = 1er fill de la partie, B = 2e… (toujours la même fin). */
     std::string used;
     const std::vector<int> *fl = fill_list(g_seq.loop_part, used);
@@ -1729,7 +1732,7 @@ std::string seq_outro()
         return g_song.outro.empty() ? "ok fin " + var_name(g_outro_choice - 1) + " : fill + coup final (batterie)"
                                     : "ok outro " + var_name(g_outro_choice - 1) + " seule (batterie)";
     }
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     if (!g_song.outro.empty()) {
         const int o = std::min(std::max(g_outro_choice - 1, 0), (int)g_song.outro.size() - 1);
         for (int a : g_song.outro[o]) g_seq.once.push_back(a);
@@ -1761,7 +1764,7 @@ std::string seq_intro()
     }
     if (ic == 2) return "décompte : seulement au Play";
     if (g_seq.switch_at >= 0) return "déjà une bascule prévue";
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     for (int a : g_song.intro[std::min(ic - 3, (int)g_song.intro.size() - 1)]) g_seq.once.push_back(a);
     g_seq.once_kind = 1;
     g_seq.switch_at = at;
@@ -1774,10 +1777,11 @@ bool g_start_plain = false;    // prochain départ : g_seq.loop tel quel, sans i
 void seq_start()
 {
     if (!g_seq.active) return;
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     g_seq.switch_at = -1;
     g_seq.stop_after = false;
     g_seq.resume_pos = 0;
+    if (!g_start_plain) demo_rewind();                // démo : chaque départ repart au début
     if (g_start_plain && !g_seq.loop.empty()) {
         g_start_plain = false;
         g_seq.in_once = false;
@@ -1828,7 +1832,7 @@ void seq_stopped()
 {
     if (!g_seq.active) return;
     if (g_seq.metro_after) { set_metronome(false); g_seq.metro_after = false; }
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     g_seq.switch_at = -1;
     g_seq.in_once = g_seq.stop_after = false;
     g_seq.click_last = false;
@@ -1856,6 +1860,15 @@ struct Demo {
     size_t i = 0;                // étape en cours
     int r = 0;                   // phrases déjà jouées de cette étape
 } g_demo;
+
+/* Départ de la batterie pendant la démo : au début de la chanson. */
+void demo_rewind()
+{
+    if (!g_demo.on || g_demo.P.empty()) return;
+    g_demo.i = 0;
+    g_demo.r = 0;
+    g_seq.part = g_demo.P[0];
+}
 
 /* Le déroulé de la chanson (deux blocs). */
 std::vector<int> demo_list(std::vector<int> &reps)
@@ -1912,18 +1925,26 @@ bool demo_autofill()
     return !k || !PB_LOAD_RLX(&k->drum_nofill);
 }
 
+/* Ajoute à « une fois » : l'outro (si outro), une mesure vide, puis l'intro
+ * de la chanson, chacune avec son étiquette (Playing). */
+void demo_tail(int from, bool outro)
+{
+    if (outro) {
+        for (int a : demo_outro(from)) { g_seq.once.push_back(a); g_seq.once_k.push_back(7); }
+        if (g_silence_abs >= 0) { g_seq.once.push_back(g_silence_abs); g_seq.once_k.push_back(0); }
+    }
+    bool click;
+    for (int a : demo_intro(click)) { g_seq.once.push_back(a); g_seq.once_k.push_back(1); }
+    g_seq.click_last = click;                          // décompte : métronome sur la dernière mesure
+}
+
 /* Prépare l'enchaînement vers la partie ni (transition, puis sa phrase). */
 void demo_go(size_t ni, bool wrap)
 {
     const int from = g_demo.P[g_demo.i];
-    g_seq.once.clear();
+    g_seq.once.clear(); g_seq.once_k.clear();
     if (wrap) {                                        // fin : outro, une mesure vide, puis intro
-        for (int a : demo_outro(from)) g_seq.once.push_back(a);
-        if (g_silence_abs >= 0) g_seq.once.push_back(g_silence_abs);
-        bool click;
-        for (int a : demo_intro(click)) g_seq.once.push_back(a);
-        g_seq.click_last = click;                      // décompte : métronome sur la dernière mesure
-        g_seq.once_kind = 7;
+        demo_tail(from, true);
     } else if (demo_autofill()) {
         const int f = fill_for_part(from);
         if (f >= 0) g_seq.once.push_back(f);
@@ -1959,10 +1980,8 @@ void demo_start(bool restart)
     double at, bpb;
     if (restart && next_bar(at, bpb)) {
         g_demo.i = 0;
-        g_seq.once.clear();
-        bool click;
-        for (int a : demo_intro(click)) g_seq.once.push_back(a);
-        g_seq.click_last = click;
+        g_seq.once.clear(); g_seq.once_k.clear();
+        demo_tail(g_demo.P[0], false);
         g_seq.once_kind = 1;
         g_seq.next_loop = phrase_of(g_demo.P[0]);
         g_seq.next_part = g_demo.P[0];
@@ -1974,17 +1993,42 @@ void demo_start(bool restart)
     }
 }
 
-/* Beat ◀ ▶ tenus : partie précédente / suivante de la démo, à la mesure suivante. */
+/* Part ◀ ▶ (et Beat ◀ ▶ tenus) pendant la démo : étape précédente / suivante
+ * de TOUTE la chanson, Intro et Outro compris, à la mesure suivante.
+ * Étapes : -1 Intro, 0..n-1 les parties du déroulé, n Outro. */
 std::string demo_jump(int dir)
 {
     if (!g_demo.on || g_demo.P.empty()) return "pas de démo (en jouant, page BROWSE)";
     double at, bpb;
     if (!next_bar(at, bpb)) return "à l'arrêt";
-    const size_t n = g_demo.P.size();
-    const size_t ni = (g_demo.i + n + (dir > 0 ? 1 : n - 1)) % n;
-    demo_go(ni, false);
+    const int n = (int)g_demo.P.size();
+    bool click;
+    const bool has_intro = !demo_intro(click).empty();
+    int cur = (int)g_demo.i;                           // où on est
+    if (g_seq.in_once && g_seq.once_kind == 1) cur = -1;
+    else if (g_seq.in_once && (g_seq.once_kind == 7 || g_seq.once_kind == 0)) cur = n;
+    int t = cur + (dir > 0 ? 1 : -1);
+    if (t < -1) t = n;
+    if (t > n) t = -1;
+    if (t == -1 && !has_intro) t = dir > 0 ? 0 : n;    // pas d'intro : on la saute
+    const int from = g_demo.P[std::min(std::max(cur, 0), n - 1)];
+    std::string what;
+    if (t == -1 || t == n) {                           // Intro, ou Outro (+ mesure vide + Intro)
+        g_seq.once.clear(); g_seq.once_k.clear();
+        demo_tail(from, t == n);
+        g_demo.i = 0;
+        g_demo.r = 0;
+        g_seq.next_loop = phrase_of(g_demo.P[0]);
+        g_seq.next_part = g_demo.P[0];
+        g_seq.part = g_demo.P[0];
+        what = t == n ? "Outro" : "Intro";
+    } else {
+        g_demo.i = (size_t)std::min(std::max(cur, 0), n - 1);
+        demo_go((size_t)t, false);
+        what = g_song.parts[g_demo.P[t]];
+    }
     g_seq.switch_at = at;
-    return "démo : " + g_song.parts[g_demo.P[ni]];
+    return "démo : " + what;
 }
 
 void seq_tick()
@@ -2015,6 +2059,7 @@ void seq_tick()
         }
         abs = g_seq.once.front();
         g_seq.once.pop_front();
+        if (!g_seq.once_k.empty()) { g_seq.once_kind = g_seq.once_k.front(); g_seq.once_k.pop_front(); }
         if (!g_seq.in_once && !g_seq.loop.empty()) {   // fill qui coupe la phrase : reprise au même
             const double item_end = g_seq.item_start + g_seq.item_len;   // élément, ou au suivant s'il le finit
             g_seq.resume_pos = t + size_beats(abs) >= item_end - 0.01 ? (g_seq.loop_pos + 1) % g_seq.loop.size()
@@ -2267,6 +2312,7 @@ std::string drum_button(pb_ctl *k, int b)
         case PB_DBTN_FILL:     r = seq_fill(); break;
         case PB_DBTN_PART_PREV:
         case PB_DBTN_PART_NEXT: {                  // parties actives (pas None), en revenant au début
+            if (g_demo.on) { r = demo_jump(b == PB_DBTN_PART_NEXT ? +1 : -1); break; }   // démo : toute la chanson
             const int j = g_seq.active ? next_on(g_seq.part, b == PB_DBTN_PART_NEXT ? +1 : -1) : -1;
             r = j >= 0 ? seq_change(j, g_seq.var[j], !PB_LOAD_RLX(&k->drum_nofill)) : "pas d'autre partie";
             break;
@@ -2892,7 +2938,7 @@ std::string aud_play()
     if (next_bar(at, bpb)) {
         g_seq.next_loop = ph;
         g_seq.next_part = idx >= 0 ? idx : g_seq.loop_part;
-        g_seq.once.clear();
+        g_seq.once.clear(); g_seq.once_k.clear();
         g_seq.switch_at = at;
         return "ok à la mesure suivante";
     }
@@ -2928,7 +2974,7 @@ void aud_leave()
     if ((g_psel == 0 || g_psel == 7) && next_bar(at, bpb)) {
         g_seq.next_loop = phrase_of(g_seq.part);
         g_seq.next_part = g_seq.part;
-        g_seq.once.clear();
+        g_seq.once.clear(); g_seq.once_k.clear();
         g_seq.switch_at = at;
     }
 }

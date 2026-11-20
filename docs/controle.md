@@ -678,8 +678,14 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   cette intro ; **Metronome -> une mesure de clic** (au début et à chaque tour) ;
   Off -> pas d'intro. Play depuis BROWSE, ou
   arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
-  la démo repart à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
-  tenus** : étape précédente / suivante de la démo (courts : beat). En quittant
+  la démo repart à l'intro (à la mesure suivante en jouant) ; tout départ de
+  la batterie en démo repart au début de la chanson. **Part ◀ ▶** (boutons de
+  DLS Drum) et **Beat ◀ ▶ tenus**, pendant la démo seulement : étape
+  précédente / suivante de **toute la chanson**, Intro et Outro compris (Intro
+  sautée s'il n'y en a pas), à la mesure suivante. Sur la page DRUM (jouer),
+  pas de démo : Part ◀ ▶ ne parcourent que les parties, End va à la fin, Play
+  démarre par l'intro. **Playing** montre chaque mesure de la fin de tour :
+  Outro, « - » (mesure vide), Intro. En quittant
   BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct à
   240 BPM (Pantteri fast 2) : décompte, 2 blocs avec fills, fill + coup final,
   mesure vide, décompte, Verse.
