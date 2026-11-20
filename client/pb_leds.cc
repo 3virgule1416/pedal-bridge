@@ -296,9 +296,9 @@ void paint()
     }
     for (size_t i = 0; i < g_snaps.size() && i < 5; i++)
         if (g_snaps[i]) keys[6 + (int)i] = {*g_snaps[i], (int)i == g_selected};
-    const bool window = access("/dev/shm/pb-demarrage", F_OK) == 0;   // pb_demarrage : bouton 10 à lui
+    const bool window = access("/dev/shm/pb-demarrage", F_OK) == 0;   // pb_demarrage : rangée du bas à lui
     for (int k = 1; k <= 10; k++) {
-        if (k == 10 && window) continue;
+        if (k >= 6 && window) continue;
         const auto it = keys.find(k);
         if (it == keys.end()) { set_key(k, {0, 0, 0}, true); continue; }
         const RGB c = it->second.first;
@@ -425,7 +425,7 @@ int main()
             if (ev->type == SND_SEQ_EVENT_CONTROLLER && ev->data.control.channel == 0) g_dirty = true;
             ev = nullptr;
         }
-        static bool window_seen = false;           // fin de la fenêtre de démarrage : repeindre le bouton 10
+        static bool window_seen = false;           // fin de la fenêtre de démarrage : repeindre la rangée du bas
         const bool window = access("/dev/shm/pb-demarrage", F_OK) == 0;
         if (window_seen && !window) g_dirty = true;
         window_seen = window;

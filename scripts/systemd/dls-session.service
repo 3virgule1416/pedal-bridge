@@ -1,5 +1,5 @@
 [Unit]
-Description=DLS : session (JACK, pb_timebase, SooperLooper, Hydrogen, pont) ; bouton 10 au démarrage = mode spectacle
+Description=DLS : session (JACK, pb_timebase, SooperLooper, Hydrogen, pont) ; rangée du bas du Captain au démarrage = mode spectacle
 After=pipedald.service sound.target pb-leds.service pb-garde.service
 Wants=pipedald.service
 

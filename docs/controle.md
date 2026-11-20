@@ -44,7 +44,7 @@ suivante, ou du cycle), jamais au moment approximatif de l'appui.
 |---|---|
 | `pb-leds` | DEL de la page PEDAL du Captain (suit PiPedal), toujours, relancé s'il plante |
 | `pb-garde` | gardien : pont absent → double switch rendu à PiPedal, Captain sur la page 0 |
-| `dls-session` | **fenêtre de choix** (`pb_demarrage`) : le bouton 10 du Captain clignote en orange 8 s ; un appui = **mode spectacle** (PiPedal seul : ni JACK, ni Hydrogen, ni SooperLooper, ni le pont ; bouton 10 vert) ; sinon la session complète (`session.sh start`) |
+| `dls-session` | **fenêtre de choix** (`pb_demarrage`) : la **rangée du bas** du Captain (boutons 6 à 10) clignote en orange 8 s ; un appui sur l'un d'eux = **mode spectacle** (PiPedal seul : ni JACK, ni Hydrogen, ni SooperLooper, ni le pont ; rangée verte 2 s) ; sinon la session complète (`session.sh start`) |
 
 En mode spectacle, le double switch et les DEL de la page PEDAL marchent
 comme avec PiPedal seul. À la main : `bash scripts/session.sh start` /
@@ -471,7 +471,7 @@ PiPedal marchent **même sans le pont**. Il suit PiPedal par son websocket
 **Un seul responsable des DEL** : le pont publie la page du Captain
 (`cap_page` dans `/dev/shm/pedal-bridge-control`) ; `pb_leds` ne peint que sur
 la page PEDAL, ou si le pont ne donne plus signe de vie (`client_heartbeat`
-figé). Pendant la fenêtre de démarrage, il laisse le bouton 10 à
+figé). Pendant la fenêtre de démarrage, il laisse la rangée du bas à
 `pb_demarrage`. `pipedal_leds.py` reste dans `captain-manager` comme référence.
 
 ## 8. Tempo sans saut
@@ -577,7 +577,7 @@ Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
 
 ## 12. Suite
 
-1. Vérifier au prochain redémarrage du Pi : services, fenêtre du bouton 10.
+1. Vérifier au prochain redémarrage du Pi : services, fenêtre de la rangée du bas.
 2. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
    Crash, Batterie légère, Fill long.
 3. **Page LOOPER** du Captain.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Démarrage de la session DLS au démarrage du Pi (service dls-session).
 #
-# Fenêtre de choix (pb_demarrage) : bouton 10 du Captain clignote 8 s en
-# orange ; un appui = MODE SPECTACLE (PiPedal seul : ni JACK, ni Hydrogen, ni
+# Fenêtre de choix (pb_demarrage) : la rangée du bas du Captain clignote 8 s
+# en orange ; un appui sur un de ses boutons = MODE SPECTACLE (PiPedal seul : ni JACK, ni Hydrogen, ni
 # SooperLooper, ni le pont). Sinon : session complète (session.sh start).
 #
 #   bash scripts/dls-demarrage.sh

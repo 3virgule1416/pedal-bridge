@@ -1,14 +1,15 @@
 /*
  * pb_demarrage : fenêtre de choix au démarrage du Pi (mode spectacle).
  *
- * Dès que le MIDI Captain est là, la DEL du bouton 10 clignote en orange
- * pendant 8 s. Un appui sur le bouton 10 (page PEDAL : CC 10, canal 1) choisit
- * le **mode spectacle** : bouton 10 en vert, code de sortie 1 (la session —
- * JACK, Hydrogen, SooperLooper, le pont — n'est pas lancée : PiPedal seul).
- * Sans appui : code 0 (session complète). Captain absent après 30 s : code 0.
+ * Dès que le MIDI Captain est là, toute la rangée du bas (boutons 6 à 10)
+ * clignote en orange pendant 8 s. Un appui sur n'importe lequel d'entre eux
+ * (page PEDAL : CC 6 à 10, canal 1) choisit le **mode spectacle** : rangée en
+ * vert, code de sortie 1 (la session — JACK, Hydrogen, SooperLooper, le pont —
+ * n'est pas lancée : PiPedal seul). Sans appui : code 0 (session complète).
+ * Captain absent après 30 s : code 0.
  *
- * Pendant la fenêtre, /dev/shm/pb-demarrage existe : pb_leds ne touche pas au
- * bouton 10.
+ * Pendant la fenêtre, /dev/shm/pb-demarrage existe : pb_leds ne touche pas à
+ * la rangée du bas.
  *
  *   pb_demarrage [secondes, défaut 8]
  */
@@ -63,15 +64,20 @@ static void send_ev(snd_seq_event_t *ev)
     snd_seq_event_output_direct(seq, ev);
 }
 
-static void key10(int r, int g, int b)            /* 3 DEL du bouton 10, RVB 8 bits */
+static void key(int k, int r, int g, int b)       /* 3 DEL d'une touche, RVB 8 bits */
 {
-    unsigned char m[15] = {0xF0, 0x00, 0x04, 0x10, 10};
+    unsigned char m[15] = {0xF0, 0x00, 0x04, 0x10, (unsigned char)k};
     for (int i = 0; i < 3; i++) { m[5 + 3 * i] = r / 2; m[6 + 3 * i] = g / 2; m[7 + 3 * i] = b / 2; }
     m[14] = 0xF7;
     snd_seq_event_t ev;
     snd_seq_ev_clear(&ev);
     snd_seq_ev_set_sysex(&ev, sizeof m, m);
     send_ev(&ev);
+}
+
+static void row(int r, int g, int b)               /* rangée du bas : boutons 6 à 10 */
+{
+    for (int k = 6; k <= 10; k++) key(k, r, g, b);
 }
 
 int main(int argc, char **argv)
@@ -95,30 +101,30 @@ int main(int argc, char **argv)
     snd_seq_ev_clear(&ev);
     snd_seq_ev_set_controller(&ev, 15, 20, 0);        /* page PEDAL (canal 16, CC 20 = 0) */
     send_ev(&ev);
-    printf("pb_demarrage : bouton 10 pendant %.0f s = mode spectacle\n", window);
+    printf("pb_demarrage : un bouton du bas pendant %.0f s = mode spectacle\n", window);
     fflush(stdout);
     int show = 0, lit = -1;
     const double start = now_s();
     while (!show && now_s() - start < window) {
         const int on = (int)((now_s() - start) * 4) % 2 == 0;   /* clignote 2 fois par seconde */
-        if (on != lit) { key10(on ? 255 : 0, on ? 110 : 0, 0); lit = on; }
+        if (on != lit) { row(on ? 255 : 0, on ? 110 : 0, 0); lit = on; }
         snd_seq_event_t *in = NULL;
         while (snd_seq_event_input(seq, &in) >= 0 && in) {
             if (in->type == SND_SEQ_EVENT_CONTROLLER && in->data.control.channel == 0 &&
-                in->data.control.param == 10 && in->data.control.value > 0)
+                in->data.control.param >= 6 && in->data.control.param <= 10 && in->data.control.value > 0)
                 show = 1;
             in = NULL;
         }
         usleep(20000);
     }
     if (show) {
-        key10(0, 255, 0);
+        row(0, 255, 0);
         printf("pb_demarrage : MODE SPECTACLE (PiPedal seul, sans batterie ni looper)\n");
         fflush(stdout);
         sleep(2);
-        key10(0, 0, 0);                                /* puis éteint : pb_leds remet sa couleur */
+        row(0, 0, 0);                                  /* puis éteinte : pb_leds remet ses couleurs */
     } else {
-        key10(0, 0, 0);
+        row(0, 0, 0);
         printf("pb_demarrage : démarrage normal (session complète)\n");
     }
     unlink(FLAG);
