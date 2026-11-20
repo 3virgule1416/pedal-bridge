@@ -673,10 +673,11 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
 - **Mode démo** (BROWSE, en jouant) : la chanson se déroule en boucle, Intro
   → Verse ×2 → Pre-Chorus → Chorus ×2 → Bridge → Outro → Intro… (parties à
   None sautées ; fill entre deux parties si Auto Fill ; sans outro : fill + coup
-  final ; intro jouée seulement si l'Intro est A, B…, pas Metronome). Nouveau
+  final ; intro : celle choisie, sinon la première de la chanson même si l'Intro
+  est sur Off ou Metronome ; pas d'intro dans la chanson : on part du Verse). Nouveau
   beat (Style, Type, Beat) : la démo repart à l'intro, à la mesure suivante ;
-  Play depuis BROWSE : départ à l'intro puis Verse ; en arrivant sur BROWSE
-  pendant la lecture : on continue depuis la partie en cours. **Beat ◀ ▶
+  Play depuis BROWSE, ou arrivée sur BROWSE pendant la lecture : la démo
+  repart toujours à l'intro (à la mesure suivante en jouant). **Beat ◀ ▶
   tenus** : partie précédente / suivante de la démo (courts : beat). En quittant
   BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct
   (Pantteri fast 2 : Verse ×2, fill, Pre-Chorus, fill, Chorus ×2, fill, Bridge,

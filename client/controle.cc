@@ -1856,11 +1856,13 @@ std::vector<int> demo_list()
     return P;
 }
 
+/* L'intro de la démo : celle choisie (A, B…), sinon la première de la chanson
+ * même si l'Intro est sur Off ou Metronome (on veut entendre toute la chanson). */
 std::vector<int> demo_intro()
 {
-    if (g_intro_choice >= 3 && !g_song.intro.empty())
-        return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
-    return {};
+    if (g_song.intro.empty()) return {};
+    if (g_intro_choice >= 3) return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
+    return g_song.intro[0];
 }
 
 std::vector<int> demo_outro(int from_part)
@@ -2983,7 +2985,7 @@ void cap_page(int page)
 {
     if (g_cap_page == 3 && page != 3) aud_leave();
     if (g_cap_page == 2 && page != 2) g_demo.on = false;   // la partie en cours continue de boucler
-    if (page == 2 && g_cap_page != 2) demo_start(false);
+    if (page == 2 && g_cap_page != 2) demo_start(true);     // la démo repart à l'intro (mesure suivante)
     midi_captain_cc(16, 20, page);
     g_cap_page = page;
     if (page == 3) g_psel = sel_of_part(transport_rolling() ? g_seq.loop_part : g_seq.part);   // ce qui joue
@@ -3123,7 +3125,7 @@ void midi_event(const MidiEv &e)
         if (page != g_cap_page) {                                      // page changée sans nous
         if (g_cap_page == 2) g_demo.on = false;
         g_cap_page = page;
-        if (page == 2) demo_start(false);
+        if (page == 2) demo_start(true);
         paint_page();
     }
         pb_ctl *k = g_ctl.load(std::memory_order_acquire);
