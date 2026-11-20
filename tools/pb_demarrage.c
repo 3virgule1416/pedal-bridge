@@ -116,6 +116,7 @@ int main(int argc, char **argv)
         printf("pb_demarrage : MODE SPECTACLE (PiPedal seul, sans batterie ni looper)\n");
         fflush(stdout);
         sleep(2);
+        key10(0, 0, 0);                                /* puis éteint : pb_leds remet sa couleur */
     } else {
         key10(0, 0, 0);
         printf("pb_demarrage : démarrage normal (session complète)\n");
