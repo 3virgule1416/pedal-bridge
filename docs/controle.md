@@ -562,11 +562,14 @@ long libre). Sur ces deux pages : **A = Play/Stop**, **B = retour à DrumKit**.
 
 | | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| Haut | Style ◀ | Style ▶ | Kit ◀ | Kit ▶ | Metronome |
-| Bas | Type ◀ | Type ▶ | Beat ◀ | Beat ▶ | → Parts |
+| Haut | Style ◀ *(long : Kit ◀)* | Style ▶ *(long : Kit ▶)* | Type ◀ | Type ▶ | Metronome |
+| Bas | Beat ◀ | Beat ▶ | Part ◀ | Part ▶ | → Parts *(long : → DRUM)* |
+
+(Révisée le 2026-11-19 : le Kit change rarement, il passe en appui long sur
+Style ◀ ▶ ; Part ◀ ▶ parcourent la chanson de la démo.)
 
 - Style, Type, Beat ◀ ▶ : comme les boutons Browse de DLS Drum.
-- **Kit ◀ ▶** : change la liste Kit (renvoyée à PiPedal). En jouant : Stop,
+- **Kit ◀ ▶** (Style ◀ ▶ tenus) : change la liste Kit (renvoyée à PiPedal). En jouant : Stop,
   chargement du nouveau gros morceau (~2,5 s), puis **reprise là où on était**
   (même mesure, même partie et variation) ; à l'arrêt : chargement tout de suite.
 - **Metronome** : on/off ; DEL **verte allumé, rouge éteint**.
@@ -680,7 +683,7 @@ Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
   arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
   la démo repart à l'intro (à la mesure suivante en jouant) ; tout départ de
   la batterie en démo repart au début de la chanson. **Part ◀ ▶** (boutons de
-  DLS Drum) et **Beat ◀ ▶ tenus**, pendant la démo seulement : étape
+  DLS Drum, et Part ◀ ▶ de la page BROWSE), pendant la démo seulement : étape
   précédente / suivante de **toute la chanson**, Intro et Outro compris (Intro
   sautée s'il n'y en a pas), à la mesure suivante. Sur la page DRUM (jouer),
   pas de démo : Part ◀ ▶ ne parcourent que les parties, End va à la fin, Play

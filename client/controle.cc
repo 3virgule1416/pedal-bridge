@@ -3038,8 +3038,8 @@ void paint_page()
                                 C_ORANGE, C_CYAN, C_CYAN, C_GREEN, C_DGREEN};
         for (int i = 0; i < 10; i++) cap_led(i + 1, c[i]);
     } else if (g_cap_page == 2) {                      // BROWSE
-        const uint32_t c[10] = {C_YELLOW, C_YELLOW, C_WHITE, C_WHITE, g_h2_metro == 1 ? C_GREEN : C_RED,
-                                C_ORANGE, C_ORANGE, C_CYAN, C_CYAN, C_DIM};
+        const uint32_t c[10] = {C_YELLOW, C_YELLOW, C_ORANGE, C_ORANGE, g_h2_metro == 1 ? C_GREEN : C_RED,
+                                C_CYAN, C_CYAN, C_GREEN, C_GREEN, C_DIM};
         for (int i = 0; i < 10; i++) cap_led(i + 1, c[i]);
     } else if (g_cap_page == 3) {                      // PARTS
         for (int sel : {0, 1, 2, 3, 4, 7}) {
@@ -3144,23 +3144,23 @@ void cap_key(pb_ctl *k, int page, int key, bool down)
             cap_page(now_s() - g_held.t >= LONG_S ? 1 : (page == 2 ? 3 : 2));
             g_held = Held();
         }
-    } else if (page == 2 && (key == 7 || key == 8)) { // Beat ◀ ▶ : court -> beat, tenu -> partie de la démo
+    } else if (page == 2 && (key == 0 || key == 1)) { // Style ◀ ▶ : court -> style, tenu -> Kit ◀ ▶
         if (down) g_held = {page, key, now_s(), 0, false};
         else if (g_held.page == page && g_held.key == key) {
-            if (!g_held.long_done) say("Captain BROWSE : %s", browse(k, 2, key == 7 ? -1 : +1).c_str());
+            if (!g_held.long_done) say("Captain BROWSE : %s", browse(k, 0, key == 0 ? -1 : +1).c_str());
             g_held = Held();
             g_refresh_now = true;
         }
     } else if (page == 2 && down) {                    // BROWSE
         std::string r;
         switch (key) {
-        case 0: r = browse(k, 0, -1); break;           // Style ◀
-        case 1: r = browse(k, 0, +1); break;           // Style ▶
-        case 2: r = kit_step(k, -1); break;            // Kit ◀
-        case 3: r = kit_step(k, +1); break;            // Kit ▶
+        case 2: r = browse(k, 1, -1); break;           // Type ◀
+        case 3: r = browse(k, 1, +1); break;           // Type ▶
         case 4: r = set_metronome(g_h2_metro != 1); break;
-        case 5: r = browse(k, 1, -1); break;           // Type ◀
-        case 6: r = browse(k, 1, +1); break;           // Type ▶
+        case 5: r = browse(k, 2, -1); break;           // Beat ◀
+        case 6: r = browse(k, 2, +1); break;           // Beat ▶
+        case 7: r = demo_jump(-1); break;              // Part ◀ (démo : toute la chanson)
+        case 8: r = demo_jump(+1); break;              // Part ▶
         }
         say("Captain BROWSE : %s", r.c_str());
         g_refresh_now = true;
@@ -3185,9 +3185,10 @@ void cap_key(pb_ctl *k, int page, int key, bool down)
 /* Appelé à chaque tour : appui long atteint, répétition de BPM ±, couleur de Tap. */
 void cap_tick(pb_ctl *k)
 {
-    if (g_held.page == 2 && (g_held.key == 7 || g_held.key == 8) && !g_held.long_done && now_s() - g_held.t >= LONG_S) {
-        g_held.long_done = true;
-        say("Captain BROWSE : %s", demo_jump(g_held.key == 7 ? -1 : +1).c_str());
+    if (g_held.page == 2 && (g_held.key == 0 || g_held.key == 1) && !g_held.long_done && now_s() - g_held.t >= LONG_S) {
+        g_held.long_done = true;                       // Style ◀ ▶ tenus : Kit ◀ ▶
+        say("Captain BROWSE : %s", kit_step(k, g_held.key == 0 ? -1 : +1).c_str());
+        g_refresh_now = true;
     }
     if (g_held.page == 1 && g_held.key >= 0) {
         const double held = now_s() - g_held.t;
