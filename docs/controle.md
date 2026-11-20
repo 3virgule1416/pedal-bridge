@@ -1,1153 +1,549 @@
-# Contrôle au pied : batterie, looper, écran — document de conception
+# Contrôle au pied : batterie, looper, écran
 
-État : **proposition à discuter**. Rien n'est encore codé, à part ce qui est
-indiqué comme « existe ».
+Document de conception **et de référence** : il décrit ce qui marche aujourd'hui
+(à jour au 2026-11-19), comment, et ce qui reste à faire. Les choix sont
+expliqués ; les mesures qui les justifient sont gardées.
 
 ## 1. But
 
 Jouer de la guitare dans PiPedal et, **sans toucher au PC ni à VNC** :
 
-- lancer et arrêter la batterie (Hydrogen), changer de groove, déclencher un fill ;
-- enregistrer, superposer, annuler des boucles (SooperLooper), passer d'une boucle
-  à l'autre et enchaîner des sections (ex. boucle 1 × 4, boucle 2 × 4, retour à 1) ;
+- lancer et arrêter la batterie (Hydrogen), choisir le style et le beat, passer
+  d'une partie à l'autre (couplet, refrain…), déclencher un fill, finir la
+  chanson ;
+- enregistrer, superposer, annuler des boucles (SooperLooper), et plus tard
+  enchaîner des sections ;
 - régler le tempo ;
-- tout ça au pied (MIDI Captain 10 + double switch), avec un retour visuel
-  (DEL du Captain, écran OLED sur le Pi, voyants dans PiPedal).
+- tout ça au pied (MIDI Captain 10 boutons + double switch de l'Axe I/O One),
+  avec un retour visuel (DEL du Captain, voyants dans PiPedal, écran OLED plus
+  tard).
 
-Tout ce qui change quelque chose doit tomber **sur la mesure** (sur le 1, ou sur
-le début du cycle), jamais au moment approximatif de l'appui.
+Tout ce qui change quelque chose tombe **sur la mesure** (au début de la mesure
+suivante, ou du cycle), jamais au moment approximatif de l'appui.
 
-## 2. Ce qui existe déjà
+## 2. État
 
 | Pièce | Rôle | État |
 |---|---|---|
-| DLS Send / DLS Return (LV2) | audio PiPedal ↔ JACK | fait, validé à l'oreille |
-| `pedal_bridge` (client JACK) | rééchantillonnage, latence déclarée, compensation de SooperLooper par OSC | fait, validé |
-| `pb_timebase` | maître du temps JACK : tempo, mesure et temps corrects | fait, validé (départ sur le 1) |
-| `session.sh` | démarre JACK, VNC, SooperLooper, Hydrogen, le pont | fait |
-| Outils de mesure | `pb_slhit`, `pb_slphase`, `pb_onsets`, `pb_transport` | faits |
+| DLS Send / DLS Return (LV2) | audio PiPedal ↔ JACK, génériques | fait |
+| **DLS Looper** (LV2, mono et stéréo) | envoi au looper + retour des boucles ; boutons du looper | fait (§6) |
+| **DLS Drum** (LV2, mono et stéréo) | retour de la batterie ; chanson, parties, variations, tempo | fait (§5) |
+| `pedal_bridge` (client JACK) | rééchantillonnage, compensation de latence, **cerveau** : séquenceur de batterie, commandes, websocket PiPedal, **routeur MIDI** du Captain | fait |
+| `pb_timebase` | maître du temps JACK ; tempo changé à la barre, sans saut (§8) | fait |
+| Hydrogen **1.2.7** (`h2cli`, sans fenêtre) | batterie, pilotée par OSC | fait (compilé, §10) |
+| SooperLooper 1.7.8 | boucles, pilotées par OSC | fait |
+| Pages du **MIDI Captain** DRUM, BROWSE, PARTS | jouer et régler la batterie au pied | fait (§7) |
+| Double switch A/B par le pont | Play/Stop, End, Part ▶, changer de mode | **à faire** (§7) |
+| Page LOOPER du Captain, sections | boucles au pied, enchaîner | à faire (§9) |
+| Écran OLED | état lisible | à faire (§11) |
 
-Ce qu'on a appris et qui guide la suite :
-
-- **Hydrogen 1.2.0-beta** publie une mesure fausse quand il est maître du temps.
-  Il doit rester en écoute (J.Trans oui, J.Master non). Il adopte alors le tempo
-  du maître (vérifié), et son champ BPM est bloqué.
-- **SooperLooper 1.7.8** ne lit que le tempo et la position en trames du
-  transport. Il place sa grille de cycles depuis la trame 0. Il ne lit pas la
-  latence des ports JACK. Il n'a pas de mode « chanson ».
-- **Changer le tempo pendant la lecture** fait sauter la position, puisque la
-  mesure est calculée depuis la trame 0 (voir §8 pour la correction prévue).
+Démarrage : `bash scripts/session.sh start` (JACK, `pb_timebase`,
+SooperLooper, Hydrogen, le pont, branchements). Pas automatique au démarrage
+du Pi. Inventaire de ce qui est installé : `docs/installations.md`.
 
 ## 3. Architecture
 
 ```
-  MIDI Captain 10 ───── MIDI ──────────> PiPedal               écran OLED (SPI)
-        ▲                                  ├─ liaisons ─> DLS Drum (LV2)
-        │ SysEx (DEL), CC 20 (page)        ├─ liaisons ─> DLS Looper   (LV2)
-        │                                  │       │ commandes / état
-  Axe I/O One ─ MIDI ─> routeur ── court ──┘       ▼ /dev/shm/pedal-bridge-control
-  (double switch)       (dans le client)                                ▲
-                          │ long : mode suivant                         │ état
-                          ▼                                             │
-                   pedal_bridge (le « cerveau ») ───────────────> pb_display
-                     ├─ maître du temps JACK (pb_timebase intégré)
-                     ├─ transport JACK (play/stop) ─> Hydrogen suit
-                     ├─ OSC ─> SooperLooper ; OSC ─> Hydrogen (patterns, fills)
-                     ├─ séquenceur de sections, calé sur la mesure
-                     ├─ mode en cours ; DEL du Captain selon le mode
-                     └─ audio : Send/Return (existe)
+  MIDI Captain ──── MIDI (page PEDAL, canal 1) ────> PiPedal ──> effets, presets
+     │  ▲                                              │
+     │  │ SysEx (DEL), CC 20 canal 16 (page)          ├─ DLS Drum   ─┐ /dev/shm/
+     │  │                                              └─ DLS Looper ─┤ pedal-bridge-
+     │  │                                                             │ control
+     └──┼── MIDI (pages DRUM, BROWSE, PARTS, canal 2) ──> pedal_bridge ┘
+        │                                                 ├─ séquenceur de batterie (à la mesure)
+  Axe I/O One ── MIDI (double switch) ──> pedal_bridge    ├─ OSC -> Hydrogen (patterns), SooperLooper
+                                                          ├─ websocket -> PiPedal (affichage)
+  pb_timebase : maître du temps JACK ─────────────────────┤ transport JACK
+                                                          └─ audio : liens 1 (looper), 2 (batterie)
 ```
 
 Principes :
 
-1. **Les plugins sont des surfaces de contrôle.** Ils ne font que publier les
-   valeurs de leurs contrôles et afficher l'état reçu. Aucune logique musicale,
-   aucun réseau dans `run()`.
-2. **Le client décide et calcule le moment.** Toute commande est exécutée par
-   `pedal_bridge` au bon instant de la grille : début de mesure, de cycle ou de
-   section.
-3. **Une seule source de tempo** : le maître du temps intégré au client.
-4. **Les liaisons MIDI restent dans PiPedal** (son interface habituelle). Seule
-   exception : le double switch passe par le routeur du client (appui long, §7).
+1. **Les plugins sont des surfaces de contrôle.** Ils publient les valeurs de
+   leurs contrôles et affichent l'état reçu. Aucune logique musicale, aucune
+   allocation, aucun verrou, aucun appel système dans `run()`.
+2. **Le pont décide et calcule le moment.** Toute commande est exécutée par
+   `pedal_bridge` au bon instant de la grille.
+3. **Une seule source de tempo** : `pb_timebase`.
+4. **Le Captain a une page par mode**, chacune avec ses propres CC : PiPedal
+   écoute directement la page PEDAL ; le pont écoute les autres en parallèle
+   (§7). Si le pont s'arrête, la page PEDAL marche toujours.
 
-## 4. Communication plugins ↔ client
+## 4. Communication plugins ↔ pont
 
-Nouveau fichier partagé `/dev/shm/pedal-bridge-control`, même principe que les
-tampons audio : créé par les plugins en 0666, ouvert sans `O_CREAT` par le
-client, écrivains uniques par champ, atomiques.
+Fichier partagé `/dev/shm/pedal-bridge-control` (`common/pb_ctl.h`), créé par
+les plugins en 0666, ouvert sans `O_CREAT` par le pont ; un seul écrivain par
+champ, atomiques.
 
-- **Commandes (écrites par les plugins)**
-  - valeurs continues : tempo, boucle choisie, groove… (le client lit la valeur) ;
-  - boutons : un **compteur par bouton**, incrémenté à chaque appui. Le client
-    compare au dernier compteur vu : aucun appui n'est perdu, et aucun n'est
-    exécuté deux fois.
-- **État (écrit par le client)** : mesure, temps, tempo, transport, état de
-  chaque boucle (vide, enregistrement, lecture, muet, attente), boucle choisie,
-  section en cours et suivante, groove, fill en attente, et un compteur de
-  version.
-- Les plugins recopient l'état vers leurs **ports de sortie** : voyants et
-  valeurs affichés par PiPedal.
+- **Commandes (plugins)** : valeurs continues (tempo, listes) ; boutons : **un
+  compteur par bouton**, incrémenté à chaque appui (aucun appui perdu ni
+  exécuté deux fois). Boutons de DLS Drum 0 à 15 sur une ligne, 16 et plus sur
+  une autre (`pb_drum_btn`). Chemins (chanson, kit) protégés par un numéro de
+  séquence.
+- **État (pont)** : transport, mesure, temps, tempo, état des boucles, partie et
+  variation jouées, style et type, groove.
+- La **dernière instance activée** d'un plugin commande (changement de preset) ;
+  le pont se recale sur ses compteurs sans rien rejouer.
+- Les plugins recopient l'état vers leurs **ports de sortie** (voyants, textes).
 
-## 4 bis. Audio intégré aux plugins de contrôle (décidé)
+**Affichage dans PiPedal par son websocket** (`client/pipedal_ws.cc`) : un
+plugin LV2 ne peut pas changer ses propres réglages. Le pont remet donc à jour
+les listes de DLS Drum (Part, Variation, Intro, Outro, Kit, Auto Fill, Tempo)
+et le sélecteur Song (`setPatchProperty`, chemin) comme le fait la page web :
+`ws://127.0.0.1:80/pipedal`, `currentPedalboard` (instances par URI), puis
+`setControl`. Chaque valeur envoyée est **attendue et ignorée une fois**
+(écho du plugin, oublié après 2 s). PiPedal marque alors le preset modifié.
+`PB_PIPEDAL_PORT=0` désactive tout ça (banc de test).
 
-Les plugins **DLS Looper** et **DLS Drum** font **leur audio et leurs
-contrôles** au même endroit de la chaîne. But : pouvoir enregistrer la guitare
-**sèche** et choisir ou changer ses effets **après coup** (réamping), la
-batterie restant hors des effets.
+## 4 bis. Audio intégré aux plugins de contrôle
 
-| Plugin | Audio | Lien fixe | Où le placer |
+| Plugin | Audio | Lien | Où le placer |
 |---|---|---|---|
-| **DLS Looper** | copie l'entrée vers SooperLooper (Send) **puis** ajoute les boucles (Return, Add) | lien 1 (send + return) | **début** de chaîne : boucles sèches qui passent dans les effets ; **fin** : boucles enregistrées avec leurs effets |
-| **DLS Drum** | ajoute la batterie (Return, Add) | lien 2 (return) | **fin** de chaîne : la batterie ne passe dans aucun effet |
+| **DLS Looper** | copie l'entrée vers SooperLooper **puis** ajoute les boucles | lien 1 | **début** de chaîne : boucles sèches qui passent dans les effets (réamping) ; **fin** : boucles enregistrées avec leurs effets |
+| **DLS Drum** | ajoute la batterie | lien 2 | **fin** de chaîne : la batterie ne passe dans aucun effet |
 
-- Dans DLS Looper, la copie vers le looper se fait **avant** l'ajout des
-  boucles : les boucles ne peuvent pas se réenregistrer dans elles-mêmes.
-- **La position du plugin décide du son** (sec ou avec effets), sans réglage.
-- Liens fixes : plus de numéro de lien à choisir. Branchements JACK :
-  `pedal_bridge:send1` → SooperLooper, sortie de SooperLooper → `return1`,
-  Hydrogen → `return2`. La compensation de SooperLooper reste calculée sur le
-  lien 1 (envoi + retour du looper), comme aujourd'hui.
-- **Versions mono et stéréo** de chaque plugin (le nombre de canaux d'un plugin
-  LV2 est fixé dans sa description : pas une option). Même code, deux
-  descriptions, comme ToobAmp (« TooB Tone (Mono) », « … (Stereo) »).
-  - début d'une chaîne mono : **DLS Looper (Mono)**, pour que les effets mono
-    qui suivent (NAM) le restent ;
-  - fin de chaîne après une réverb stéréo : versions **stéréo**.
-  Le tampon partagé reste stéréo : la version mono écrit le même son à gauche
-  et à droite, et additionne le retour en mono.
-- Les **DLS Send / DLS Return** génériques restent, pour les usages
-  particuliers (boucle sur sa propre branche d'effets en mode Replace, autre
-  programme JACK…).
-- À vérifier dans PiPedal : qu'un plugin mono en début de chaîne garde bien le
-  reste de la chaîne en mono, et ce que fait PiPedal d'un plugin stéréo placé
-  dans la partie mono.
+- La copie vers le looper se fait **avant** l'ajout des boucles : elles ne
+  peuvent pas se réenregistrer.
+- Versions **mono et stéréo** (le nombre de canaux d'un LV2 est fixé dans sa
+  description). En mono : même son à gauche et à droite vers le looper, retour
+  ramené à (G + D) / 2.
+- Branchements JACK (`session.sh`) : `pedal_bridge:send1` → SooperLooper →
+  `return1` ; Hydrogen → `return2`. La compensation de SooperLooper est
+  calculée sur le lien 1.
+- Ne pas mettre DLS Send / DLS Return sur le lien 1 en même temps que DLS
+  Looper : la dernière instance activée prend le lien.
 
-## 5. Plugin « DLS Drum »
+## 5. DLS Drum
 
-Audio : retour de la batterie, lien 2 (§4 bis). Mono et stéréo.
+URI `…/drum-mono`, `…/drum-stereo` (« DLS Drum », « DLS Drum St. »). TTL
+généré par `scripts/gen_dls_ttl.py` ; code `lv2/drum.c` (plugin) et
+`client/controle.cc` (pont).
 
-| Contrôle | Type | Effet (exécuté par le client) |
-|---|---|---|
-| Tempo | molette 40–240 BPM | nouveau tempo, appliqué au prochain début de mesure (§8) |
-| Play / Stop | bouton | **global** : batterie et boucles ensemble, toujours depuis la mesure 1. Voir §8 bis (boucles « normalisées » pour que trigger tombe juste) |
-| Début | bouton | retour à la mesure 1 |
-| Morceau | **sélecteur de fichier** (`.h2song`) | Hydrogen ouvre le morceau (`OPEN_SONG`), le client lit ses patterns (voir ci-dessous) |
-| Groove | **sélecteur de fichier** (un fichier par groove) ; secours : liste « Groove 1 à 16 » | pattern Hydrogen, changé à la prochaine mesure ; cycle de SooperLooper = sa longueur |
-| Groove suivant / précédent | boutons | pour le pied (un choix de fichier ne se lie pas à une pédale) |
-| Fill | bouton | joue le pattern de fill pendant 1 mesure à la prochaine barre, puis revient au groove |
-| Tap tempo | bouton | tempo calculé à partir des derniers appuis |
-| Volume | dB | gain de la batterie (sur le retour, ou dans Hydrogen) |
+### 5.1 Contrôles, par section de PiPedal
 
-Sorties (voyants) : **Temps** (1–4), **Sur le 1** (clignote d'une autre couleur
-sur le premier temps), **En lecture**, **Fill en attente**, **Groove refusé**.
+Les réglages (listes) sont séparés des boutons à assigner aux pédales. PiPedal
+ouvre une nouvelle boîte dès que la section change d'un port au suivant : les
+ports sont rangés par section.
 
-### Choisir le morceau et le groove par leur vrai nom
-
-Un menu déroulant LV2 a une liste **fixée dans la description du plugin** : il
-ne peut pas montrer les patterns d'un morceau. Le **sélecteur de fichier** de
-PiPedal (celui du NAM de ToobAmp) liste, lui, le **contenu d'un dossier** au
-moment où on l'ouvre. On s'en sert :
-
-- **Morceau** : un champ fichier qui liste les `.h2song` d'un dossier.
-- **Groove** : quand un morceau est chargé, un dossier reçoit **un fichier vide
-  par groove compatible**, nommé avec le vrai nom et la longueur, par exemple
-  `03 - main 2-1 (1 mesure).groove`, `12 - refrain (2 mesures).groove`. Les
-  patterns incompatibles (pas en 4/4, longueur pas entière) **n'y sont pas** :
-  ils ne sont pas proposés.
-- Choisir un fichier : le plugin transmet le chemin au client par le fichier de
-  contrôle (§4), le client lit le numéro au début du nom, sélectionne le pattern
-  (`SELECT_ONLY_NEXT_PATTERN`, sans démarrer) et règle le cycle.
-- **Secours** si le sélecteur ne convient pas : menu « Groove 1 à 16 » ; le vrai
-  nom et la longueur s'affichent sur l'écran OLED (et l'écran du Captain) ; un
-  numéro inexistant ou incompatible allume « Groove refusé » et le groove
-  précédent reste.
-
-À vérifier (plugin minimal, étape 3 du §12) :
-
-- **Dossiers acceptés** par le sélecteur de PiPedal. Probablement seulement les
-  siens (`/var/pipedal/audio_uploads/…`), qui appartiennent à `pipedal_d` : le
-  client (compte `pedalboard`) n'a pas le droit d'y écrire. Deux solutions :
-  le **plugin crée lui-même les fichiers** (il tourne dans PiPedal ; le client
-  lui passe la liste des grooves ; écriture hors de `run()`, par le worker LV2),
-  ou ajouter `pedalboard` au groupe `pipedal_d` (changement système : avec
-  accord).
-- **Mise à jour de la liste** quand on change de morceau (relue à l'ouverture ?).
-- Ce que PiPedal **enregistre dans le preset** pour un champ fichier (chemin
-  complet ?), et ce qui se passe si le fichier n'existe plus.
-- Liaison MIDI : impossible sur un choix de fichier, d'où les boutons
-  suivant / précédent.
-
-**Résultats avec DLS Test** (PiPedal 2.0.111, 2026-11-15) :
-
-- Le plugin crée lui-même `/var/pipedal/audio_uploads/PedalBridgeTest/` et ses
-  fichiers à l'instanciation (« Dossier créé » allumé) : c'est la solution
-  retenue, aucun changement système.
-- Le sélecteur (`pipedal_ui:directory "PedalBridgeTest"`) liste les fichiers
-  du dossier, filtrés par extension, et affiche le nom **sans l'extension**.
-  Le plugin reçoit le chemin (patch:Set, atom:Path).
-- Le choix est **gardé dans le preset** (changer de preset puis revenir : le
-  fichier est encore sélectionné).
-- À voir encore : fichier supprimé entre-temps, liste mise à jour pendant que
-  le sélecteur est ouvert.
-
-### Réalisé (1re version, 2026-11-15)
-
-`lv2/drum.c`, URI `…/drum-mono` et `…/drum-stereo` (« DLS Drum », « DLS Drum
-St. »). Batterie du lien 2 **ajoutée** au signal (en mono : (G + D) / 2) ; à
-placer **en fin de chaîne** (la batterie ne passe dans aucun effet). Le Looper
-reste en début de chaîne (lien 1). Testé à l'oreille et sur le Pi.
-
-| Section | Contrôle | Effet |
-|---|---|---|
-| Drums | **Groove** (menu 1–16) | pattern N du morceau d'Hydrogen, **sans démarrer** |
-| | **Previous / Next** | groove précédent / suivant (bornés au nombre de patterns lus dans le `.h2song`) |
-| | **Playing** (sortie) | groove qui joue vraiment (« - » si inconnu) |
-| Transport | **Play / Stop** | le même que celui du Looper (§8 bis) ; marche aussi sans SooperLooper (batterie seule) |
-| | **Tempo** (40–240) | appliqué quand le bouton ne bouge plus depuis 0,3 s |
-| | **BPM + / BPM -** (momentanés) | ±1 BPM ; tenus : répétition après 0,4 s (toutes les 120 ms), plus vite après 2 s (40 ms) |
-| | **Tap** | au moins 3 coups ; le tempo change **une fois**, 1 s après le dernier coup (1,6 intervalle aux tempos lents), BPM entier, moyenne des 8 derniers coups |
-| | **Metronome** (bascule) | métronome d'Hydrogen |
-| | Beat, ♩, 1, ▶, BPM (sorties) | comme le Looper ; Beat compte 3 ou 4 temps selon le groove |
-| Bridge | Volume, Link | gain de la batterie ; état du lien 2 |
-
-Comportements à retenir :
-
-- **Chargement du preset** (ou redémarrage du pont) : le groove du menu et
-  l'interrupteur Metronome sont **appliqués**, sans démarrer la batterie. Les
-  autres réglages (tempo) ne s'appliquent qu'en changeant.
-- **Groove sans démarrer** : `SELECT_ONLY_NEXT_PATTERN` (Hydrogen choisit le
-  pattern tout de suite en mode « pattern sélectionné »). `SELECT_AND_PLAY_PATTERN`
-  démarrait le transport : seul Play démarre maintenant.
-- **Métronome** : l'OSC d'Hydrogen n'a qu'une bascule (`TOGGLE_METRONOME`,
-  argument ignoré). Le client lit le **retour d'état** d'Hydrogen
-  (`/Hydrogen/TOGGLE_METRONOME` 0 ou 1, envoyé à toute adresse qui lui a parlé)
-  et ne bascule que si l'état diffère. État inconnu : un message d'une adresse
-  nouvelle pour Hydrogen lui fait renvoyer tout son état.
-- **BPM + / -** : le plugin compte les pas (répétition dans `run()`, sans
-  appel système) ; le client les regroupe (10 tempos par seconde au plus,
-  sinon Hydrogen déborde) et part toujours du **dernier tempo appliqué**.
-
-**Affichage dans PiPedal par son websocket** (`client/pipedal_ws.cc`) :
-
-- Un plugin LV2 ne peut pas changer ses propres réglages. Après Next/Previous,
-  Tap ou BPM +/-, le client remet **Groove** (Drum) et **Tempo** (Drum et
-  Looper) à la bonne valeur comme le fait la page web : connexion à
-  `ws://127.0.0.1:80/pipedal`, `currentPedalboard` (pour trouver les
-  `instanceId` par URI), puis `setControl` ; connexion fermée aussitôt (pas de
-  `hello` : pas d'abonnement aux notifications). PiPedal marque le preset
-  modifié, comme un changement à la main.
-- **Échos** : le plugin renvoie ensuite la valeur reçue. Chaque valeur envoyée
-  est **attendue et ignorée une fois** (oubliée après 2 s) ; sans ça, un écho en
-  retard ramenait un ancien tempo après un Tap.
-- Le bouton qu'on **tourne** ne reçoit pas sa propre valeur (sinon il se bat
-  avec le geste) ; pendant qu'on **tient** BPM +/-, les boutons Tempo ne sont
-  mis à jour qu'au relâchement.
-- `PB_PIPEDAL_PORT=0` désactive tout ça (banc de test).
-- Le pas des flèches de la case Tempo vient de PiPedal : 10 si la plage dépasse
-  100 (40–240), 1 sinon. D'où BPM + / BPM -.
-
-**Texte dans PiPedal** : un plugin ne peut afficher que des étiquettes
-**écrites d'avance** dans sa description (`lv2:scalePoint`) ; aucun texte qui
-change pendant que ça tourne (`pipedal_ui:text` existe mais n'est pas lu). Le
-nom des patterns ira donc dans la description à l'installation (collection
-fixe) et sur l'écran OLED (§11).
-
-## 6. Plugin « DLS Looper »
-
-Audio : envoi de l'entrée au looper puis ajout des boucles, lien 1 (§4 bis).
-Mono et stéréo. Plus un réglage de **gain des boucles**.
-
-| Contrôle | Type | Effet |
-|---|---|---|
-| Boucle | liste 1–8 | boucle sélectionnée |
-| Record | bouton | enregistre (départ et fin quantifiés) |
-| Overdub | bouton | superpose sur la boucle |
-| Undo / Redo | boutons | annuler ou refaire la dernière couche |
-| Mute | bouton | coupe ou réactive la boucle, à la fin du cycle |
-| Effacer | bouton (appui long ?) | vide la boucle |
-| Section suivante | bouton | passe à la section suivante au prochain cycle (§9) |
-| Play / Stop | bouton | le même Play/Stop global que la batterie |
-| Tempo | molette | **le même tempo** que la batterie (une seule valeur, deux endroits) |
-
-Sorties : **État de la boucle** (vide, attente, enregistrement, lecture, muet),
-**Temps** et **Sur le 1** (clignotant au tempo, couleur différente sur le 1),
-**Section**.
-
-### Réalisé (1re version, 2026-11-15)
-
-- Plugins **DLS Looper (Mono)** (`.../looper-mono`, étiquette « DLS Looper ») et
-  **DLS Looper (Stéréo)** (`.../looper-stereo`, « DLS Looper St. »), dans le
-  bundle principal. TTL généré par `scripts/gen_looper_ttl.py`.
-- Audio sur le lien 1 (`lv2/io.c`, même comportement que Send/Return en mode
-  Add) : l'entrée part vers SooperLooper **avant** l'ajout des boucles. Mono :
-  même son à gauche et à droite vers le looper, retour ramené à (G + D) / 2.
-- Contrôles : Boucle (1-8), Record, Overdub, Undo, Redo, Mute, Effacer,
-  Play / Stop (boutons momentanés), Tempo (40-240, appliqué quand on le
-  **change** : charger un preset ne change pas le tempo), Volume boucles.
-- Sorties : State (texte : offline, empty, waiting, recording, overdub,
-  playing, muted, paused, other), Beat (texte), voyants ♩ (chaque temps, vert),
-  1 (premier temps, rouge), ▶ (lecture), BPM (texte), Link (no bridge, no
-  audio, OK).
-- Interface en anglais (noms affichés seulement : les symboles des ports, que
-  les presets gardent, restent les mêmes). Trois sections (pg:group) : Loop,
-  Transport, Bridge ; les ports sont rangés par section, car PiPedal ouvre une
-  nouvelle boîte dès que la section change d'un port au suivant. Les voyants
-  ont un nom d'un caractère (un voyant est trop étroit pour un mot).
-- **Fichier de contrôle** `/dev/shm/pedal-bridge-control` (`common/pb_ctl.h`) :
-  créé par le plugin ; compteurs de boutons ; la dernière instance activée
-  commande (changement de preset) ; le client se recale sur ses compteurs sans
-  rien rejouer. Le client y écrit le transport (callback JACK) et l'état des
-  boucles (toutes les 0,2 s, et juste après chaque commande). Il lit les
-  boutons toutes les 5 ms.
-- Exécution dans le client (`controle.cc`) : `/sl/N/hit` record, overdub,
-  undo, redo, mute, undo_all sur la boucle choisie (et `selected_loop_num`
-  pour l'interface de SooperLooper) ; Play / Stop = `stop` (avec normalisation)
-  si le transport roule, sinon `play` depuis la mesure 1.
-- Outils : `pb_ctl` (lire l'état, simuler les boutons), banc
-  `scripts/test-looper.sh` (JACK séparé, SooperLooper, pb_timebase, client) :
-  tempo, play, record (départ et fin au cycle), boucle 2, mute, overdub,
-  stop avec normalisation, play depuis la mesure 1, effacer, changement
-  d'instance. Tout passe. Test hors ligne `test_looper` (40 vérifications,
-  aucun appel système dans `run()`).
-- **Mesure en direct à travers le plugin** (2026-11-15, période 128, `pb_lag`) :
-  batterie amenée dans la chaîne par DLS Return (lien 2) placé avant DLS
-  Looper, enregistrée en boucle avec les boutons du plugin. Boucle vs batterie :
-  −10,6 ms juste après l'enregistrement, −10,6 ms après Stop (normalisation)
-  puis Play, trois fois. Attendu : −10,7 ms = latence propre de PiPedal
-  (entrée + sortie de l'Axe), que la batterie ne traverse pas dans ce test.
-  Le trajet du plugin et du pont est donc exact.
-- **Test au médiator** (même jour, métronome d'Hydrogen, coups étouffés sur
-  chaque temps, `pb_onsets` sur la boucle) : 12 coups, écart moyen au temps
-  **−6,4 ms**, dispersion 22 ms, sans dérive. Pas de latence cachée de l'Axe
-  mesurable (elle donnerait un retard constant) : les 10,7 ms comptées
-  suffisent. Un premier essai qui accélérait (jusqu'à −136 ms à la 4e mesure)
-  montre que la sensation de décalage venait du jeu, pas du pont.
-- **Batterie sur le lien 2** (`session.sh`, liens 1,2 par défaut) : DLS Looper
-  au début de la chaîne, DLS Return (lien 2, Add) à la fin. Vérifié à
-  l'oreille : batterie sans effets. Remplissage des deux retours à quelques
-  trames l'un de l'autre (251,0 et 252,2 pour 256 visées, soit < 0,1 ms) :
-  boucles et batterie restent alignées.
-- Limites : SooperLooper suit le transport : **Record ne part que si le
-  transport roule** (appuyer sur Play d'abord). La batterie arrive aussi par le
-  lien 1 tant que DLS Drum n'existe pas (branchement de `session.sh`). Ne pas
-  mettre DLS Send / DLS Return sur le lien 1 en même temps que DLS Looper : la
-  dernière instance activée prend le lien.
-
-À explorer dans SooperLooper : `multiply`, `insert`, `reverse`, `once` (jouer une
-fois), `trigger`, `rate`/`stretch` (« t. stretch » : la boucle suit le tempo ?),
-`sync`/`play sync`, la quantification du mute (`mute_quantized`), et les pistes
-synchronisées entre elles (« sync to loop »).
-
-## 6 bis. Jouer avec ou sans batterie ; mode tempo et mode libre
-
-### Batterie audible ou non : la présence du plugin décide
-
-- Le **tempo et la grille des mesures** viennent de `pb_timebase`, pas
-  d'Hydrogen : SooperLooper se cale (départs, arrêts, longueurs) **sans aucune
-  batterie**.
-- La batterie n'arrive dans PiPedal **que par DLS Drum**. Preset avec
-  **seulement DLS Looper** : on n'entend pas la batterie (le pont n'écrit
-  même rien quand aucun plugin n'écoute). On **ajoute DLS Drum** (ou on
-  passe à un preset qui l'a) : la batterie apparaît, déjà calée.
-- Hydrogen **reste lancé**, silencieux, pour être prêt (≈ 27 % d'un cœur).
-- Repères sans batterie : DEL du Captain qui clignotent au tempo (autre couleur
-  sur le 1), écran OLED (mesure, temps). En option, un **clic** : métronome
-  d'Hydrogen par OSC (`TOGGLE_METRONOME`), comme le genre « GUIDE » du RC-600.
-- C'est l'usage « rythme éteint » des Boss RC : la mémoire garde un tempo et une
-  mesure qui servent au calage des pistes.
-
-### Mode tempo (mode principal)
-
-- Le tempo est choisi **avant** d'enregistrer : réglage BPM (plugin Looper ou
-  Batterie, commande `tempo`), ou **tap tempo** au pied.
-- Mesure : 4/4 aujourd'hui ; 3/4, 6/8 à faire (`pb_timebase` à N temps).
-- Tout est quantifié : départ et fin d'enregistrement sur la grille, longueur =
-  nombre entier de cycles. La batterie ajoutée plus tard tombe juste.
-
-### Mode libre (option)
-
-- **Pas de tempo au départ** : la **1re boucle** enregistrée fixe la longueur.
-  Elle commence et finit **exactement aux appuis** (rien à quantifier).
-- Le client en déduit le tempo : `tempo = mesures × temps par mesure × 60 / durée`,
-  le donne à `pb_timebase`, place la grille pour que le **début de la boucle
-  soit le 1**, puis les boucles suivantes se calent normalement (mode tempo).
-- **Nombre de mesures choisi d'avance** (1, 2, 4, 8 ; réglage MEASURE du RC-600) :
-  sinon le tempo peut être faux du simple au double, ou ne pas tomber sur la
-  phrase (phrase de 3 mesures comptée comme 4). Option : choix automatique du
-  nombre qui donne un tempo entre 70 et 140 BPM, en signalant l'hypothèse.
-- **Limites** :
-  - la précision dépend des appuis : un départ en retard place le « 1 » de la
-    future batterie à l'appui, pas sur le premier temps joué ; un départ ou une
-    fin imprécis fait un petit accroc à chaque tour (vrai pour tout looper
-    libre) ;
-  - à faire au pied (Captain, double switch), pas par VNC (50 à 150 ms de délai).
-- Usage conseillé : boucler seul. Pour ajouter une batterie ensuite, préférer le
-  mode tempo (BPM d'avance ou tap tempo).
-
-## 7. MIDI Captain et modes
-
-**Trois modes** : **PiPedal** (presets, effets, snapshots), **Batterie**,
-**Looper**. Les 10 boutons du Captain changent de rôle selon le mode.
-
-### Ce qu'on sait du Captain (firmware officiel), d'après `captain-manager`
-
-Le dépôt voisin `captain-manager` (`pipedal_leds.py`, `blinker.py`,
-`testmido.py`) a déjà vérifié sur le vrai matériel :
-
-- **DEL pilotables par MIDI** : SysEx `F0 00 04 10 <touche 1-10> <R G B> × 3 F7`,
-  couleurs sur 7 bits (0-127). Chaque touche a **3 DEL réglables séparément**.
-- **Changer de page depuis le Pi** : **CC 20, valeur N** → le Captain saute à son
-  preset (page) N, avec les CC et couleurs de cette page.
-- Le Captain apparaît sur le Pi comme port MIDI « Feather RP2040 ».
-- `pipedal_leds.py` suit PiPedal par son WebSocket (`ws://127.0.0.1/pipedal`,
-  origine `http://pedalboard`) et colore les touches : effets liés par CC
-  (actif/inactif) et snapshots (couleur de PiPedal, sélectionné ou pâle).
-- `blinker.py` montre l'idée d'un **routeur MIDI** : il lit les pédales de
-  l'Axe I/O One et renvoie lui-même suivant/précédent à PiPedal.
-
-### Choix proposé : un routeur MIDI pour le double switch
-
-Le double switch est branché sur l'Axe I/O One. Aujourd'hui, PiPedal écoute l'Axe
-directement et change de preset **dès l'appui** (CC 65/67) : impossible d'y
-ajouter un appui long. Proposition :
-
-1. Dans les réglages MIDI de PiPedal, **ne plus écouter l'Axe directement**, mais
-   un port virtuel du client. C'est un réglage de PiPedal : à faire **avec ton
-   accord**.
-2. Le client lit l'Axe et mesure la durée de chaque appui :
-   - **appui court** (relâché avant ~0,5 s) → envoie « preset précédent/suivant »
-     à PiPedal (comme aujourd'hui, mais au relâchement) ;
-   - **appui long** sur un des deux boutons → **mode suivant/précédent** :
-     CC 20 au Captain (sa page change), mise à jour des DEL et de l'écran.
-3. Le Captain reste branché à PiPedal comme maintenant. Chaque page envoie ses
-   propres CC, liés dans PiPedal aux contrôles de DLS Drum, DLS Looper
-   ou aux effets.
-
-Contrepartie : en appui court, le changement de preset part au **relâchement** et
-non à l'appui (quelques centaines de ms plus tard). À juger à l'usage. Sinon :
-appui long sur une touche du Captain, si sa page le permet.
-
-Vérifié : l'Axe envoie bien un message au **relâchement** du switch (valeur 0)
-en plus de l'appui, comme le Captain (voir `docs/rc600.md`) : l'appui long est
-possible sur le double switch.
-
-### Disposition décidée (révisée 2026-11-19) : double switch et page DRUM
-
-Le double switch reste **le même dans tous les modes** : il porte ce qui sert
-partout. Il ne change donc plus de preset (CC 65/67) : le changement de preset
-passe sur la page du mode PiPedal.
-
-| Double switch | Court | Long |
-|---|---|---|
-| **A** | Play / Stop (batterie et boucles) | **End** : la batterie finit la chanson (outro, sinon fill + coup final), puis tout s'arrête |
-| **B** | **Part ▶** (couplet → refrain…) | **Changer de mode** (Drum → Looper → PiPedal) |
-
-A : **à l'arrêt, Play part dès l'appui** (pour partir pile) ; **en jouant**, le
-pont attend le relâchement : court = Stop (~0,2 s après l'appui, au
-relâchement), long = End.
-
-Page **DRUM** du Captain (jouer) : la rangée du **bas** (la plus facile
-d'accès) sert **en jouant**, celle du **haut** entre deux morceaux. *Long* =
-appui long, mesuré par le pont (le Captain envoie l'appui et le relâchement).
-
-| | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| **Haut** (entre les morceaux) | Tap | BPM − | BPM + | → Browse | → Parts |
-| *long* | Metronome on/off | BPM − en continu | BPM + en continu | — | — |
-| **Bas** (en jouant) | Fill | Var ◀ | Var ▶ | Part ◀ | Batterie on/off |
-| *long* | Crash | Batterie légère | Fill long | Intro | Break |
-
-- **BPM ±** : appui rapide = ±1 ; tenu, répète (après 0,4 s, plus vite après
-  2 s), comme les boutons de DLS Drum.
-- **Batterie on/off** (bascule) : DEL verte quand la batterie joue, rouge
-  coupée ; elle revient pile sur le 1. **Batterie légère** (bascule, appui long
-  sur Var ◀) : garde seulement les cymbales ; DEL de Var ◀ allumée d'une autre
-  couleur tant qu'elle est active.
-- Style, Type, Beat et Kit sont sur la page **Browse** ; intro, parties et
-  outro se règlent sur la page **Parts** (voir plus bas).
-- Pas encore faits : Crash, Batterie légère, Fill long, Batterie on/off, Break.
-
-### Rangement de la liste Song (fait, 2026-11-18)
-
-Trois niveaux partout : **Style / Groupe (type de beat) / Beat**, par
-`scripts/ranger.py` (fichiers déplacés, rien d'effacé ; `.alias.txt` dans le
-dossier : le pont retrouve la chanson d'un ancien preset). Les noms ne répètent
-pas le style et n'ont pas de tempo (le tempo est toujours celui choisi ; celui
-d'origine reste dans les `.parts.json`). Les ensembles JJ sont coupés par
-famille (Straight, Backbeat, grooves 4/4, Odd Meters), chacune avec les
-fills et intros de sa plage, nommée par son allure (slow, medium, fast, very
-fast, extreme ; noms en anglais). Exemples : `Metal/Straight/Lamb Chops very fast`,
-`Rock/Straight/Classic S03`, `Latin/Bossa and Samba/Bossa`. Gros morceau :
-3 134 patterns, ouvert en 3,5 s.
-
-Au pied : Beat ◀ ▶ (appui long sur Groove ◀ ▶) fait défiler les beats du style ; Style ◀ ▶ : appui très long (voir le tableau)
-en file, d'un groupe à l'autre.
-
-### Structure des parties et Fill (fait, 2026-11-18)
-
-- `gros_morceau.py` écrit `<kit>.h2song.parts.txt` : pour chaque chanson,
-  `part:<Partie>` (grooves), `fill:<Partie>`, `fill:*` (fills communs),
-  `intro`, `outro`, `transition`, `hits` -> numéros de groove dans la chanson.
-  Rôle tiré de la catégorie (midi2h2 : la partie) ou du nom (DLS : Verse,
-  Chorus fill… ; RP Bardet : Pattern = groove, Break = fill). Exemple Classic
-  S03 : intro 1-3, Verse 4-13 + fills 14-19, Chorus 20-27 + fills 28-31,
-  transitions 32-33, Bridge 34-35, outro 37-39.
-- **Fill** (bouton de DLS Drum, `PB_DBTN_FILL`) : un fill de la partie en cours
-  (sinon un fill commun) pendant la mesure suivante, puis retour au groove ; les
-  fills tournent à chaque appui ; un fill plus court qu'une mesure finit avec
-  elle. Le pont envoie le changement ~10 ms avant la barre (heure tirée de la
-  position du transport JACK) ; le cycle de SooperLooper ne change pas.
-  Vérifié : fill parti à « mesure 2 temps 4 +99 % », retour à « mesure 3 temps
-  4 +99 % ».
-
-### Parties, variations, intro et outro (fait, 2026-11-18)
-
-Modèle à la BeatBuddy / RC-600. Dans DLS Drum :
-
-| Contrôle | Valeurs | Effet |
-|---|---|---|
-| Intro | Off, Metronome, A, B… | au Play : rien, 1 mesure de clic (pattern « Silence » + métronome), ou l'intro choisie, **une fois** |
-| Part | Verse, Pre-Chorus, Chorus, Bridge | partie qui tourne en boucle (absente : la plus proche ; chanson sans parties : « Groove ») |
-| Variation | A, B, C… | variation de la partie affichée ; chaque partie retient la sienne |
-| Outro | A, B… | fin jouée par End, une fois, puis tout s'arrête |
-| Var ◀ ▶ | boutons | variation précédente / suivante, à la mesure suivante |
-| Fill | bouton | fill de la partie, puis la phrase reprend (même pattern, ou le suivant si le fill le finissait) |
-| Part ◀ ▶ | boutons | partie précédente / suivante : transition de la chanson, sinon un fill de la partie quittée, puis la nouvelle partie |
-| End | bouton | outro choisie puis arrêt (pas d'outro, 86 chansons sur 102 : un fill de la partie puis un **coup final** ; la liste Outro choisit le fill, A = 1er fill de la partie, B = 2e…, et Outro ▶ passe au suivant ; grosse caisse + crash sur le 1, pattern « Final hit » du gros morceau, une mesure pour sonner) ; **à l'arrêt** : l'outro seule, batterie seule (boucles en pause), pour la choisir |
-| Intro (bouton) | bouton | intro choisie à la mesure suivante, puis la partie reprend ; **à l'arrêt** : l'intro seule (ou la mesure de décompte), batterie seule |
-| Auto Fill | interrupteur (allumé) | allumé : fill de transition entre deux parties ; éteint : la partie suivante part tout de suite (Fill marche toujours) |
-| Playing, Var | sorties | partie jouée (Intro, Verse…, Outro, Fill) et variation |
-
-Sections de DLS Drum dans PiPedal (2026-11-18) : réglages d'un côté, boutons
-à assigner aux pédales de l'autre.
-
-| Section | Contenu |
+| Section | Contrôles |
 |---|---|
-| Song | Kit, Song, Intro (liste) + Intro + Intro ▶, Outro (liste) + End + Outro ▶ |
-| Browse | Style ◀ ▶, Type ◀ ▶, Beat ◀ ▶ ; affichages Style et Type |
-| Parts | Part, Variation, Auto Fill, Playing, Var |
-| Pedals | Play/Stop, Part ◀ ▶, Var ◀ ▶, Fill |
-| Tempo | Tempo, BPM −, BPM +, Tap, Metronome, Beat, voyants ♩ 1 ▶, BPM |
-| Bridge | Volume, Link |
+| **Song** | Kit (liste fixe : `scripts/kits/*.kit`), **Song** (sélecteur de fichier), Intro (liste) + **Intro** + **Intro ▶**, Outro (liste) + **End** + **Outro ▶** |
+| **Browse** | Style ◀ ▶, Type ◀ ▶, Beat ◀ ▶ ; sorties **Style** et **Type** |
+| **Parts** | Part (Verse, Pre-Chorus, Chorus, Bridge), Variation (None, A, B…), Auto Fill ; sorties **Playing**, **Var** |
+| **Pedals** | Play / Stop, Part ◀ ▶, Var ◀ ▶, Fill |
+| **Tempo** | Tempo (40–240), BPM −, BPM +, Tap, Metronome ; sorties Beat, voyants ♩ 1 ▶, BPM |
+| **Bridge** | Volume, Link |
 
-Intro et End sont à côté de leur liste pour écouter et choisir (à l'arrêt) ;
-l'assignation aux pédales ne dépend pas de la section.
+### 5.2 La liste des chansons (Song)
 
-- **Intro ▶ / Outro ▶** (appui long sur Intro / End au Captain) : choix
-  suivant de la liste (Intro : Metronome, A, B… sans Off ; revient au début),
-  montré dans PiPedal, puis joué comme par Intro / End (à l'arrêt : seul ;
-  en jouant, Outro ▶ finit la chanson avec cette outro).
-- **Browse** : Beat ◀ ▶ dans le type, Type ◀ ▶ dans le style, Style ◀ ▶ ;
-  chaque type retient son dernier beat et chaque style son dernier type (en
-  mémoire tant que le pont tourne). En jouant : à la mesure suivante, sans
-  coupure (gros morceau). Le pont renvoie le chemin au sélecteur Song de
-  PiPedal (websocket `setPatchProperty`) : il montre le Beat ; les sorties
-  **Style** et **Type** montrent le reste. Liste des noms : `scripts/browse.txt`
-  (« Style/Type », ordre du pont), installée avec le plugin
-  (`/usr/local/lib/lv2/pedal-bridge.lv2/browse.txt`) : le pont lit celle-là,
-  donc jamais un mauvais nom (un dossier pas encore installé : « - »). Au
-  premier choix de chanson après son démarrage, le pont compare les dossiers
-  à cette liste ; s'ils ont changé, il refait `browse.txt` et `drum.ttl` dans
-  le paquet compilé (`gen_dls_ttl.py --types … --out …`) et écrit dans son
-  journal la commande sudo pour les installer (puis redémarrer pipedald).
-- Les `.parts.json` sont cachés (`.X.parts.json`) : le sélecteur de PiPedal ne
-  montre pas les fichiers qui commencent par un point.
+- Les chansons sont dans `/var/pipedal/audio_uploads/DLS Drums/`, rangées en
+  **Style / Type / Beat** (`scripts/ranger.py` ; fichiers déplacés, rien
+  d'effacé ; `.alias.txt` : le pont retrouve la chanson d'un ancien preset).
+  Noms en anglais, sans tempo ; les packs JJ sont coupés par famille, nommés
+  par leur allure (slow, medium, fast, very fast, extreme). Ex. :
+  `Metal/Straight/Lamb Chops very fast`, `Rock/Straight/Classic S03`.
+- Les métadonnées de conversion (`.X.parts.json`) sont **cachées** (point au
+  début) : le sélecteur de PiPedal ne les montre pas.
+- Le **sélecteur Song** est un sélecteur de fichier de PiPedal : il liste le
+  dossier, affiche le nom sans extension, et le choix est gardé dans le preset.
+- **Browse** (boutons) : Beat ◀ ▶ dans le type, Type ◀ ▶ dans le style, Style
+  ◀ ▶ ; chaque type retient son dernier beat, chaque style son dernier type
+  (mémoire, §5.6). En jouant : à la mesure suivante, sans coupure. Le pont
+  renvoie le chemin au sélecteur Song (qui montre le Beat) ; les sorties
+  **Style** et **Type** montrent le reste.
+- Les noms de Style et Type sont **figés** dans la description du plugin
+  (PiPedal n'affiche pas de texte libre venant d'un plugin) :
+  `scripts/browse.txt` (« Style/Type », ordre du pont), installé avec le plugin.
+  Le pont lit la liste **installée** (jamais un mauvais nom ; un dossier pas
+  encore installé s'affiche « - »). Au premier choix de chanson après son
+  démarrage, il compare aux dossiers ; s'ils ont changé, il refait
+  `browse.txt` et `drum.ttl` dans le paquet compilé et écrit dans son journal
+  la commande sudo pour les installer.
 
-**Pages de configuration du Captain (décidé 2026-11-18)** : en mode Drum, une
-page pour jouer (DrumKit) et deux pour régler, **Browse** et **Parts**. On y
-entre depuis la page DrumKit par un appui long sur Batterie on/off (seul appui
-long libre). Sur ces deux pages : **A = Play/Stop**, **B = retour à DrumKit**.
+### 5.3 Le gros morceau (un par kit)
 
-*Page Browse* (choisir kit et chanson) :
+`scripts/gros_morceau.py` réunit toutes les chansons, rendues pour un kit, dans
+`~/dls-batterie/gros/<kit>.h2song` (+ `.index.txt` : premier pattern et nombre
+par chanson ; `.parts.txt` : structure). Changer de **chanson** = sauter à sa
+fenêtre de patterns, **même en jouant**, sans coupure. Changer de **kit** =
+ouvrir un autre gros morceau (~2,5 s, à l'arrêt). Refait automatiquement s'il
+manque ou s'il est plus vieux qu'une chanson, un `.kit` ou le script.
 
-| | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| Haut | Style ◀ *(long : Kit ◀)* | Style ▶ *(long : Kit ▶)* | Type ◀ | Type ▶ | Metronome |
-| Bas | Beat ◀ | Beat ▶ | Part ◀ | Part ▶ | → Parts *(long : → DRUM)* |
+- XML allégé (réglages de note égaux aux valeurs par défaut retirés) : 3 136
+  patterns, ~12 Mo, ouvert en **2,3 s** avec Hydrogen 1.2.7.
+- Deux patterns ajoutés : **Silence** (1 mesure vide : décompte, mesure vide de
+  la démo) et **Final hit** (grosse caisse + crash du kit sur le 1).
+- Après un `OPEN_SONG`, Hydrogen reste occupé puis remet le premier pattern :
+  le pont attend qu'il soit calme (temps processeur) avant de choisir.
+- Kits : `scripts/kits/*.kit` donne l'instrument de chaque rôle (K, S, H, C,
+  C2, CH…) avec des remplaçants ; modèles dans `~/dls-modeles`.
 
-(Révisée le 2026-11-19 : le Kit change rarement, il passe en appui long sur
-Style ◀ ▶ ; Part ◀ ▶ parcourent la chanson de la démo.)
+### 5.4 Structure des chansons
 
-- Style, Type, Beat ◀ ▶ : comme les boutons Browse de DLS Drum.
-- **Kit ◀ ▶** (Style ◀ ▶ tenus) : change la liste Kit (renvoyée à PiPedal). En jouant : Stop,
-  chargement du nouveau gros morceau (~2,5 s), puis **reprise là où on était**
-  (même mesure, même partie et variation) ; à l'arrêt : chargement tout de suite.
-- **Metronome** : on/off ; DEL **verte allumé, rouge éteint**.
+`.parts.txt` : pour chaque chanson, `part:<Partie>` (variations), `fill:<Partie>`,
+`fill:*`, `intro`, `outro`, `transition`. Une variation est une **phrase** : les
+moitiés « Verse (1) », « Verse (2) » d'une phrase de 8 mesures coupée à 4
+(limite d'Hydrogen) sont enchaînées (`4+5,6+7`).
 
-*Page Parts* (régler intro, parties, outro : mode « audition ») :
+Sur 102 chansons : 78 **packs de grooves** (JJ… : intros, grooves, fills), 24 à
+**vraies parties**, souvent incomplètes.
 
-| | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| Haut | Intro | Verse | Pre-Chorus | Chorus | Bridge |
-| Bas | Back | Next | Outro | AutoFill | → Browse |
+- **Pack de grooves** : les 4 parties existent et puisent dans les mêmes
+  grooves ; au départ Verse = A, Pre-Chorus = B, Chorus = C, Bridge = D.
+- **Parties absentes** d'une chanson à parties (ex. Pop Punk/Modern : Verse
+  seulement) : elles existent aussi, à **None au départ**, et puisent dans tous
+  les grooves de la chanson ; leur donner une variation en fait une vraie partie.
+- La liste Part montre la partie affichée ; une chanson n'a jamais moins
+  d'une partie active.
 
-- Appuyer sur Intro, une partie ou Outro la **sélectionne** (DEL plus lumineuse)
-  et la **joue en boucle** (ici l'Intro et l'Outro bouclent aussi).
-- **Back / Next** changent la valeur de la sélection : Intro (Off, Metronome,
-  A, B…), partie (None, A, B…), Outro (A, B…) ; retenu par chanson (`choix.txt`).
-- **None / Off** : le son s'arrête, la DEL de la sélection devient **rouge** ;
-  une autre partie à None / Off est **rouge très pâle**. Revenir à une valeur
-  (A, Metronome…) relance la boucle avec ce choix, la DEL reprend sa couleur.
-- **Play/Stop (A)** sur cette page : arrête / relance la boucle de la sélection.
-- **En arrivant sur Parts pendant la lecture** : la partie qui joue est
-  sélectionnée (DEL plus lumineuse), la musique continue, Back / Next agissent
-  sur elle.
-- **AutoFill** : interrupteur, DEL **verte allumé, rouge éteint**.
+### 5.5 Le séquenceur (dans le pont)
 
-*Couleurs* (à ajuster sur le vrai matériel) :
-
-| Bouton | Couleur |
-|---|---|
-| Paires ◀ ▶ (Style, Type, Kit, Beat) | une couleur par paire, la même pour ◀ et ▶ (on voit qu'elles vont ensemble) ; proposé : Style jaune, Type orange, Kit blanc, Beat cyan |
-| Intro, Verse, Pre-Chorus, Chorus, Bridge, Outro | une couleur par partie, pâle si non sélectionnée, vive si sélectionnée ; proposé : Intro bleu, Verse vert, Pre-Chorus turquoise, Chorus orange, Bridge violet, Outro magenta |
-| Back / Next (Parts) | la couleur de la sélection |
-| None / Off | rouge vif (sélectionnée), rouge très pâle (sinon) |
-| Metronome, AutoFill | vert allumé, rouge éteint |
-| → Parts, → Browse | blanc pâle |
-
-*Architecture choisie (2026-11-18) : des pages sur le Captain, chacun écoute ce
-qui le concerne.* Le Captain a une page par mode (PiPedal, DrumKit, Browse,
-Parts, Looper), chacune avec ses propres CC (aucun CC partagé entre pages).
-PiPedal écoute le Captain directement, mais seuls les CC de la page PiPedal y
-sont liés ; le pont écoute le Captain en parallèle et traite les autres pages
-(actions, DEL, changement de page par CC 20). Seul le double switch A/B de
-l'Axe passe par le pont (appui long = changer de mode). Si le pont s'arrête, la
-page PiPedal continue de marcher (presets, effets, snapshots).
-
-*Pages du Captain* (`captain/pageN.txt`, faites par `scripts/gen_captain.py` à
-partir de l'en-tête de la page 0 du musicien, `captain/entete.txt`) : rangée du
-haut key1 à key5, du bas keyA à keyE ; chaque touche envoie 127 à l'appui et 0
-au relâchement (aussi après un appui long : le pont mesure la durée).
-Aucune couleur dans les pages (DEL éteintes, comme la page 0) : **le pont peint
-les DEL** (SysEx) à chaque changement de page et d'état ; la table des couleurs
-ne vit que dans le pont (changer une couleur = changer le pont, pas les pages).
-
-| Page | Nom | Messages |
-|---|---|---|
-| 0 (PiPedal) | `PEDAL` | CC1 à CC10, canal 1 (liés dans PiPedal), inchangée sauf le nom (`captain/page0.txt`) |
-| 1 DrumKit | `DRUM` | CC21 à CC30, canal 2 |
-| 2 Browse | `BROWSE` | CC31 à CC40, canal 2 |
-| 3 Parts | `PARTS` | CC41 à CC50, canal 2 |
-| 4 Looper (plus tard) | `LOOP` | CC51 à CC60, canal 2 |
-
-Format des pages (firmware officiel, « super mode ») : par touche `short_dw`
-(appui), `short_up` (relâchement), `long` / `long_up` (appui long, durée
-`long_press_timing`, 1 s ici), `ledcolor0/1` (3 DEL), `keytimes` (états à
-bascule) ; `[preset][value_inc]` change de page ; `page_name` 6 caractères au plus
-(mode d'emploi FW 5.0, `E:/DWL/MIDICaptainSTD_FW5.zip`). L'écran montre aussi le
-nom du dernier bouton appuyé (`short_dw1_name`), la dernière commande envoyée, le
-numéro de page et le tempo de son Tap ; le Pi ne peut pas y écrire de texte
-libre. Commande externe (canal 16) : CC 1 à 10 = appui virtuel (valeur 1 appui,
-2 long, 3 relâchement, 4 relâchement long), CC 20 = page, CC 21 à 30 = état
-d'une touche à bascule ; couleurs par SysEx (RVB 8 bits divisés par 2).
-Copie de la mémoire du Captain : `E:/DWL/Pedalboard/supersetup/` (page 0 du
-musicien, pages 1 à 27 d'usine).
-
-*Étape 1 faite (2026-11-19)* : `client/midi.cc` (ALSA séquenceur, client
-« pedal_bridge ») s'abonne au Captain (« Feather RP2040 ») et à l'Axe (« AXE IO
-One ») **en parallèle de PiPedal**, reprend un appareil rebranché (essai toutes
-les 2 s) et peut envoyer au Captain CC et SysEx. Le pont note chaque appui et
-relâchement avec sa durée (court < 0,5 s ≤ long < 1,5 s ≤ très long), sans
-action. Commande `captain page N` (CC 20 canal 16). Vérifié sur le matériel :
-Axe A = CC 65, B = CC 67 (canal 1, 127 / 0) ; page PEDAL : CC 1 à 10 canal 1
-(appui seulement) ; page DRUM : CC 21 à 30 canal 2, appui et relâchement ;
-changement de page depuis le Pi : `captain page 1` affiche DRUM, `page 0` PEDAL.
-
-*Page DRUM active (2026-11-19)* : le pont fait les actions de la page DRUM
-(même fonction `drum_button` que les boutons de DLS Drum). Une touche sans
-action longue agit dès l'appui ; Part ◀ et → Browse font leur action courte au
-relâchement et la longue dès 0,5 s de maintien ; Tap compte le coup à l'appui
-et, tenu, l'annule et bascule le métronome (Tap vert quand il est allumé) ;
-BPM ± : un pas, puis répétition (0,4 s, plus vite après 2 s). Var ◀ s'arrête à
-A (None seulement par la liste Variation ou la page Parts). Le Captain remet la
-DEL d'une touche appuyée à la couleur de la page (noire) : le pont repeint la
-page après chaque appui et relâchement. Vérifié sur le matériel : Fill, Var ◀ ▶,
-Part ◀ (court et Intro), BPM ± tenu, Tap et métronome, DEL.
-Provisoire tant que B ne passe pas par le pont : sur DRUM, → Browse **tenu**
-ramène à PEDAL ; sur BROWSE et PARTS, la dernière touche **tenue** ramène à DRUM
-(appuyée brièvement : l'autre page). Pas encore faits : Crash, Batterie légère,
-Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
-
-*Pages BROWSE et PARTS actives (2026-11-19)* :
-- BROWSE : Style, Type, Beat ◀ ▶ (fonction Browse), Metronome (DEL verte /
-  rouge), **Kit ◀ ▶** (liste Kit de PiPedal ; en jouant : Stop, chargement, puis
-  reprise sur la même partie et variation, sans intro, **à la mesure 1** pour
-  rester calé avec les boucles).
-- **Mode démo** (BROWSE, en jouant) : la chanson se déroule en boucle comme
-  une vraie : Intro, puis **deux fois** [Verse ×2, Pre-Chorus, Chorus ×2,
-  Bridge], puis Outro, **une mesure sans batterie** (on entend que c'est fini),
-  et on recommence. Parties à None sautées ; fill entre deux parties si Auto
-  Fill ; sans outro : fill + coup final. Intro selon la liste Intro : A, B… ->
-  cette intro ; **Metronome -> une mesure de clic** (au début et à chaque tour) ;
-  Off -> pas d'intro. Play depuis BROWSE, ou
-  arrivée sur BROWSE pendant la lecture, ou nouveau beat (Style, Type, Beat) :
-  la démo repart à l'intro (à la mesure suivante en jouant) ; tout départ de
-  la batterie en démo repart au début de la chanson. **Part ◀ ▶** (boutons de
-  DLS Drum, et Part ◀ ▶ de la page BROWSE), pendant la démo seulement : étape
-  précédente / suivante de **toute la chanson**, Intro et Outro compris (Intro
-  sautée s'il n'y en a pas), à la mesure suivante. Sur la page DRUM (jouer),
-  pas de démo : Part ◀ ▶ ne parcourent que les parties, End va à la fin, Play
-  démarre par l'intro. **Playing** montre chaque mesure de la fin de tour :
-  Outro, « - » (mesure vide), Intro. En quittant
-  BROWSE, la démo s'arrête, la partie en cours continue. Vérifié en direct à
-  240 BPM (Pantteri fast 2) : décompte, 2 blocs avec fills, fill + coup final,
-  mesure vide, décompte, Verse.
-- PARTS (audition) : la sélection (Intro, partie, Outro) boucle ; **à l'arrêt,
-  choisir ne fait que sélectionner**, Play (Play/Stop de DLS Drum, plus tard A)
-  la lance, batterie seule ; **en jouant**, changement à la mesure suivante.
-  Back / Next changent la valeur (retenue par chanson). **None / Off en jouant :
-  mesures vides** (le transport continue) ; le prochain choix repart à la
-  mesure. En quittant PARTS pendant que l'intro, l'outro ou le décompte boucle,
-  retour à la partie à la mesure suivante. AutoFill : DEL verte / rouge.
-- DEL de PARTS : une couleur par partie, vive si sélectionnée, **5 %** sinon
-  (`PALE`) ; None / Off : **deux DEL de la couleur de la partie, celle du milieu
-  rouge** (vive ou pâle) ; le Captain règle bien ses 3 DEL séparément.
-- **Parties absentes** (chanson à parties incomplète, ex. Pop Punk/Modern :
-  Verse seulement) : elles existent aussi, à **None au départ** (sautées), et
-  puisent dans tous les grooves de la chanson ; leur donner une variation (PARTS
-  ou liste Variation) en fait une vraie partie, retenue par chanson.
-
-*Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
-ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
-dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le
-relâchement : déjà vérifié) ; (2) réglage MIDI de PiPedal pour ne plus écouter l'Axe en direct
-(avec l'accord du musicien) ; (3) pages du Captain programmées avec
-`captain-manager` ; (4) mode audition et Kit ◀ ▶ dans le pont.
-
-- **Phrase** : les moitiés « Verse (1) », « Verse (2) » (phrase de 8 mesures
-  coupée à 4, limite d'Hydrogen) forment **une** variation, jouée d'affilée.
-  `.parts.txt` : `part:Verse	4+5,6+7` (variations séparées par `,`, patterns
-  enchaînés par `+`). Cycle de SooperLooper = longueur de la phrase.
-- Le pont choisit chaque pattern ~10 ms avant son départ, d'après la position
-  du transport JACK, et le note dans son journal (« pattern 12 (mesure 3 temps
-  4.99, une fois) »).
-- Les listes Part et Variation de PiPedal suivent les boutons (websocket).
-- **Pack de grooves** (JJ… : intros, grooves, fills, sans Verse ni Chorus) :
-  les 4 parties existent quand même et puisent dans les mêmes grooves ; au
-  départ Verse = A, Pre-Chorus = B, Chorus = C, Bridge = D. Pour changer :
-  Part = Chorus puis Variation = G (ou Part ▶ puis Var ▶ au pied).
-- **Mémoire** (`~/dls-batterie/choix.txt`, écrite à chaque changement, quel
-  que soit le preset), par chanson :
-  - la variation de chaque partie (`chanson<TAB>Verse<TAB>A`, `-` = None) ;
-    au chargement : mémoire, sinon la Variation du preset (partie affichée),
-    sinon A (pack : A à D) ;
-  - **la liste Intro montre toujours l'intro qui jouera** : chanson jamais
-    réglée -> **A** si elle a des intros, sinon **Off** ; A, B… sur une chanson
-    sans intro -> Off ; lettre au-delà de ses intros -> la dernière qui existe
-    (corrigé dans la liste et retenu) ;
-  - l'Intro et l'Outro (`chanson<TAB>Intro<TAB>Metronome`, `…Outro<TAB>B`),
-    remontrés dans PiPedal au changement de chanson ; jamais réglés : ceux en
-    cours (preset) ; pendant 1,5 s après un changement de chanson, un Intro /
-    Outro venu du preset ne remplace pas celui retenu ;
-  - Browse : dernier beat de chaque type (`@browse-type<TAB>Style/Type<TAB>chanson`)
-    et dernier type de chaque style (`@browse-style<TAB>Style<TAB>Style/Type`).
-
-  Dans le preset seulement : Kit, Song, Tempo, Metronome, Auto Fill, Volume.
-- Les fills tournent par liste de fills (pas par partie) : deux parties qui
-  partagent les fills communs n'enchaînent pas le même.
-- **Variation = None** : la partie est sautée par Part ◀ ▶ (retenu dans la
-  mémoire : `-`). La musique ne change pas tant qu'on ne change pas de partie ;
-  au Play, une partie affichée à None laisse la place à la suivante. Il reste
-  toujours au moins une partie.
-- **Part ◀ ▶ reviennent au début** (Bridge -> Verse, Verse -> Bridge), comme
-  la BeatBuddy qui revient à la 1re partie après la dernière. Avec Verse et
-  Chorus seulement, Part ▶ alterne Verse / Chorus.
-- Comparaison : BeatBuddy (appui = fill, appui long = transition puis partie
-  suivante, double appui = outro ; la chanson n'a que les parties créées) ;
-  RC-600 (variations A à D sans parties, changement à la fin de la mesure ou
-  de la boucle : réglage VAR.CHANGE).
-- Vérifié (Contemporary S06) : Fill à la barre puis retour ; Part ▶ avec fill
-  de transition ; Var ▶ ; End : outro de 3 patterns puis arrêt.
-- Limite : un fill au milieu d'un pattern de 4 mesures le fait repartir à sa
-  mesure 1 (Hydrogen redémarre un pattern choisi au début) ; la phrase est
-  alors décalée jusqu'à la fin de ce pattern.
-
-### Fonctions de batterie (définitions)
-
-Chaque chanson (style) devient une petite chanson à la BeatBuddy, construite à
-partir des `.parts.json` (automatique pour les packs étiquetés, devinée pour
-ceux qui n'ont que « Groove » et « Fill », modifiable par un petit fichier par
-chanson) :
-
-| Partie | Contenu |
-|---|---|
-| Intro | intro ou décompte |
-| Partie 1 (Verse / couplet) | groove(s) du couplet + leurs fills |
-| Partie 2 (Chorus / refrain) | groove(s) du refrain + leurs fills |
-| Partie 3 (Bridge / pont) | facultative |
-| Transition | fill qui fait passer d'une partie à la suivante |
-| Outro | la fin |
-
-Les moitiés d'une phrase coupée à 4 mesures (« Verse (1) », « Verse (2) ») sont
-enchaînées automatiquement comme un seul groove.
+Hydrogen redémarre un pattern choisi à son début : le pont choisit chaque
+pattern **~10 ms avant son départ**, d'après la position du transport JACK, et
+le note dans son journal (« pattern 12 (mesure 3 temps 4.99, une fois) »).
 
 | Fonction | Effet |
 |---|---|
-| **Groove ◀ ▶** | pattern précédent/suivant de la chanson, tous confondus : pour explorer |
-| **Beat ◀ ▶** | beat précédent/suivant du style, en file à travers les groupes (instantané : gros morceau) |
-| **Style ◀ ▶** | style précédent/suivant (Metal, Rock…) ; premier beat du style |
-| **Partie ◀ ▶** | section précédente/suivante : fill de transition, puis le groove de la partie, au début de la mesure |
-| **Variation** | autre version du groove de la partie en cours (Verse A → B → C → A), sans fill ni changement de partie |
-| **Fill** | un fill de la partie en cours pendant 1 mesure, puis retour automatique au groove ; les fills de la partie tournent à chaque appui ; compte comme une mesure normale pour les boucles |
-| **Fill long** | fill de 2 mesures ou plus (« 2-Bar Fill », fills longs JJ) ; à défaut, deux fills courts ou le fill normal |
-| **Batterie on/off** | coupe la batterie (mute d'Hydrogen), boucles et tempo continuent ; elle revient pile sur le 1 |
-| **Batterie légère** | coupe grosse caisse et caisse claire (mute par instrument d'Hydrogen), garde les cymbales : montées, passages calmes |
-| **Break** | 1 mesure de silence (ou un seul coup sur le 1), puis le groove repart |
-| **Crash / accent** | un coup de crash sur le prochain 1 |
-| **Intro** | relance l'intro de la chanson |
-| **Outro** | joue la fin de la chanson (« Outro », « Ending »…) puis arrête tout (batterie et boucles) ; sans fin prévue : coup final (crash + grosse caisse sur le 1) puis arrêt |
+| **Play** | intro (ou décompte), puis la partie affichée en boucle |
+| **Intro** (liste) | Off, Metronome (1 mesure de clic), A, B… ; **la liste montre toujours ce qui jouera** : chanson jamais réglée → A si elle a des intros, sinon Off ; lettre sans intro correspondante → corrigée |
+| **Part ◀ ▶** | partie précédente / suivante (parties à None sautées, retour au début après la dernière), à la mesure suivante ; **transition** de la chanson, sinon un fill de la partie quittée, si **Auto Fill** est allumé |
+| **Var ◀ ▶** | variation précédente / suivante de la partie, à la mesure suivante ; Var ◀ s'arrête à A (None seulement par la liste ou la page PARTS) |
+| **Variation = None** | partie sautée par Part ◀ ▶ ; au Play, une partie affichée à None laisse la place à la suivante |
+| **Fill** | un fill de la partie (sinon commun), à la mesure suivante, puis la phrase reprend ; les fills tournent par liste |
+| **End** | l'outro choisie, puis tout s'arrête ; **sans outro** (86 chansons) : un fill de la partie + **coup final** ; la liste Outro choisit alors le fill (A = 1er, B = 2e…) |
+| **Intro** (bouton) | l'intro à la mesure suivante, puis la partie reprend |
+| **Intro ▶ / Outro ▶** | choix suivant de la liste, montré dans PiPedal, puis joué |
+| Intro, End, Intro ▶, Outro ▶ **à l'arrêt** | jouent seuls (batterie seule, boucles en pause), pour choisir |
+| **Playing / Var** | ce qui joue vraiment : Intro, partie, Outro, Fill, « - » (mesure vide) |
 
-**Moment du changement** : Fill, Partie, Variation, Break et Outro partent **au
-début de la mesure suivante** (le fill est toujours complet ; il faut appuyer
-une mesure d'avance). Façon BeatBuddy (le fill commence tout de suite et finit
-avec la mesure en cours) : non retenue pour l'instant. Réglage prévu pour
-l'étape des boucles, comme le VAR.CHANGE de la RC-600 : changer de partie à la
-**mesure** ou à la **fin du tour de boucle**.
+- **Changer de chanson en jouant** : la nouvelle part à la mesure suivante.
+- **Cycle de SooperLooper** = longueur de la phrase.
+- **Limite** : un fill au milieu d'un pattern de 4 mesures le fait repartir à
+  sa mesure 1 ; la phrase est alors décalée jusqu'à la fin de ce pattern.
 
-**Comparaison** : la RC-600 (Parameter Guide p. 7) a 4 variations (A–D), un
-fill automatique au changement de variation (réglage FILL on/off, pas de fill
-sur demande dans les pages lues), intro et fin en on/off, et le changement de
-variation à la fin de la mesure ou de la boucle. Le BeatBuddy : un groove par
-partie, fill sur demande, appui tenu = partie suivante, double appui = fin.
-Notre système : fill sur demande ET transition, toutes les variations des
-packs, un bouton par fonction.
+**Tempo et métronome** : Tempo appliqué quand le bouton ne bouge plus depuis
+0,3 s ; BPM ± : ±1, tenus : répétition (0,4 s, plus vite après 2 s), regroupés
+(10 tempos par seconde au plus) ; Tap : au moins 3 coups, tempo changé une fois
+à la fin, moyenne des 8 derniers. Métronome : l'OSC d'Hydrogen n'a qu'une
+bascule ; le pont suit le retour d'état et ne bascule que si l'état diffère.
 
-**Ordre de réalisation** : (1) structure des parties de chaque chanson ;
-(2) Fill, puis Partie ◀ ▶ et Outro ; (3) Variation, Batterie on/off, Break ;
-(4) Style ◀ ▶ au pied ; (5) Fill long, Batterie légère, Crash, Intro ;
-(6) boucles par partie et répétitions (§9, à la RC-600) ; puis le routeur MIDI
-et les pages du Captain.
+### 5.6 Mémoire par chanson
 
-### DEL : un seul responsable à la fois
+`~/dls-batterie/choix.txt`, écrite à chaque changement, **prioritaire sur le
+preset** :
 
-`pipedal_leds.py` et le client ne doivent pas écrire en même temps dans les DEL :
+- la variation de chaque partie (`chanson<TAB>Verse<TAB>A`, `-` = None) ;
+- l'Intro et l'Outro (`…Intro<TAB>Metronome`, `…Outro<TAB>B`), remontrés dans
+  PiPedal au changement de chanson ; pendant 1,5 s après, une valeur venue du
+  preset ne les remplace pas ;
+- Browse : dernier beat de chaque type, dernier type de chaque style.
 
-- **mode PiPedal** : DEL d'effets et de snapshots (logique de `pipedal_leds.py`) ;
-- **mode Batterie** : play (vert/rouge), groove choisi, fill en attente, temps qui
-  clignote, le 1 d'une autre couleur ;
-- **mode Looper** : état de chaque boucle (rouge = enregistrement, jaune =
-  overdub, vert = lecture, pâle = muet, éteint = vide), clignotement au tempo.
+Dans le preset seulement : Kit, Song, Tempo, Metronome, Auto Fill, Volume.
+Copie sur le PC : `bash scripts/sauvegarde.sh` (voir `docs/installations.md`).
 
-Proposition : **un seul programme écrit dans les DEL**, et c'est celui qui connaît
-le mode. Soit la logique de `pipedal_leds.py` est intégrée au système du client,
-soit `pipedal_leds.py` reste en Python et reçoit le mode du client (il se tait
-hors du mode PiPedal). À décider.
+### 5.7 Comparaison
+
+BeatBuddy : appui = fill, appui long = transition puis partie suivante, double
+appui = outro, retour à la 1re partie après la dernière ; la chanson n'a que les
+parties créées. RC-600 : variations A à D sans parties, fill automatique au
+changement de variation, changement à la fin de la mesure ou de la boucle
+(VAR.CHANGE). Ici : fill sur demande et transition, toutes les variations des
+packs, un bouton par fonction, changement à la mesure.
+
+## 6. DLS Looper
+
+URI `…/looper-mono`, `…/looper-stereo` (« DLS Looper », « DLS Looper St. »).
+
+| Section | Contrôles |
+|---|---|
+| Loop | Boucle (1–8), Record, Overdub, Undo, Redo, Mute, Effacer ; sortie State (offline, empty, waiting, recording, overdub, playing, muted, paused) |
+| Transport | Play / Stop (le même que la batterie), Tempo ; sorties Beat, ♩, 1, ▶, BPM |
+| Bridge | Volume des boucles, Link |
+
+- Exécution dans le pont : `/sl/N/hit` record, overdub, undo, redo, mute,
+  undo_all sur la boucle choisie ; Play / Stop global (§8 bis).
+- **Record ne part que si le transport roule** (SooperLooper suit le
+  transport). Avec la batterie arrêtée, un deuxième appui sur Record ne désarme
+  pas une boucle en attente (à corriger avec la page LOOPER).
+- Mesuré à travers le plugin (`pb_lag`, période 128) : boucle vs batterie
+  −10,6 ms = latence propre de PiPedal (entrée + sortie de l'Axe), identique
+  après Stop/Play : le trajet du plugin et du pont est exact. Test au
+  médiator : écart moyen −6,4 ms, sans dérive.
+- Bancs : `scripts/test-looper.sh` (JACK séparé), `test_looper` hors ligne.
+- À explorer dans SooperLooper : `multiply`, `insert`, `reverse`, `once`,
+  `rate`/`stretch`, quantification du mute, pistes synchronisées.
+
+## 6 bis. Jouer avec ou sans batterie
+
+- Le **tempo et la grille** viennent de `pb_timebase`, pas d'Hydrogen :
+  SooperLooper se cale sans aucune batterie. La batterie n'arrive dans PiPedal
+  **que par DLS Drum** : preset sans DLS Drum = pas de batterie (Hydrogen reste
+  lancé, silencieux). Repère sans batterie : métronome d'Hydrogen.
+- **Mode tempo** (principal) : tempo choisi avant d'enregistrer (réglage, tap) ;
+  4/4 ou 3/4 (selon le groove) ; tout est quantifié.
+- **Mode libre** (option, à faire) : la 1re boucle fixe la longueur ; le pont en
+  déduit le tempo (nombre de mesures choisi d'avance, comme MEASURE de la
+  RC-600) et place le 1 au début de la boucle.
+
+## 7. MIDI Captain
+
+### 7.1 Ce qu'on sait du Captain (firmware officiel 5.0, « super mode »)
+
+- Port MIDI « Feather RP2040 » sur le Pi. Configuration par fichiers
+  `supersetup/pageN.txt` sur sa mémoire USB (copie : `E:/DWL/Pedalboard/supersetup/` ;
+  mode d'emploi : `E:/DWL/MIDICaptainSTD_FW5.zip`).
+- Par touche : `short_dw` (appui), `short_up` (relâchement), `long` / `long_up`
+  (appui long, `long_press_timing`), `ledcolor0/1` (3 DEL), `keytimes`
+  (bascule) ; `page_name` : 6 caractères au plus.
+- **Commande externe, canal 16** : CC 20 = aller à la page N ; CC 1 à 10 = appui
+  virtuel ; CC 21 à 30 = état d'une touche à bascule. **DEL** par SysEx
+  `F0 00 04 10 <touche 1-10> <R G B> ×3 F7` (RVB 8 bits divisés par 2) ; les 3 DEL
+  d'une touche se règlent séparément (vérifié).
+- L'écran montre le nom de la page, le nom du dernier bouton appuyé, la
+  dernière commande ; **le Pi ne peut pas y écrire de texte libre**.
+- Le Captain remet la DEL d'une touche appuyée à la couleur de sa page : le
+  pont **repeint** la page après chaque appui et relâchement.
+
+### 7.2 Architecture : une page par mode
+
+| Page | Nom | Messages | Qui écoute |
+|---|---|---|---|
+| 0 | `PEDAL` | CC1 à CC10, canal 1, appui seulement | **PiPedal** (liaisons du musicien) |
+| 1 | `DRUM` | CC21 à CC30, canal 2, 127 / 0 | pont |
+| 2 | `BROWSE` | CC31 à CC40, canal 2 | pont |
+| 3 | `PARTS` | CC41 à CC50, canal 2 | pont |
+| 4 | `LOOP` (à faire) | CC51 à CC60, canal 2 | pont |
+
+- Pages générées par `scripts/gen_captain.py` (`captain/pageN.txt`, fins de
+  ligne Windows), à partir de l'en-tête de la page 0 du musicien ; à copier sur
+  le Captain. Rangée du haut : key1 à key5 ; du bas : keyA à keyE.
+- **Aucune couleur dans les pages** : le pont peint les DEL ; la table des
+  couleurs ne vit que dans le pont.
+- Le pont (`client/midi.cc`, ALSA séquenceur, client « pedal_bridge ») s'abonne
+  au Captain et à l'Axe **en parallèle de PiPedal** et les reprend s'ils sont
+  rebranchés. Il mesure la durée des appuis : une touche sans action longue agit
+  **dès l'appui** ; une touche avec action longue fait l'action courte **au
+  relâchement** et la longue **dès 0,5 s** de maintien.
+- Commande du pont `captain page N` (aussi utilisée par les touches → Browse…).
+
+### 7.3 Double switch (A, B) — à faire
+
+| | Court | Long |
+|---|---|---|
+| **A** | Play / Stop (à l'arrêt : dès l'appui ; en jouant : au relâchement) | **End** |
+| **B** | **Part ▶** | **changer de mode** (Drum → Looper → PiPedal) |
+
+Vérifié : l'Axe envoie l'appui (127) et le relâchement (0) : A = CC 65,
+B = CC 67, canal 1. Il faut **ne plus faire écouter l'Axe par PiPedal** (réglage
+MIDI de PiPedal, avec l'accord du musicien) : aujourd'hui, PiPedal change de
+preset à chaque appui. Le changement de preset passera sur la page PEDAL.
+
+En attendant (provisoire) : sur DRUM, **→ Browse tenu** ramène à PEDAL ; sur
+BROWSE et PARTS, la dernière touche **tenue** ramène à DRUM.
+
+### 7.4 Page DRUM (jouer)
+
+Rangée du **bas** : ce qu'on touche en jouant ; du **haut** : entre deux
+morceaux.
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **Haut** | Tap *(long : Metronome)* | BPM − *(tenu : continu)* | BPM + *(tenu : continu)* | → Browse | → Parts |
+| **Bas** | Fill *(long : Crash)* | Var ◀ *(long : Batterie légère)* | Var ▶ *(long : Fill long)* | Part ◀ *(long : Intro)* | Batterie on/off *(long : Break)* |
+
+- Mêmes actions que les boutons de DLS Drum (fonction `drum_button` commune).
+- Tap compte le coup dès l'appui ; tenu, ce coup est annulé et le métronome
+  bascule (Tap vert quand il est allumé).
+- Pas de démo sur cette page : Part ◀ ▶ ne parcourent que les parties, End va
+  à la fin, Play démarre par l'intro.
+- **Pas encore faits** : Crash, Batterie légère, Fill long, Batterie on/off,
+  Break (§7.7).
+- Couleurs : Tap blanc (vert : métronome), BPM jaune, → pages gris, Fill
+  orange, Var cyan, Part vert, Batterie vert foncé.
+
+### 7.5 Page BROWSE (choisir, écouter la chanson)
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **Haut** | Style ◀ *(long : Kit ◀)* | Style ▶ *(long : Kit ▶)* | Type ◀ | Type ▶ | Metronome |
+| **Bas** | Beat ◀ | Beat ▶ | Part ◀ | Part ▶ | → Parts *(long : → DRUM)* |
+
+- **Kit ◀ ▶** (Style tenus) : change la liste Kit dans PiPedal. En jouant :
+  Stop, chargement du gros morceau du kit (~2,5 s), puis reprise sur la même
+  partie et variation, sans intro, **à la mesure 1** (pour rester calé avec les
+  boucles). À l'arrêt : chargement tout de suite.
+- **Metronome** : DEL verte allumé, rouge éteint.
+- **Mode démo** (en jouant) : la chanson se déroule en boucle comme une vraie :
+  Intro, puis **deux fois** [Verse ×2, Pre-Chorus, Chorus ×2, Bridge], puis
+  Outro (sinon fill + coup final), **une mesure sans batterie**, et on
+  recommence. Parties à None sautées ; fill entre deux parties si Auto Fill ;
+  l'intro suit la liste Intro (Metronome = une mesure de clic à chaque tour).
+  Repart à l'intro : Play depuis BROWSE, arrivée sur BROWSE en jouant, nouveau
+  beat. **Part ◀ ▶** (et ceux de DLS Drum pendant la démo) : étape précédente /
+  suivante de **toute la chanson**, Intro et Outro compris. En quittant BROWSE,
+  la démo s'arrête, la partie en cours continue.
+- Couleurs par paire : Style jaune, Type orange, Beat cyan, Part vert.
+
+### 7.6 Page PARTS (régler intro, parties, outro : audition)
+
+| | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **Haut** | Intro | Verse | Pre-Chorus | Chorus | Bridge |
+| **Bas** | Back | Next | Outro | AutoFill | → Browse *(long : → DRUM)* |
+
+- Appuyer sur Intro, une partie ou Outro la **sélectionne** et la fait
+  **boucler** (l'Intro et l'Outro aussi). **À l'arrêt**, choisir ne fait que
+  sélectionner ; **Play** la lance, batterie seule. **En jouant** : à la mesure
+  suivante.
+- **Back / Next** changent la valeur de la sélection (retenue par chanson) :
+  Intro (Off, Metronome, A…), partie (None, A…), Outro (A…, ou fins fill + coup
+  final).
+- **None / Off en jouant** : mesures vides (le transport continue) ; le
+  prochain choix repart à la mesure.
+- En arrivant sur PARTS en jouant, la partie qui joue est sélectionnée ; en
+  quittant pendant que l'intro, l'outro ou le décompte boucle, retour à la
+  partie à la mesure suivante.
+- **DEL** : une couleur par partie (Intro bleu, Verse vert, Pre-Chorus
+  turquoise, Chorus orange, Bridge violet, Outro magenta), vive si
+  sélectionnée, **5 %** sinon ; None / Off : deux DEL de la couleur de la
+  partie et **celle du milieu rouge** ; Back / Next : couleur de la
+  sélection ; AutoFill vert / rouge.
+
+### 7.7 Fonctions encore à faire
+
+| Fonction | Effet prévu |
+|---|---|
+| **Batterie on/off** | coupe la batterie (mute d'Hydrogen) ; boucles et tempo continuent ; revient pile sur le 1 |
+| **Batterie légère** | coupe grosse caisse et caisse claire, garde les cymbales (montées, passages calmes) ; bascule |
+| **Break** | une mesure de silence (ou un coup sur le 1), puis le groove repart |
+| **Crash** | un coup de crash sur le prochain 1 |
+| **Fill long** | fill de 2 mesures ou plus ; à défaut, deux fills courts |
+| **Page LOOPER** | boutons du looper au pied, état des boucles en couleur |
+
+### 7.8 DEL : un seul responsable
+
+`pipedal_leds.py` (dépôt `captain-manager`) colore la page PEDAL selon les
+effets et snapshots de PiPedal ; le pont colore ses pages. Ils ne doivent pas
+écrire en même temps : à décider quand on fera le changement de mode (intégrer
+`pipedal_leds.py` au pont, ou lui transmettre le mode).
 
 ## 8. Tempo sans saut
 
-Problème : SooperLooper place sa grille depuis la trame 0 avec le tempo actuel.
-Si le tempo change en cours de lecture, la grille saute.
+SooperLooper place sa grille depuis la trame 0 avec le tempo actuel. Un tempo
+changé en cours de lecture est donc appliqué **au début de la mesure suivante**,
+et à cet instant `pb_timebase` **repositionne le transport** à la trame de cette
+mesure au nouveau tempo (`trame = mesure × temps × trames par temps`). La mesure
+ne saute pas, la grille de SooperLooper reste alignée. Vérifié : « mesure 5
+temps 4 » à 160 BPM → « mesure 6 temps 1 » à 200 BPM ; `sl-sync-test.sh`
+(100 → 120 → 100 puis record) : départ pile au 1, décalage −2,8 ms comme sans
+changement.
 
-Correction prévue dans le maître du temps : appliquer un nouveau tempo **au
-prochain début de mesure**, et à ce moment **repositionner le transport** à la
-trame qui correspond à ce numéro de mesure au nouveau tempo
-(`trame = (mesure − 1) × 4 temps × trames par temps`). Mesure, Hydrogen et grille
-de SooperLooper restent alors d'accord, sans saut audible de la batterie.
+Hydrogen 1.2.0-beta accumulait des notes après un changement de tempo en
+lecture (son doublé, CPU ×4, jusqu'au Stop : bug Hydrogen #1953, corrigé en
+1.2.4). **Réglé avec Hydrogen 1.2.7** (§10).
 
-**Fait (2026-11-18)** dans `pb_timebase` (callback de traitement : quand la
-barre suivante tombe dans le cycle, `jack_transport_locate` à la trame de cette
-mesure au nouveau tempo ; le tempo est appliqué au cycle du repositionnement).
-Vérifié : « mesure 5 temps 4 » à 160 BPM -> « mesure 6 temps 1 » à 200 BPM ;
-`sl-sync-test.sh` essai 3 (100 -> 120 -> 100 puis record) : départ à la mesure
-10 temps 1.00, décalage -2,8 ms comme sans changement.
-
-**Reste un défaut d'Hydrogen 1.2.0-beta** : après un changement de tempo en
-lecture, il accumule des notes qui ne s'éteignent plus (CPU d'h2cli ×3 à ×4,
-son brouillon) jusqu'au prochain Stop. Avant ce correctif aussi (la mesure
-sautait). Mesures : 3 % -> 11-12 % après quelques changements, 3 % après
-Stop/Play ; changer de pattern ne l'efface pas, un relocate non plus.
-C'est le bug Hydrogen #1953 (« Audio sounds duplicated after tempo change as
-transport slave »), corrigé dans la 1.2.4. **Réglé (2026-11-18)** avec Hydrogen
-1.2.7 compilé dans `~/hydrogen-1.2.7` (voir `docs/installations.md`) :
-2 % de CPU avant, après le balayage de tempo et après Stop/Play ; gros morceau
-ouvert en 2,3 s (3,5 s avec la 1.2.0-beta) ; Fill, parties, fin vérifiés.
-
-Les boucles déjà enregistrées à l'ancien tempo ne s'étirent pas, sauf si l'option
-« t. stretch » de SooperLooper le fait proprement (à tester).
+Les boucles déjà enregistrées ne s'étirent pas (« t. stretch » de SooperLooper
+à tester).
 
 ## 8 bis. Stop, Play et chansons sauvegardées
 
-But : un **vrai stop** puis un **play depuis la mesure 1**, batterie et boucles
-ensemble, et pouvoir **sauvegarder** boucles + batterie pour y revenir plus tard.
-
-### Ce qu'on a mesuré (`pb_lag`, batterie enregistrée dans une boucle)
-
-| Situation | Boucle vs batterie |
+| Situation (`pb_lag`) | Boucle vs batterie |
 |---|---|
-| Lecture continue après l'enregistrement | −22,67 ms (compensation de SooperLooper appliquée) |
-| Relance par `trigger` (play depuis la mesure 1) | 0 ms : **compensation perdue** (22,7 ms de retard) |
-| Idem avec toute la compensation à l'entrée | 0 ms : pareil |
-| Pause/reprise (pause_on/pause_off + transport) | garde la compensation, mais +3 à 4 ms à **chaque** pause (cycles JACK différents) |
-| **Boucle sauvée, audio décalé de 1088 trames, rechargée, puis `trigger`** | **−22,67 ms, identique 3 fois de suite** |
+| Lecture continue après l'enregistrement | −22,67 ms (compensation appliquée) |
+| Relance par `trigger` | 0 ms : **compensation perdue** |
+| Pause / reprise | garde la compensation, mais +3 à 4 ms à chaque pause |
+| **Audio de la boucle décalé de D trames, puis `trigger`** | **−22,67 ms, identique** |
 
-Conclusion : SooperLooper ne compense pas en modifiant l'audio, il **décale la
-lecture**, et `trigger` oublie ce décalage. Si l'**audio de la boucle est
-décalé lui-même** du même nombre de trames, `trigger` tombe juste, et une boucle
-rechargée d'un fichier aussi.
+SooperLooper compense en décalant la lecture, et `trigger` l'oublie. Le pont
+décale donc **l'audio de la boucle elle-même** (normalisation) :
 
-### Réalisé dans le client (`client/controle.cc`)
+- **stop** : transport arrêté, boucles en pause, puis normalisation des
+  boucles neuves (`save_loop`, rotation de D = latence envoi + retour au moment
+  de l'enregistrement, `load_loop`). Refusé pendant un enregistrement.
+- **play** : stop, transport à la trame 0, `trigger` de toutes les boucles,
+  départ. Toujours depuis la mesure 1.
+- **save NOM / load NOM** : `~/pedal-bridge/chansons/NOM/` (boucles
+  normalisées, tempo, `NOM.h2song`).
+- Seul un enregistrement neuf rend une boucle « à normaliser ». Une boucle
+  normalisée est définitive (vérifié même après changement de période JACK).
+  État gardé dans `~/pedal-bridge/travail/etat.txt`.
+- **Boucles muettes** : gardées muettes après Stop puis Play ; un Mute fait à
+  l'arrêt est retenu.
+- **Mesures de 3 temps** : groove de 144 ticks = 3 temps ; le pont envoie
+  `beats N` à `pb_timebase`. Les 4/4 swing « tassés » dans 144 ticks sont
+  réécrits par `scripts/h2_swing44.py`.
 
-Commandes texte par UDP (`pedal_bridge --cmd "..."`, ou `session.sh play`,
-`pause`, `save NOM`, `load NOM`, `list`, `boucles`) :
+Limites : ne pas changer la période JACK pendant que SooperLooper tourne (il
+plante ; `session.sh` refuse) ; un undo qui annule une normalisation n'est pas
+détecté.
 
-- **stop** : transport arrêté + boucles en pause, puis **normalisation** des
-  boucles qui en ont besoin : `save_loop` (WAV float, ~20 ms pour 4 s),
-  rotation de l'audio de D = latence envoi + retour **au moment de
-  l'enregistrement** de la boucle (1088 trames aujourd'hui),
-  `load_loop`. Refusé pendant un enregistrement en cours.
-- **play** : stop (normalise au besoin), transport à la trame 0, `trigger` de
-  toutes les boucles (armées, elles partent sur la première barre), départ du
-  transport. Toujours depuis la mesure 1.
-- **save NOM** : `~/pedal-bridge/chansons/NOM/` : `boucleN.wav` (normalisées),
-  `chanson.txt` (tempo, D, fréquence, longueurs).
-- **load NOM** : `load_loop` de chaque boucle (les autres sont vidées), tempo
-  envoyé à `pb_timebase`, transport à la mesure 1, **sans aucun décalage**.
-- Seul un **enregistrement neuf** (état record) rend une boucle « à normaliser » :
-  un overdub sur une boucle normalisée tombe juste (mesuré : pic unique à
-  −22,67 ms après overdub de la même batterie).
-- **Une boucle normalisée est définitive.** Au playback, la boucle et la batterie
-  passent par le même chemin de retour : elles restent alignées même si la
-  latence change ensuite (période JACK, réglages de PiPedal). Mesuré : boucle
-  normalisée avec D = 1088, puis pont relancé avec D = 1536 : toujours −22,67 ms,
-  et chanson sauvée à 1088 rechargée à 1536 : −22,67 ms.
-- **État gardé** dans `~/pedal-bridge/travail/etat.txt` (index, longueur, D) :
-  après un redémarrage du pont, les boucles déjà normalisées sont reconnues
-  (même longueur) et ne sont pas décalées deux fois.
+## 9. Sections (à faire)
 
-Mesures (`pb_lag`, batterie branchée directement dans la boucle 2) : −22,67 ms
-en lecture continue, après 3 × stop + play, après save + load + play, et après
-un redémarrage du pont. Partout identique.
+SooperLooper n'a pas de mode chanson ; le pont en fera un, calé sur la mesure :
+une **section** = quelles boucles jouent + une longueur en cycles ; une
+**chanson** = une liste de sections (`A×4, B×4, A×4`). Au pied : section
+suivante au prochain cycle, ou enchaînement automatique. Idée : lier les
+sections aux parties de la batterie (une boucle pour le couplet, une pour le
+refrain).
 
-### Limites connues
+## 10. Hydrogen
 
-- **Ne pas changer la période JACK pendant que SooperLooper tourne** : il
-  plante (constaté, boucles perdues). `session.sh start` refuse maintenant de
-  la changer dans ce cas.
-- **Hydrogen** (fait, §10) : `save` écrit aussi `NOM.h2song` (`SAVE_SONG_AS`),
-  `mode=pattern` et le groove retenu ; `load` rouvre le morceau (`OPEN_SONG`),
-  remet le mode Pattern, le groove et l'affichage du tempo. Vérifié à l'écran
-  (titre, pattern, BPM). Le groove n'est connu que s'il a été choisi par
-  `groove N` : Hydrogen n'annonce pas un pattern cliqué dans son interface.
-  `SAVE_SONG_AS` fait aussi de ce fichier le morceau « courant » d'Hydrogen.
-- **Cycle = longueur du groove** (fait) : le client lit la taille des patterns
-  dans le `.h2song` (au `save` et au `load` ; 48 ticks par noire, 192 = une
-  mesure de 4/4) et, à chaque `groove N` ou `load`, règle `eighth_per_cycle` de
-  SooperLooper = taille / 24. Un groove de 2 mesures donne un cycle de 2
-  mesures : l'enregistrement part au **début du groove** et finit à sa **fin**.
-  Mesuré avec un groove de test (A = 4 coups, B = 1 coup) : A sur les mesures
-  1, 3, 5… ; record appuyé pendant A (mesure 1) → départ mesure 3, stop pendant
-  B (mesure 4) → fin de la mesure 4 (2 mesures) ; record pendant B (mesure 8)
-  → départ mesure 9, stop pendant A (mesure 11) → fin de la mesure 12
-  (4 mesures).
-- Taille des patterns connue pour le morceau ouvert par `batterie CHEMIN`,
-  `load`, ou au démarrage : le client **retient le morceau qu'il a ouvert**
-  (`travail/morceau-batterie.txt`), car Hydrogen n'écrit son
-  `lastSongFilename` qu'en quittant ; à défaut, ce `lastSongFilename`.
-- **Mesures de 3 temps** (fait) : groove de 144 ticks = 3 temps, 192 = 4 temps.
-  Le client envoie `beats N` à `pb_timebase` (temps par mesure : Beat, voyant 1,
-  mesure 1) et règle le cycle de SooperLooper sur la longueur du groove.
-  Vérifié avec la valse de la collection RP Bardet : compteur 1-2-3, boucle
-  enregistrée juste. Changer le nombre de temps pendant la lecture fait sauter
-  la position (la mesure est comptée depuis la trame 0).
-- **4/4 swing « tassé »** : certains morceaux (Jazz, Shuffle, Swing, une partie
-  de Reggae chez RP Bardet) écrivent une mesure de 4/4 dans 144 ticks (temps à
-  0, 36, 72, 108). `scripts/h2_swing44.py` les réécrit en vraies mesures de
-  192 ticks (positions × 4/3 : triolets à 16 ticks, comme Hydrogen les écrit).
-- **Boucles muettes** (fait) : une boucle muette le reste après Stop puis Play,
-  et un Mute fait à l'arrêt est retenu (État « muted »). SooperLooper efface un
-  `mute_on` reçu avant le vrai départ de la boucle (vérifié) : le client
-  l'envoie juste après le départ du transport et le répète pendant 40 ms. Même
-  idée que la RC-600 (piste arrêtée avec LOOP SYNC : elle revient en place).
-- Hydrogen crée un fichier `.NOM.autosave.h2song` dans le dossier du morceau
-  ouvert.
-- Un **undo** qui ramène une boucle à son contenu d'avant la normalisation
-  (annuler le chargement) n'est pas détecté.
-- Une boucle réenregistrée **pendant que le pont est arrêté**, avec exactement
-  la même longueur, serait prise pour normalisée.
+- **Version 1.2.7**, compilée dans `~/hydrogen-1.2.7` (Debian bookworm n'a que
+  la 1.2.0-beta). `session.sh` l'utilise s'il existe (`PB_H2=/usr` : celle de
+  Debian). Lancé sans fenêtre (`h2cli`) ; `PB_GUI=1` pour les interfaces.
+- En écoute du transport JACK (J.Trans), jamais maître : il suit le tempo de
+  `pb_timebase`.
+- **OSC** (`oscEnabled` dans `~/.hydrogen/hydrogen.conf`), port 9000 : on
+  utilise `OPEN_SONG`, `SELECT_ONLY_NEXT_PATTERN` (choisit sans démarrer ;
+  sélectionner le numéro déjà choisi est ignoré : forcer 1 puis 0 après un
+  chargement), `SONG_MODE_ACTIVATION 0` (mode Pattern), `TOGGLE_METRONOME`,
+  `SAVE_SONG_AS`. Retour d'état : table de mixage, métronome ; **pas** le
+  pattern ni le tempo (le pont les retient).
+- **Bibliothèque DLS** (`scripts/gen_rythmes.py`) : rythmes écrits pour ce
+  projet, toujours la même structure (Intro, Verse, Verse fill, Chorus, Chorus
+  fill, Transition, Ending). Conversion des packs MIDI : `scripts/midi2h2.py`.
+- Kits dans `~/.hydrogen/data/drumkits` : AVL Black Pearl, AVL Red Zeppelin
+  (CC BY-SA, Glen MacArthur), DeathMetal (CC-BY, Archman ; ancien format :
+  `scripts/modele_kit.py`, `--gain 5`), plus GMRockKit d'Hydrogen.
 
-## 9. Sections (enchaîner les boucles)
+## 11. Écran OLED (à faire)
 
-SooperLooper n'a pas de mode chanson ; le client en fait un, calé sur la mesure.
+Waveshare 2,42 po, SSD1309, 128 × 64, en SPI.
 
-- Une **section** = quelles boucles jouent (les autres sont muettes) + une
-  longueur en cycles (ex. 4).
-- Une **chanson** = une liste de sections, ex. `A×4, B×4, A×4`, en boucle ou non.
-- Au pied :
-  - « Section suivante » : bascule au prochain début de cycle ;
-  - mode auto : la liste s'enchaîne toute seule.
-- Bascule = mute et unmute envoyés par OSC **juste avant** la barre, avec la
-  quantification du mute de SooperLooper pour que ça tombe pile.
-- Définition des chansons : petit fichier `~/.config/pedal-bridge/chansons.json`
-  au début. Plus tard, enregistrement au pied (« apprendre » : la section dure le
-  nombre de cycles joués avant l'appui suivant).
+| Module | Rôle | Pi (broche / GPIO) |
+|---|---|---|
+| VCC | 3,3 V | 1 |
+| GND | masse | 6 |
+| DIN | MOSI | 19 / GPIO 10 |
+| CLK | horloge | 23 / GPIO 11 |
+| CS | sélection | 24 / GPIO 8 (CE0) |
+| DC | données/commande | 22 / GPIO 25 |
+| RST | reset | 13 / GPIO 27 |
 
-## 10. Hydrogen : grooves et fills
+- À activer : `dtparam=spi=on` dans `/boot/firmware/config.txt` puis
+  redémarrage (commande sudo, avec accord). `pedalboard` est déjà dans les
+  groupes `spi` et `gpio`.
+- Programme `pb_display` (C, `spidev` + `libgpiod`) : il lit l'état du pont et
+  affiche ce que PiPedal et le Captain ne peuvent pas : **noms du Style, du
+  Type et du Beat**, partie et variation, tempo, mesure et temps, état des
+  boucles. Mise en page d'abord en images PNG sur le PC.
 
-- **OSC d'Hydrogen activé** (accord donné) : `oscEnabled` = true dans
-  `~/.hydrogen/hydrogen.conf` (sauvegarde : `hydrogen.conf.bak-20261114-224403`).
-  Hydrogen écoute en UDP sur le port **9000, toutes interfaces** (accessible
-  depuis le réseau local, comme l'OSC de SooperLooper).
-- **Retour d'état** : un programme qui lui a écrit reçoit l'état de la table de
-  mixage (volume, pan, mute, solo de chaque instrument), le métronome et le mute
-  général. **Pas** le tempo, le mode ni le pattern sélectionné : c'est donc notre
-  système qui doit retenir le pattern qu'il a demandé.
-- **Commandes présentes dans la 1.2.0-beta** (liste tirée du programme) :
-  `OPEN_SONG`, `SAVE_SONG`, `SAVE_SONG_AS`, `NEW_SONG`, `SELECT_AND_PLAY_PATTERN`,
-  `SELECT_NEXT_PATTERN`, `SELECT_ONLY_NEXT_PATTERN`, `SONG_MODE_ACTIVATION`,
-  `LOOP_MODE_ACTIVATION`, `BPM`, `BPM_INCR`/`DECR`, `TAP_TEMPO`, `PLAY`, `STOP`,
-  `PAUSE`, `RELOCATE`, `NEXT_BAR`, `PREVIOUS_BAR`, `LOAD_DRUMKIT`,
-  `TOGGLE_METRONOME`, `MUTE`/`UNMUTE`, `JACK_TRANSPORT_ACTIVATION`,
-  `JACK_TIMEBASE_MASTER_ACTIVATION`, table de mixage par instrument.
-  À tester une par une (arguments, comportement en écoute du maître du temps).
-- Pour une chanson : `SAVE_SONG_AS` (le `.h2song` dans le dossier de la chanson),
-  `OPEN_SONG` au chargement, mode (`SONG_MODE_ACTIVATION`), pattern retenu par
-  le client (`SELECT_ONLY_NEXT_PATTERN` : choisit sans démarrer ;
-  `SELECT_AND_PLAY_PATTERN` démarre le transport), et `BPM` pour que l'affichage
-  d'Hydrogen suive `pb_timebase`.
-- **Mode Pattern** : `SONG_MODE_ACTIVATION 0` met Hydrogen en mode Pattern
-  (vérifié depuis le mode Song). `session.sh start` l'envoie à chaque démarrage.
-- Fill = pattern dédié, joué une mesure, puis retour au groove. Le client envoie
-  le changement juste avant la barre.
-- **Bibliothèque de rythmes DLS** (`scripts/gen_rythmes.py`) : rythmes écrits
-  pour ce projet (grilles de 16 ou 12 pas), un `.h2song` par style, toujours
-  la même structure (1 Intro, 2 Verse, 3 Verse fill, 4 Chorus, 5 Chorus fill,
-  6 Transition, 7 Ending), pensée pour un futur bouton Fill / passage de
-  partie à la BeatBuddy. Styles : Rock, Funk, Shuffle, Punk, Metal.
-  - **Kits** : les grilles utilisent des rôles (K, S, H, C…) ; un fichier
-    `scripts/kits/*.kit` donne l'instrument de chaque rôle dans un kit, avec
-    des remplaçants. Modèle de morceau par kit : fait par Hydrogen
-    (`NEW_SONG`, `LOAD_DRUMKIT`, `SAVE_SONG`), dans `~/dls-modeles` sur le Pi.
-  - Kits installés dans `~/.hydrogen/data/drumkits` (sans sudo) depuis la
-    bibliothèque officielle d'Hydrogen (SourceForge) : AVLDrumkits-BlackPearl-2023
-    et AVLDrumkits-RedZeppelin-2023 (CC BY-SA, Glen MacArthur ; 5 nuances de
-    frappe), DeathMetal (CC-BY, Archman). Fichiers produits : « DLS Rock »
-    (GMRockKit), « DLS Rock - Black Pearl », etc.
-  - **Kits de l'ancien format** (DeathMetal, 2008) : Hydrogen 1.2 n'arrive pas
-    à les convertir (instruments sans son et en sourdine). `scripts/modele_kit.py`
-    fabrique le modèle à partir du `drumkit.xml` ; `--gain 5` pour DeathMetal,
-    enregistré trop bas (mesuré : 0,03 au plus fort contre 0,27 pour Black
-    Pearl ; 0,16 après).
-- **Gros morceau unique (fait, 2026-11-17)** : `scripts/gros_morceau.py` réunit
-  toutes les chansons du dossier DLS Drums (et sous-dossiers de style), rendues
-  pour un kit, dans `~/dls-batterie/gros/<kit>.h2song` (+ `.index.txt` :
-  premier pattern et nombre par chanson). Mesuré : 88 chansons, 2 609
-  patterns, 28 Mo, fabriqué en 1,7 s, chargé en moins de 4 s ; Hydrogen passe
-  de 515 Mo à 1 Go de mémoire (2,4 Go restent libres), processeur inchangé.
-  Le pont : changer de **chanson** = sauter à sa fenêtre de patterns (Groove,
-  Previous/Next, Playing comptés dans la chanson), **même en jouant** (vérifié :
-  la lecture continue) ; changer de **kit** = charger le gros morceau de ce kit,
-  à l'arrêt ; le gros morceau est refait s'il manque ou s'il est plus vieux
-  qu'une chanson, que le `.kit` ou que le script.
-- **Gros morceau allégé et Hydrogen sans fenêtre (2026-11-17)** : les
-  réglages de note égaux aux valeurs par défaut d'Hydrogen sont retirés
-  (27 -> 10,6 Mo, 92 380 notes identiques une fois relues). `session.sh`
-  lance par défaut `h2cli` (Hydrogen sans fenêtre, même OSC et même JACK) et
-  ni slgui ni écran virtuel (`PB_GUI=1` pour les interfaces). Mesuré : gros
-  morceau chargé en 2,6 s (6,2 s avant) ; mémoire utilisée 1,2 Go (2,3 Go
-  avant). Vérifié en jouant : grille, groove, métronome, boucle SooperLooper
-  calée sur le cycle. Après un chargement, Hydrogen reste occupé puis remet le
-  premier pattern : le pont attend qu'il soit calme (temps processeur) avant
-  de choisir le groove.
-- Ancienne note : changer de style sans coupure. Changer de morceau
-  (`OPEN_SONG`) recharge tout : la batterie se tait 1 à 1,5 s. Pour l'instant,
-  un morceau choisi pendant la lecture (sélecteur Song) est ouvert au prochain
-  Stop. Solution prévue : tous les styles de la collection RP Bardet utilisent
-  la même batterie (GMRockKit), donc on peut les **réunir dans un seul gros
-  morceau** (277 patterns, une plage de patterns par style). Choisir un style =
-  sauter à ses patterns, aussi instantané qu'un groove. À prévoir :
-  - un script qui fusionne les `.h2song` (mêmes instruments vérifiés, patterns
-    renumérotés) et écrit la table style → plage de patterns ;
-  - le sélecteur Song garde un fichier par style (repère), le pont le traduit
-    en plage ; Groove, Previous et Next restent dans la plage du style ;
-  - la liste Groove (1–16) et Playing restent relatives au style ;
-  - vérifier qu'Hydrogen garde un morceau de près de 300 patterns sans problème.
-- Alternative si l'OSC est trop limité : piloter Hydrogen par MIDI (notes et
-  changements de programme), ou mettre à jour Hydrogen (§13).
+## 12. Suite
 
-## 11. Écran OLED (Waveshare 2,42 po, SSD1309, 128 × 64)
-
-- **SPI** (réglage d'usine). Branchement prévu :
-
-  | Module | Rôle | Pi (broche / GPIO) |
-  |---|---|---|
-  | VCC | 3,3 V | 1 |
-  | GND | masse | 6 |
-  | DIN | MOSI | 19 / GPIO 10 |
-  | CLK | horloge | 23 / GPIO 11 |
-  | CS | sélection | 24 / GPIO 8 (CE0) |
-  | DC | données/commande | 22 / GPIO 25 |
-  | RST | reset | 13 / GPIO 27 |
-
-- À activer : `dtparam=spi=on` dans `/boot/firmware/config.txt`, puis
-  redémarrage (**commande sudo donnée au moment voulu**). Le compte `pedalboard`
-  est déjà dans les groupes `spi` et `gpio`.
-- Programme `pb_display` (C, `spidev` + `libgpiod`, sans RPi.GPIO qui ne marche
-  pas sur le Pi 5). Il lit l'état du client et le nom du preset PiPedal (par le
-  WebSocket de PiPedal), et rafraîchit environ 20 fois par seconde.
-- Écrans :
-  - **PiPedal** : nom du preset, effets actifs ;
-  - **Batterie** : tempo en gros, groove, fill en attente, mesure et temps ;
-  - **Looper** : 8 cases de boucles avec leur état, boucle choisie, section
-    (en cours → suivante), mesure et temps, avec le **1 mis en évidence**.
-- Avant de recevoir l'écran : rendu en **images PNG** 128 × 64 pour régler la mise
-  en page sur le PC.
-
-## 12. Étapes de réalisation
-
-Chaque étape est testée (banc JACK séparé quand c'est possible), puis validée à
-l'oreille avant la suivante.
-
-1. **Mesures (d)** : latence, dérive, xruns, CPU sur 10 minutes ; origine des
-   xruns vus par SooperLooper.
-2. **Modes et routeur MIDI** (§7) : (relâchement de l'Axe : vérifié) ; lire les pages du Captain (quels CC par page) ; routeur
-   court/long dans le client ; changement de page par CC 20.
-3. **Vérifier PiPedal** avec un plugin minimal : rendu des boutons momentanés
-   (`lv2:trigger` ou équivalent), des voyants de sortie, liaison d'un CC à un
-   bouton, comportement d'un plugin mono ou stéréo placé en début de chaîne
-   mono (§4 bis), et **sélecteur de fichier** : dossiers acceptés, droits
-   d'écriture, mise à jour de la liste, ce qui est gardé dans le preset (§5).
-   **Fait avec DLS Test** (2026-11-15) :
-   - titre long (`doap:name` « Davis Loop Station … ») dans la fiche, étiquette
-     courte (`mod:label` « DLS … ») dans la chaîne, coupée vers 14 caractères
-     (« DLS Test (Stér… ») ; `rdfs:comment` des ports affiché en bulle ;
-   - bascule, bouton momentané (`epp:trigger`) et menu : OK ;
-   - **liaison MIDI** d'un CC du Captain (CC 6) au bouton momentané : +1 à
-     chaque appui ;
-   - sorties : voyant (toggled) et voyant clignotant OK ; une sortie avec
-     `lv2:enumeration` affiche son **texte** (« vide », « enregistre »…) : à
-     utiliser pour l'état du Looper et les compteurs ; une sortie numérique
-     simple s'affiche en **barre** (pas de chiffre) ;
-   - noms de sortie courts collés les uns aux autres (« VoyantAppuis… ») :
-     prendre des noms plus longs ;
-   - sélecteur de fichier : voir §5 ;
-   - écoute en début de chaîne : son identique, avec ou sans le plugin
-     (sortie sur un seul haut-parleur Headrush : les deux côtés du stéréo
-     restent à vérifier au casque).
-4. **Fichier de contrôle + DLS Looper** (mono et stéréo, audio intégré :
-   envoi + retour des boucles sur le lien 1 ; record, overdub, undo, mute,
-   boucle, état) ; `pb_timebase` intégré au client.
-5. **DLS Drum** (mono et stéréo, retour de la batterie sur le lien 2) :
-   tempo, play/stop, début, tap ; tempo sans saut (§8). Branchements JACK :
-   SooperLooper → `return1`, Hydrogen → `return2`.
-   **Fait** (2026-11-15, §5 « Réalisé ») : groove, précédent/suivant, Playing,
-   Play/Stop, Tempo, BPM +/-, Tap, Metronome, mesures de 3 temps, affichage
-   par le websocket de PiPedal. Restent : tempo sans saut (§8), fill, choix du
-   morceau dans PiPedal (collection, sélecteur de fichier).
-6. **Hydrogen OSC** : grooves et fills (OSC activé ; `groove N` fait).
-7. **Sections** (§9).
-8. **Écran** : rendu PNG, puis vrai écran après activation du SPI.
-9. **DEL du Captain** par SysEx, selon le mode ; un seul programme responsable
-   (intégration de `pipedal_leds.py`).
+1. **Double switch A/B par le pont** (§7.3) — avec l'accord pour le réglage
+   MIDI de PiPedal ; puis changement de mode et DEL de la page PEDAL (§7.8).
+2. **Fonctions de batterie restantes** (§7.7) : Batterie on/off, Break,
+   Crash, Batterie légère, Fill long.
+3. **Page LOOPER** du Captain.
+4. **Sections** (§9).
+5. **Écran OLED** (§11).
+6. Mode libre (§6 bis).
 
 ## 13. Questions ouvertes
 
-- Pages du Captain : combien, et quels CC envoie chaque touche dans chaque page ?
-  (Le firmware officiel se configure par fichiers sur son lecteur USB.)
-- `pipedal_leds.py` : l'intégrer au client, ou le garder en Python et lui
-  transmettre le mode ?
-- PiPedal 2.0.111 : liaison MIDI sur un bouton momentané à maintien
-  (`mod:preferMomentaryOffByDefault`, BPM +/-) : le Captain doit envoyer 127 à
-  l'appui et 0 au relâchement — à vérifier.
-- (Réglé : Hydrogen 1.2.7 compilé dans `~/hydrogen-1.2.7`, voir §8.)
+- `pipedal_leds.py` : l'intégrer au pont, ou lui transmettre le mode (§7.8) ?
+- Changement de preset au relâchement (appui court de la page PEDAL ou du
+  double switch) : acceptable à l'usage ?
 - SooperLooper : « t. stretch » utilisable au changement de tempo ?
-- Changement de preset au relâchement (appui court) : acceptable à l'usage ?
+- Démarrage automatique de la session au démarrage du Pi (service système,
+  avec accord) ?
