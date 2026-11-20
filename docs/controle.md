@@ -665,6 +665,26 @@ ramène à PEDAL ; sur BROWSE et PARTS, la dernière touche **tenue** ramène à
 (appuyée brièvement : l'autre page). Pas encore faits : Crash, Batterie légère,
 Fill long, Batterie on/off, Break ; pages BROWSE et PARTS ; double switch A/B.
 
+*Pages BROWSE et PARTS actives (2026-11-19)* :
+- BROWSE : Style, Type, Beat ◀ ▶ (fonction Browse), Metronome (DEL verte /
+  rouge), **Kit ◀ ▶** (liste Kit de PiPedal ; en jouant : Stop, chargement, puis
+  reprise sur la même partie et variation, sans intro, **à la mesure 1** pour
+  rester calé avec les boucles).
+- PARTS (audition) : la sélection (Intro, partie, Outro) boucle ; **à l'arrêt,
+  choisir ne fait que sélectionner**, Play (Play/Stop de DLS Drum, plus tard A)
+  la lance, batterie seule ; **en jouant**, changement à la mesure suivante.
+  Back / Next changent la valeur (retenue par chanson). **None / Off en jouant :
+  mesures vides** (le transport continue) ; le prochain choix repart à la
+  mesure. En quittant PARTS pendant que l'intro, l'outro ou le décompte boucle,
+  retour à la partie à la mesure suivante. AutoFill : DEL verte / rouge.
+- DEL de PARTS : une couleur par partie, vive si sélectionnée, **5 %** sinon
+  (`PALE`) ; None / Off : **deux DEL de la couleur de la partie, celle du milieu
+  rouge** (vive ou pâle) ; le Captain règle bien ses 3 DEL séparément.
+- **Parties absentes** (chanson à parties incomplète, ex. Pop Punk/Modern :
+  Verse seulement) : elles existent aussi, à **None au départ** (sautées), et
+  puisent dans tous les grooves de la chanson ; leur donner une variation (PARTS
+  ou liste Variation) en fait une vraie partie, retenue par chanson.
+
 *Réalisation* : le pont lit lui-même le Captain (CC de ces pages) et commande
 ses DEL (SysEx) et ses pages (CC 20) : routeur MIDI du §7. Étapes : (1) routeur
 dans le pont (Captain + double switch de l'Axe ; vérifier que l'Axe envoie le

@@ -26,6 +26,7 @@
 #include <ctime>
 #include <fstream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -555,6 +556,8 @@ int g_ui_groove = 0;              // à afficher (0 = rien)
 int g_ui_tempo = 0;
 int g_ui_part = 0, g_ui_var = -1; // listes Part (1..4) et Variation (0 None, 1.. A…) à afficher ; -1 : rien
 int g_ui_intro = 0, g_ui_outro = 0; // listes Intro (1 Off, 2 Metronome, 3.. A…) et Outro (1.. A…) ; 0 : rien
+int g_ui_kit = 0;                   // liste Kit (1..N) ; 0 : rien
+int g_ui_autofill = -1;             // Auto Fill (0 / 1) ; -1 : rien
 std::string g_ui_song;              // chemin à montrer dans le sélecteur Song (Browse) ; vide : rien
 int g_ui_tempo_late = 0;          // BPM +/- : affiché une fois le bouton relâché
 double g_bpm_step_t = 0;          // dernier pas de BPM +/-
@@ -590,8 +593,13 @@ void ui_flush()
     /* Pendant qu'on tient BPM +/-, ne pas toucher aux boutons Tempo : leur
      * retour arriverait en retard et ramènerait un ancien tempo. */
     if (g_ui_tempo_late && now_s() - g_bpm_step_t > 0.4) { g_ui_tempo = g_ui_tempo_late; g_ui_tempo_late = 0; }
-    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && g_ui_var < 0 && !g_ui_intro && !g_ui_outro && g_ui_song.empty()) return;
+    if (!g_ui_groove && !g_ui_tempo && !g_ui_part && g_ui_var < 0 && !g_ui_intro && !g_ui_outro && g_ui_song.empty() &&
+        !g_ui_kit && g_ui_autofill < 0) return;
     std::vector<PipedalSet> v;
+    if (g_ui_kit) v.push_back({URI_DRUM, "kit", (float)(g_ui_kit - 1)});
+    if (g_ui_autofill >= 0) v.push_back({URI_DRUM, "auto_fill", (float)g_ui_autofill});
+    g_ui_kit = 0;
+    g_ui_autofill = -1;
     if (g_ui_intro) v.push_back({URI_DRUM, "intro", (float)(g_ui_intro - 1)});
     if (g_ui_outro) v.push_back({URI_DRUM, "outro", (float)g_ui_outro});
     if (!g_ui_song.empty()) v.push_back({URI_DRUM, "", 0.0f, "http://pedal-bridge.local/plugins/drum#song", g_ui_song});
@@ -661,6 +669,7 @@ struct SongDef {
     std::vector<std::vector<int>> intro, outro;
     std::vector<int> transition;
     bool pool = false;                                            // pack de grooves : parties « virtuelles »
+    std::set<std::string> borrowed;                               // parties absentes à la source (réservoir de grooves)
 } g_song;
 
 struct Seq {
@@ -690,6 +699,10 @@ void seq_display(uint32_t &part, uint32_t &var);
 void browse_display(uint32_t &style, uint32_t &type);
 void browse_check(const std::string &songs);
 void cap_page(int page);                           // routeur MIDI : page du Captain (plus bas)
+extern bool g_start_plain;
+extern int g_cap_page, g_psel;
+std::string parts_play();
+const std::vector<int> &phrase_of(int part);
 
 /* Arrête tout et normalise ce qui doit l'être. */
 std::string stop_all()
@@ -1226,6 +1239,8 @@ bool apply_big_choice(pb_ctl *k)
     return true;
 }
 
+bool g_kit_resume = false;     // Kit changé en jouant (page BROWSE) : repartir une fois chargé
+
 void drum_song_poll(pb_ctl *k)
 {
     std::string path;
@@ -1251,8 +1266,16 @@ void drum_song_poll(pb_ctl *k)
     /* Avec un kit et une chanson du dossier : gros morceau (changer de
      * chanson = sauter, même en jouant ; changer de kit = recharger, à l'arrêt). */
     if (g_dr_song_pending && !g_dr_kit_sel.empty() && !songs_dir_of(g_dr_song_sel).empty()) {
-        if (apply_big_choice(k)) g_dr_song_pending = false;
-        else if (changed) say("DLS Drum : nouveau kit chargé au prochain Stop");
+        if (apply_big_choice(k)) {
+            g_dr_song_pending = false;
+            if (g_kit_resume && !transport_rolling()) {      // Kit ◀ ▶ en jouant : on repart, même partie
+                g_kit_resume = false;
+                g_seq.loop = phrase_of(g_seq.part);
+                g_seq.loop_part = g_seq.part;
+                g_start_plain = true;
+                say("DLS Drum : reprise après le kit : %s", play_from_start().c_str());
+            }
+        } else if (changed) say("DLS Drum : nouveau kit chargé au prochain Stop");
         return;
     }
     if (g_dr_song_pending && !transport_rolling()) {
@@ -1316,6 +1339,20 @@ void build_song_def()
         g_song.vars.clear();
         for (const char *pn : PART_UI) { g_song.parts.push_back(pn); g_song.vars[pn] = pool; }
         g_song.pool = true;
+    } else if (!g_song.parts.empty()) {
+        /* Chanson à parties incomplète (ex. Verse seulement) : les parties
+         * absentes existent aussi et puisent dans TOUS les grooves de la
+         * chanson (variations de ses parties, dans l'ordre) ; elles sont à
+         * None au départ (sautées) tant qu'on ne leur choisit pas une variation. */
+        std::vector<std::vector<int>> pool;
+        for (const auto &pn : g_song.parts) for (const auto &ph : g_song.vars[pn]) pool.push_back(ph);
+        std::vector<std::string> order;
+        for (const char *pn : {"Verse", "Pre-Chorus", "Chorus", "Bridge", "Groove"}) {
+            const bool have = std::find(g_song.parts.begin(), g_song.parts.end(), pn) != g_song.parts.end();
+            if (have) order.push_back(pn);
+            else if (std::string(pn) != "Groove") { order.push_back(pn); g_song.vars[pn] = pool; g_song.borrowed.insert(pn); }
+        }
+        g_song.parts = order;
     }
 }
 
@@ -1529,7 +1566,7 @@ void seq_setup(uint32_t part_ui, uint32_t var_ui)
     const auto mem = g_memo.find(g_song_rel);
     for (int i = 0; i < (int)g_song.parts.size(); i++) {
         const int n = (int)g_song.vars[g_song.parts[i]].size();
-        int v = g_song.pool ? i : 0;
+        int v = g_song.pool ? i : g_song.borrowed.count(g_song.parts[i]) ? -1 : 0;   // absente : None
         if (i == g_seq.part && var_ui != UINT32_MAX) v = (int)var_ui - 1;     // 0 : None
         if (mem != g_memo.end()) {
             const auto q = mem->second.find(g_song.parts[i]);
@@ -1724,6 +1761,8 @@ std::string seq_intro()
 }
 
 /* Au Play (transport à la mesure 1) : intro ou décompte, puis la partie. */
+bool g_start_plain = false;    // prochain départ : g_seq.loop tel quel, sans intro (audition, reprise après un kit)
+
 void seq_start()
 {
     if (!g_seq.active) return;
@@ -1731,6 +1770,17 @@ void seq_start()
     g_seq.switch_at = -1;
     g_seq.stop_after = false;
     g_seq.resume_pos = 0;
+    if (g_start_plain && !g_seq.loop.empty()) {
+        g_start_plain = false;
+        g_seq.in_once = false;
+        g_seq.loop_pos = 0;
+        seq_select(g_seq.loop[0]);
+        g_seq.item_start = 0;
+        g_seq.item_len = size_beats(g_seq.loop[0]);
+        seq_cycle(g_seq.loop);
+        return;
+    }
+    g_start_plain = false;
     if (g_seq.var[g_seq.part] < 0) {                  // partie affichée sautée : la suivante
         const int j = next_on(g_seq.part, +1);
         if (j >= 0) g_seq.part = j;
@@ -2045,7 +2095,8 @@ std::string drum_button(pb_ctl *k, int b)
 {
     std::string r = "?";
     switch (b) {
-        case PB_DBTN_PLAYSTOP: r = transport_rolling() ? stop_all() : play_from_start(); break;
+        case PB_DBTN_PLAYSTOP:                         // page PARTS du Captain : la sélection, batterie seule
+        r = transport_rolling() ? stop_all() : g_cap_page == 3 && g_psel >= 0 ? parts_play() : play_from_start(); break;
         case PB_DBTN_PREV:                             // Var ◀ s'arrête à A (None : liste Variation, page Parts)
         r = g_seq.active ? seq_change(g_seq.part, std::max(g_seq.var[g_seq.part] - 1, 0), false) : step_groove(-1); break;
         case PB_DBTN_NEXT:     r = g_seq.active ? seq_change(g_seq.part, g_seq.var[g_seq.part] + 1, false) : step_groove(+1); break;
@@ -2570,33 +2621,250 @@ int g_cap_page = -1;                               // page affichée (-1 : incon
 
 /* Couleurs des DEL : ici seulement (les pages n'en ont pas). RVB 8 bits. */
 enum : uint32_t {
-    C_OFF = 0x000000, C_WHITE = 0xFFFFFF, C_DIM = 0x303030, C_YELLOW = 0xFFC000, C_ORANGE = 0xFF5000,
+    C_OFF = 0x000000, C_WHITE = 0xFFFFFF, C_DIM = 0x101010, C_YELLOW = 0xFFC000, C_ORANGE = 0xFF5000,
     C_CYAN = 0x00C0FF, C_GREEN = 0x00FF00, C_DGREEN = 0x004000, C_RED = 0xFF0000,
 };
 
 /* Une touche (1 à 10) : ses 3 DEL de la même couleur (SysEx du Captain,
  * composantes divisées par 2). */
-void cap_led(int key, uint32_t rgb)
+void cap_led3(int key, uint32_t c1, uint32_t c2, uint32_t c3)   // les 3 DEL d'une touche
 {
-    const uint8_t r = (uint8_t)((rgb >> 16 & 0xFF) / 2), g = (uint8_t)((rgb >> 8 & 0xFF) / 2), b = (uint8_t)((rgb & 0xFF) / 2);
-    midi_captain_sysex({0xF0, 0x00, 0x04, 0x10, (uint8_t)key, r, g, b, r, g, b, r, g, b, 0xF7});
+    std::vector<uint8_t> m = {0xF0, 0x00, 0x04, 0x10, (uint8_t)key};
+    for (uint32_t c : {c1, c2, c3})
+        for (int sh : {16, 8, 0}) m.push_back((uint8_t)((c >> sh & 0xFF) / 2));
+    m.push_back(0xF7);
+    midi_captain_sysex(m);
+}
+
+void cap_led(int key, uint32_t rgb) { cap_led3(key, rgb, rgb, rgb); }
+
+const double PALE = 0.05;          // couleur pâle (non sélectionnée) : 5 % de la vive
+
+/* Couleur d'une partie, plus ou moins vive (f : 1 vive, PALE pâle). */
+uint32_t scale(uint32_t rgb, double f)
+{
+    auto c = [&](int sh) { return (uint32_t)std::lround(((rgb >> sh) & 0xFF) * f) << sh; };
+    return c(16) | c(8) | c(0);
+}
+
+/* --- Page PARTS : mode audition ---
+ * Sélection : 0 Intro, 1 Verse, 2 Pre-Chorus, 3 Chorus, 4 Bridge, 7 Outro.
+ * La sélection boucle (l'intro et l'outro aussi) ; Back / Next changent sa
+ * valeur (retenue par chanson) ; None / Off arrête le son. */
+const uint32_t PART_COLOR[8] = {0x0040FF, 0x00FF00, 0x00FFA0, 0xFF6000, 0xA000FF, 0, 0, 0xFF00C0};
+int g_psel = -1;                   // sélection (-1 : aucune)
+bool g_aud = false;                // une audition joue
+bool g_aud_metro = false;          // métronome allumé par l'audition (décompte)
+
+/* Index dans la chanson de la partie 1..4 (Verse..Bridge), -1 si absente. */
+int part_idx(int sel)
+{
+    if (sel < 1 || sel > 4) return -1;
+    for (size_t i = 0; i < g_song.parts.size(); i++) if (g_song.parts[i] == PART_UI[sel - 1]) return (int)i;
+    return -1;
+}
+
+/* Sélection pour une partie de la chanson (1..4, 0 si « Groove »). */
+int sel_of_part(int idx)
+{
+    if (idx < 0 || idx >= (int)g_song.parts.size()) return 1;
+    for (int i = 0; i < 4; i++) if (g_song.parts[idx] == PART_UI[i]) return i + 1;
+    return 1;
+}
+
+/* Nombre de fins possibles : outros de la chanson, sinon fills (fill + coup final). */
+int outro_count()
+{
+    if (!g_song.outro.empty()) return (int)g_song.outro.size();
+    std::string used;
+    const std::vector<int> *fl = fill_list(g_seq.loop_part, used);
+    return fl && g_final_abs >= 0 ? std::min((int)fl->size(), 26) : 0;
+}
+
+/* Ce que l'audition fait tourner pour la sélection ; vide = silence. */
+std::vector<int> aud_phrase(int sel, bool &metro)
+{
+    metro = false;
+    if (sel == 0) {
+        if (g_intro_choice == 2 && g_silence_abs >= 0) { metro = true; return {g_silence_abs}; }
+        if (g_intro_choice >= 3 && !g_song.intro.empty())
+            return g_song.intro[std::min(g_intro_choice - 3, (int)g_song.intro.size() - 1)];
+        return {};
+    }
+    if (sel == 7) {
+        if (!g_song.outro.empty())
+            return g_song.outro[std::min(std::max(g_outro_choice - 1, 0), (int)g_song.outro.size() - 1)];
+        std::string used;
+        const std::vector<int> *fl = fill_list(g_seq.loop_part, used);
+        if (!fl || g_final_abs < 0) return {};
+        return {(*fl)[(size_t)std::max(g_outro_choice - 1, 0) % fl->size()], g_final_abs};
+    }
+    const int idx = part_idx(sel);
+    return idx < 0 ? std::vector<int>() : phrase_of(idx);
+}
+
+void aud_metro(bool on)
+{
+    if (on && g_h2_metro != 1) { set_metronome(true); g_aud_metro = true; }
+    if (!on && g_aud_metro) { set_metronome(false); g_aud_metro = false; }
+}
+
+/* Fait tourner la sélection : à la mesure suivante en jouant, sinon démarre
+ * la batterie seule (sans les boucles). */
+std::string aud_play()
+{
+    if (!g_seq.active) return "pas de structure pour cette chanson";
+    bool metro;
+    std::vector<int> ph = aud_phrase(g_psel, metro);
+    if (ph.empty()) {                                  // None / Off : on continue en silence (mesures
+        if (!transport_rolling() || g_silence_abs < 0) { aud_metro(false); g_aud = false; return "silence"; }
+        ph = {g_silence_abs};                          // vides), pour repartir à la mesure au prochain choix
+    }
+    aud_metro(metro);
+    g_aud = true;
+    const int idx = part_idx(g_psel);
+    if (idx >= 0) g_seq.part = idx;                    // la partie choisie reste au retour sur DRUM
+    double at, bpb;
+    if (next_bar(at, bpb)) {
+        g_seq.next_loop = ph;
+        g_seq.next_part = idx >= 0 ? idx : g_seq.loop_part;
+        g_seq.once.clear();
+        g_seq.switch_at = at;
+        return "ok à la mesure suivante";
+    }
+    aud_metro(false);                                  // à l'arrêt : seulement choisi ; Play la lance
+    g_aud = false;
+    return "choisi (Play pour l'écouter)";
+}
+
+/* Play sur la page PARTS, à l'arrêt : la sélection en boucle, batterie seule. */
+std::string parts_play()
+{
+    bool metro;
+    const std::vector<int> ph = aud_phrase(g_psel, metro);
+    if (ph.empty()) return "rien à jouer (None / Off)";
+    aud_metro(metro);
+    g_aud = true;
+    const int idx = part_idx(g_psel);
+    if (idx >= 0) g_seq.part = idx;
+    g_seq.loop = ph;
+    g_seq.loop_part = idx >= 0 ? idx : g_seq.loop_part;
+    g_start_plain = true;
+    return "audition : " + play_from_start(true);
+}
+
+/* En quittant PARTS : l'intro, l'outro ou le décompte ne bouclent plus ; on
+ * revient sur la partie en cours à la mesure suivante. */
+void aud_leave()
+{
+    if (!g_aud) return;
+    g_aud = false;
+    aud_metro(false);
+    double at, bpb;
+    if ((g_psel == 0 || g_psel == 7) && next_bar(at, bpb)) {
+        g_seq.next_loop = phrase_of(g_seq.part);
+        g_seq.next_part = g_seq.part;
+        g_seq.once.clear();
+        g_seq.switch_at = at;
+    }
+}
+
+/* Back / Next sur la sélection. */
+std::string aud_step(int dir)
+{
+    if (!g_seq.active) return "pas de structure pour cette chanson";
+    if (g_psel == 0) {
+        const int last = 2 + (int)g_song.intro.size();               // 1 Off, 2 Metronome, 3.. A…
+        g_intro_choice = std::min(std::max(g_intro_choice + dir, 1), last);
+        g_ui_intro = g_intro_choice;
+        memo_choice("Intro", g_intro_choice);
+        return std::string("Intro ") + (g_intro_choice == 1 ? "Off" : g_intro_choice == 2 ? "Metronome"
+                                        : var_name(g_intro_choice - 3).c_str()) + " : " + aud_play();
+    }
+    if (g_psel == 7) {
+        const int n = outro_count();
+        if (n < 1) return "pas de fin possible";
+        g_outro_choice = std::min(std::max(g_outro_choice + dir, 1), n);
+        g_ui_outro = g_outro_choice;
+        memo_choice("Outro", g_outro_choice);
+        return "Outro " + var_name(g_outro_choice - 1) + " : " + aud_play();
+    }
+    const int idx = part_idx(g_psel);
+    if (idx < 0) return "partie absente de cette chanson";
+    const int n = (int)g_song.vars[g_song.parts[idx]].size();
+    const int v = std::min(std::max(g_seq.var[idx] + dir, -1), n - 1);   // -1 : None
+    if (v < 0 && g_seq.var[idx] >= 0 && next_on(idx, +1) < 0) return "il faut au moins une partie";
+    g_seq.var[idx] = v;
+    memo_save(idx);
+    return g_song.parts[idx] + " " + var_name(v) + " : " + aud_play();
+}
+
+std::string browse(pb_ctl *k, int level, int dir);
+
+/* Kit précédent / suivant (liste Kit de PiPedal) ; en jouant : Stop, chargement,
+ * puis reprise sur la même partie (drum_song_poll). */
+std::string kit_step(pb_ctl *k, int dir)
+{
+    int n = 0;
+    while (!kit_file((uint32_t)n + 1).empty()) n++;
+    if (n < 2) return "un seul kit";
+    const int cur = (int)PB_LOAD_RLX(&k->drum_kit_num);
+    const int next = cur < 1 ? 1 : (cur - 1 + dir + n) % n + 1;
+    g_ui_kit = next;
+    const std::string name = kit_file((uint32_t)next);
+    std::string r = "kit " + name.substr(name.rfind('/') + 1);
+    if (transport_rolling()) {
+        g_kit_resume = true;
+        r += " : " + stop_all() + ", reprise après le chargement";
+    }
+    return r;
 }
 
 void paint_page()
 {
+    pb_ctl *k = g_ctl.load(std::memory_order_acquire);
     if (g_cap_page == 1) {                             // DRUM
         const uint32_t c[10] = {g_h2_metro == 1 ? C_GREEN : C_WHITE, C_YELLOW, C_YELLOW, C_DIM, C_DIM,
                                 C_ORANGE, C_CYAN, C_CYAN, C_GREEN, C_DGREEN};
-        for (int k = 0; k < 10; k++) cap_led(k + 1, c[k]);
-    } else if (g_cap_page == 2 || g_cap_page == 3) {   // BROWSE, PARTS : à venir (seul le retour est actif)
-        for (int k = 0; k < 10; k++) cap_led(k + 1, C_DIM);
+        for (int i = 0; i < 10; i++) cap_led(i + 1, c[i]);
+    } else if (g_cap_page == 2) {                      // BROWSE
+        const uint32_t c[10] = {C_YELLOW, C_YELLOW, C_WHITE, C_WHITE, g_h2_metro == 1 ? C_GREEN : C_RED,
+                                C_ORANGE, C_ORANGE, C_CYAN, C_CYAN, C_DIM};
+        for (int i = 0; i < 10; i++) cap_led(i + 1, c[i]);
+    } else if (g_cap_page == 3) {                      // PARTS
+        for (int sel : {0, 1, 2, 3, 4, 7}) {
+            const int key = sel == 7 ? 7 : sel;
+            bool off, present = true;
+            if (sel == 0) off = g_intro_choice <= 1;
+            else if (sel == 7) off = outro_count() < 1;
+            else {
+                const int idx = part_idx(sel);
+                present = idx >= 0;
+                off = present && g_seq.var[idx] < 0;
+            }
+            const bool chosen = sel == g_psel;
+            if (present && off) {                      // None / Off : 2 DEL de la partie, celle du milieu rouge
+                const uint32_t pc = chosen ? PART_COLOR[sel] : scale(PART_COLOR[sel], PALE);
+                cap_led3(key + 1, pc, chosen ? C_RED : scale(C_RED, PALE), pc);
+                continue;
+            }
+            cap_led(key + 1, !present ? C_OFF : chosen ? PART_COLOR[sel] : scale(PART_COLOR[sel], PALE));
+        }
+        const uint32_t sc = g_psel >= 0 ? PART_COLOR[g_psel] : C_DIM;
+        cap_led(6, sc);                                // Back
+        cap_led(7, sc);                                // Next
+        const bool fill_on = k && !PB_LOAD_RLX(&k->drum_nofill);
+        cap_led(9, fill_on ? C_GREEN : C_RED);         // AutoFill
+        cap_led(10, C_DIM);                            // → Browse
     }
 }
 
 void cap_page(int page)
 {
+    if (g_cap_page == 3 && page != 3) aud_leave();
     midi_captain_cc(16, 20, page);
     g_cap_page = page;
+    if (page == 3) g_psel = sel_of_part(transport_rolling() ? g_seq.loop_part : g_seq.part);   // ce qui joue
     paint_page();
     say("Captain : page %d", page);
 }
@@ -2658,12 +2926,42 @@ void cap_key(pb_ctl *k, int page, int key, bool down)
             if (drum_waits(key) && !g_held.long_done) drum_key(k, key, 1);
             g_held = Held();
         }
-    } else if ((page == 2 || page == 3) && key == 9) { // BROWSE / PARTS : à venir ; dernière touche :
-        if (down) g_held = {page, key, now_s(), 0, false};   // court -> l'autre page, tenu -> DRUM
+    } else if ((page == 2 || page == 3) && key == 9) { // dernière touche : court -> l'autre page, tenu -> DRUM
+        if (down) g_held = {page, key, now_s(), 0, false};
         else if (g_held.page == page && g_held.key == key) {
             cap_page(now_s() - g_held.t >= LONG_S ? 1 : (page == 2 ? 3 : 2));
             g_held = Held();
         }
+    } else if (page == 2 && down) {                    // BROWSE
+        std::string r;
+        switch (key) {
+        case 0: r = browse(k, 0, -1); break;           // Style ◀
+        case 1: r = browse(k, 0, +1); break;           // Style ▶
+        case 2: r = kit_step(k, -1); break;            // Kit ◀
+        case 3: r = kit_step(k, +1); break;            // Kit ▶
+        case 4: r = set_metronome(g_h2_metro != 1); break;
+        case 5: r = browse(k, 1, -1); break;           // Type ◀
+        case 6: r = browse(k, 1, +1); break;           // Type ▶
+        case 7: r = browse(k, 2, -1); break;           // Beat ◀
+        case 8: r = browse(k, 2, +1); break;           // Beat ▶
+        }
+        say("Captain BROWSE : %s", r.c_str());
+        g_refresh_now = true;
+    } else if (page == 3 && down) {                    // PARTS
+        std::string r;
+        if (key <= 4 || key == 7) {                    // Intro, parties, Outro : sélection + audition
+            const int sel = key;
+            if (sel >= 1 && sel <= 4 && part_idx(sel) < 0) r = std::string(PART_UI[sel - 1]) + " absent de cette chanson";
+            else { g_psel = sel; r = aud_play(); }
+        } else if (key == 5 || key == 6) {             // Back / Next
+            r = g_psel < 0 ? "rien de sélectionné" : aud_step(key == 5 ? -1 : +1);
+        } else if (key == 8) {                         // AutoFill
+            const bool on = !!PB_LOAD_RLX(&k->drum_nofill);   // éteint -> allumer
+            g_ui_autofill = on ? 1 : 0;
+            r = on ? "Auto Fill allumé" : "Auto Fill éteint";
+        }
+        say("Captain PARTS : %s", r.c_str());
+        g_refresh_now = true;
     }
 }
 
@@ -2681,7 +2979,9 @@ void cap_tick(pb_ctl *k)
             g_held.next = now_s() + (held > 2.0 ? 0.04 : 0.12);
         }
     }
-    if (g_cap_page == 1 && g_h2_metro != g_metro_seen) { g_metro_seen = g_h2_metro; paint_page(); }
+    if ((g_cap_page == 1 || g_cap_page == 2) && g_h2_metro != g_metro_seen) { g_metro_seen = g_h2_metro; paint_page(); }
+    static uint32_t nofill_seen = 2;
+    if (g_cap_page == 3 && PB_LOAD_RLX(&k->drum_nofill) != nofill_seen) { nofill_seen = PB_LOAD_RLX(&k->drum_nofill); paint_page(); }
 }
 
 void midi_event(const MidiEv &e)
